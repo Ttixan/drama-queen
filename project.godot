@@ -13,6 +13,13 @@ config_version=5
 config/name="DramaQueen"
 config/features=PackedStringArray("4.6", "Mobile")
 config/icon="res://icon.svg"
+run/main_scene="res://scenes/main_scene.tscn"
+
+[autoload]
+
+; 顺序要紧：EventBus 必须排在 Game 之前，Game 的 _ready() 依赖它
+EventBus="*res://scripts/core/event_bus.gd"
+Game="*res://scripts/core/game.gd"
 
 [display]
 
