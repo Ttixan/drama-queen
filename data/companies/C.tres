@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="CompanyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/audition_condition.gd" id="1_3nuwj"]
+[ext_resource type="Script" path="res://scripts/data/role_requirement.gd" id="2_gtl06"]
+[ext_resource type="Script" path="res://scripts/data/company_data.gd" id="3_ffk1a"]
+
+[sub_resource type="Resource" id="Resource_jud2a"]
+script = ExtResource("1_3nuwj")
+type = 3
+weight = 2.0
+required = true
+
+[sub_resource type="Resource" id="Resource_w6wuu"]
+script = ExtResource("1_3nuwj")
+type = 4
+value = 0.55
+
+[sub_resource type="Resource" id="Resource_d55ta"]
+script = ExtResource("2_gtl06")
+
+[sub_resource type="Resource" id="Resource_k0jyu"]
+script = ExtResource("2_gtl06")
+tier = 1
+acting_required = 5
+match_line = 0.5
+acting_gain = 2
+payout_ratio = 2.0
+
+[sub_resource type="Resource" id="Resource_fmbot"]
+script = ExtResource("2_gtl06")
+tier = 2
+acting_required = 15
+match_line = 0.7
+acting_gain = 5
+payout_ratio = 3.0
+
+[resource]
+script = ExtResource("3_ffk1a")
+id = &"C"
+code = "C"
+display_name = "C 公司"
+tier = 2
+acting_threshold = 8
+conditions = Array[ExtResource("1_3nuwj")]([SubResource("Resource_jud2a"), SubResource("Resource_w6wuu")])
+roles = Array[ExtResource("2_gtl06")]([SubResource("Resource_d55ta"), SubResource("Resource_k0jyu"), SubResource("Resource_fmbot")])
+extra_payout = 80
+hint = "C 公司嘴上说「纯真」。重点在**纯** —— 掺一点别的情绪就不算数了。"
+hr_name = "陈女士"
+hr_title = "人事"

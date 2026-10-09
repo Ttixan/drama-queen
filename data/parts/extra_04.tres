@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_blp0i"]
+[ext_resource type="Texture2D" path="res://assets/parts/extra_04.png" id="2_rtkf6"]
+
+[resource]
+script = ExtResource("1_blp0i")
+id = &"extra_04"
+display_name = "红晕"
+slot = 3
+tier = 4
+texture = ExtResource("2_rtkf6")
+charm = 3.0

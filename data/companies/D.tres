@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="CompanyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/audition_condition.gd" id="1_ou5t8"]
+[ext_resource type="Script" path="res://scripts/data/role_requirement.gd" id="2_0lt77"]
+[ext_resource type="Script" path="res://scripts/data/company_data.gd" id="3_aq84a"]
+
+[sub_resource type="Resource" id="Resource_2n8ow"]
+script = ExtResource("1_ou5t8")
+type = 6
+weight = 2.0
+required = true
+
+[sub_resource type="Resource" id="Resource_f6nd1"]
+script = ExtResource("1_ou5t8")
+type = 5
+emotion = 2
+
+[sub_resource type="Resource" id="Resource_711sn"]
+script = ExtResource("2_0lt77")
+
+[sub_resource type="Resource" id="Resource_p6y5r"]
+script = ExtResource("2_0lt77")
+tier = 1
+acting_required = 5
+match_line = 0.5
+acting_gain = 2
+payout_ratio = 2.0
+
+[sub_resource type="Resource" id="Resource_3bt7y"]
+script = ExtResource("2_0lt77")
+tier = 2
+acting_required = 15
+match_line = 0.7
+acting_gain = 5
+payout_ratio = 3.0
+
+[resource]
+script = ExtResource("3_aq84a")
+id = &"D"
+code = "D"
+display_name = "D 公司"
+tier = 3
+acting_threshold = 15
+conditions = Array[ExtResource("1_ou5t8")]([SubResource("Resource_2n8ow"), SubResource("Resource_f6nd1")])
+roles = Array[ExtResource("2_0lt77")]([SubResource("Resource_711sn"), SubResource("Resource_p6y5r"), SubResource("Resource_3bt7y")])
+extra_payout = 96
+hint = "D 公司要「幻灭」。第一帧还亮着，最后一帧得暗下去 —— 一路滑下来，不是中间掉头。"
+hr_name = "徐女士"
+hr_title = "制片人"

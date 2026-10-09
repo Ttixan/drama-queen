@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_lx41p"]
+[ext_resource type="Texture2D" path="res://assets/parts/mouth_09.png" id="2_w8qkc"]
+
+[resource]
+script = ExtResource("1_lx41p")
+id = &"mouth_09"
+display_name = "坏笑"
+slot = 1
+tier = 9
+texture = ExtResource("2_w8qkc")
+anger = 1.0
+charm = 2.0

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_kuv21"]
+[ext_resource type="Texture2D" path="res://assets/parts/extra_03.png" id="2_lieeo"]
+
+[resource]
+script = ExtResource("1_kuv21")
+id = &"extra_03"
+display_name = "泪珠"
+slot = 3
+tier = 3
+texture = ExtResource("2_lieeo")
+sorrow = 3.0

@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="CompanyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/audition_condition.gd" id="1_dvyll"]
+[ext_resource type="Script" path="res://scripts/data/role_requirement.gd" id="2_bgd73"]
+[ext_resource type="Script" path="res://scripts/data/company_data.gd" id="3_74mkt"]
+
+[sub_resource type="Resource" id="Resource_s2fnj"]
+script = ExtResource("1_dvyll")
+type = 1
+value = 1.0
+weight = 2.0
+required = true
+
+[sub_resource type="Resource" id="Resource_6htcd"]
+script = ExtResource("1_dvyll")
+type = 2
+emotion = 1
+
+[sub_resource type="Resource" id="Resource_13sw3"]
+script = ExtResource("2_bgd73")
+
+[sub_resource type="Resource" id="Resource_cdox5"]
+script = ExtResource("2_bgd73")
+tier = 1
+acting_required = 5
+match_line = 0.5
+acting_gain = 2
+payout_ratio = 2.0
+
+[sub_resource type="Resource" id="Resource_gw00q"]
+script = ExtResource("2_bgd73")
+tier = 2
+acting_required = 15
+match_line = 0.7
+acting_gain = 5
+payout_ratio = 3.0
+
+[resource]
+script = ExtResource("3_74mkt")
+id = &"B"
+code = "B"
+display_name = "B 公司"
+tier = 1
+acting_threshold = 3
+conditions = Array[ExtResource("1_dvyll")]([SubResource("Resource_s2fnj"), SubResource("Resource_6htcd")])
+roles = Array[ExtResource("2_bgd73")]([SubResource("Resource_13sw3"), SubResource("Resource_cdox5"), SubResource("Resource_gw00q")])
+extra_payout = 64
+hint = "B 公司要个讨喜的新人。笑一个就行 —— 但别笑里带火气。"
+hr_name = "李女士"
+hr_title = "人事兼行政"

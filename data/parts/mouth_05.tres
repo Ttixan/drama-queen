@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_hedgj"]
+[ext_resource type="Texture2D" path="res://assets/parts/mouth_05.png" id="2_dwh5h"]
+
+[resource]
+script = ExtResource("1_hedgj")
+id = &"mouth_05"
+display_name = "撇嘴"
+slot = 1
+tier = 5
+texture = ExtResource("2_dwh5h")
+anger = 1.0
+awkward = 3.0

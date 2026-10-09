@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_rhx1n"]
+[ext_resource type="Texture2D" path="res://assets/parts/eyes_05.png" id="2_usadf"]
+
+[resource]
+script = ExtResource("1_rhx1n")
+id = &"eyes_05"
+display_name = "星星眼"
+tier = 5
+texture = ExtResource("2_usadf")
+joy = 1.0
+charm = 3.0

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_nxbq7"]
+[ext_resource type="Texture2D" path="res://assets/parts/brows_03.png" id="2_4oybf"]
+
+[resource]
+script = ExtResource("1_nxbq7")
+id = &"brows_03"
+display_name = "紧锁"
+slot = 2
+tier = 3
+texture = ExtResource("2_4oybf")
+anger = 2.0

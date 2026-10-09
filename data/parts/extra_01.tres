@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_glmkc"]
+[ext_resource type="Texture2D" path="res://assets/parts/extra_01.png" id="2_3j8ai"]
+
+[resource]
+script = ExtResource("1_glmkc")
+id = &"extra_01"
+display_name = "青筋"
+slot = 3
+tier = 1
+texture = ExtResource("2_3j8ai")
+anger = 3.0

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_rk8rx"]
+[ext_resource type="Texture2D" path="res://assets/parts/brows_05.png" id="2_b3r3c"]
+
+[resource]
+script = ExtResource("1_rk8rx")
+id = &"brows_05"
+display_name = "八字"
+slot = 2
+tier = 5
+texture = ExtResource("2_b3r3c")
+sorrow = 2.0

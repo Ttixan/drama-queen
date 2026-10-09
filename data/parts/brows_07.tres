@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_e7txb"]
+[ext_resource type="Texture2D" path="res://assets/parts/brows_07.png" id="2_3f2ey"]
+
+[resource]
+script = ExtResource("1_e7txb")
+id = &"brows_07"
+display_name = "斜挑"
+slot = 2
+tier = 7
+texture = ExtResource("2_3f2ey")
+anger = 1.0
+charm = 2.0

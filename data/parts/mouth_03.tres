@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_fculx"]
+[ext_resource type="Texture2D" path="res://assets/parts/mouth_03.png" id="2_dh67a"]
+
+[resource]
+script = ExtResource("1_fculx")
+id = &"mouth_03"
+display_name = "大笑"
+slot = 1
+tier = 3
+texture = ExtResource("2_dh67a")
+joy = 3.0

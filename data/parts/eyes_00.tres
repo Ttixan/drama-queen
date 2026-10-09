@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_x8qy5"]
+[ext_resource type="Texture2D" path="res://assets/parts/eyes_00.png" id="2_aaql1"]
+
+[resource]
+script = ExtResource("1_x8qy5")
+id = &"eyes_00"
+display_name = "平静"
+texture = ExtResource("2_aaql1")

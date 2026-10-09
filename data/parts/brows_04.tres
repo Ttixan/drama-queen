@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_wekoj"]
+[ext_resource type="Texture2D" path="res://assets/parts/brows_04.png" id="2_sc8dk"]
+
+[resource]
+script = ExtResource("1_wekoj")
+id = &"brows_04"
+display_name = "倒竖"
+slot = 2
+tier = 4
+texture = ExtResource("2_sc8dk")
+anger = 3.0

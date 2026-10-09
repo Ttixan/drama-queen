@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_k7ufs"]
+[ext_resource type="Texture2D" path="res://assets/parts/extra_02.png" id="2_ktpon"]
+
+[resource]
+script = ExtResource("1_k7ufs")
+id = &"extra_02"
+display_name = "汗滴"
+slot = 3
+tier = 2
+texture = ExtResource("2_ktpon")
+shock = 1.0
+awkward = 2.0

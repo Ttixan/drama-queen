@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="CompanyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/audition_condition.gd" id="1_eagp2"]
+[ext_resource type="Script" path="res://scripts/data/role_requirement.gd" id="2_3n4am"]
+[ext_resource type="Script" path="res://scripts/data/company_data.gd" id="3_xd4r1"]
+
+[sub_resource type="Resource" id="Resource_m8ys4"]
+script = ExtResource("1_eagp2")
+type = 2
+emotion = 1
+required = true
+
+[sub_resource type="Resource" id="Resource_3tmev"]
+script = ExtResource("2_3n4am")
+
+[sub_resource type="Resource" id="Resource_04nrh"]
+script = ExtResource("2_3n4am")
+tier = 1
+acting_required = 5
+match_line = 0.5
+acting_gain = 2
+payout_ratio = 2.0
+
+[sub_resource type="Resource" id="Resource_cqnkl"]
+script = ExtResource("2_3n4am")
+tier = 2
+acting_required = 15
+match_line = 0.7
+acting_gain = 5
+payout_ratio = 3.0
+
+[resource]
+script = ExtResource("3_xd4r1")
+id = &"A"
+code = "A"
+display_name = "A 公司"
+conditions = Array[ExtResource("1_eagp2")]([SubResource("Resource_m8ys4")])
+roles = Array[ExtResource("2_3n4am")]([SubResource("Resource_3tmev"), SubResource("Resource_04nrh"), SubResource("Resource_cqnkl")])
+extra_payout = 40
+hint = "A 厂什么都收。别全程一张臭脸就行 —— 他们自己也知道片子烂，不挑。"
+hr_name = "王先生"
+hr_title = "招聘负责人"

@@ -1,0 +1,55 @@
+[gd_resource type="Resource" script_class="CompanyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/audition_condition.gd" id="1_uyib2"]
+[ext_resource type="Script" path="res://scripts/data/role_requirement.gd" id="2_1q5vd"]
+[ext_resource type="Script" path="res://scripts/data/company_data.gd" id="3_j0x8g"]
+
+[sub_resource type="Resource" id="Resource_ux0ye"]
+script = ExtResource("1_uyib2")
+type = 7
+value = 1.0
+weight = 2.0
+required = true
+
+[sub_resource type="Resource" id="Resource_r4b8a"]
+script = ExtResource("1_uyib2")
+type = 4
+value = 0.55
+
+[sub_resource type="Resource" id="Resource_dk8u0"]
+script = ExtResource("1_uyib2")
+type = 2
+emotion = 1
+
+[sub_resource type="Resource" id="Resource_ya4v8"]
+script = ExtResource("2_1q5vd")
+
+[sub_resource type="Resource" id="Resource_ubwe2"]
+script = ExtResource("2_1q5vd")
+tier = 1
+acting_required = 5
+match_line = 0.5
+acting_gain = 2
+payout_ratio = 2.0
+
+[sub_resource type="Resource" id="Resource_l0sje"]
+script = ExtResource("2_1q5vd")
+tier = 2
+acting_required = 15
+match_line = 0.7
+acting_gain = 5
+payout_ratio = 3.0
+
+[resource]
+script = ExtResource("3_j0x8g")
+id = &"E"
+code = "E"
+display_name = "E 公司"
+tier = 4
+acting_threshold = 25
+conditions = Array[ExtResource("1_uyib2")]([SubResource("Resource_ux0ye"), SubResource("Resource_r4b8a"), SubResource("Resource_dk8u0")])
+roles = Array[ExtResource("2_1q5vd")]([SubResource("Resource_ya4v8"), SubResource("Resource_ubwe2"), SubResource("Resource_l0sje")])
+extra_payout = 120
+hint = "E 厂要「反转」。中间那下得**掉头** —— D 家那种慢慢滑下来的，他们看不上。"
+hr_name = "赵女士"
+hr_title = "高级人才招聘专家"

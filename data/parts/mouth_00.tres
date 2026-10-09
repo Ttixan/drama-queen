@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_drbyp"]
+[ext_resource type="Texture2D" path="res://assets/parts/mouth_00.png" id="2_dl0uh"]
+
+[resource]
+script = ExtResource("1_drbyp")
+id = &"mouth_00"
+display_name = "闭合"
+slot = 1
+texture = ExtResource("2_dl0uh")

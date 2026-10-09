@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_imct3"]
+[ext_resource type="Texture2D" path="res://assets/parts/extra_05.png" id="2_1e6ci"]
+
+[resource]
+script = ExtResource("1_imct3")
+id = &"extra_05"
+display_name = "呆毛"
+slot = 3
+tier = 5
+texture = ExtResource("2_1e6ci")
+joy = 1.0
+shock = 2.0

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_ofpa2"]
+[ext_resource type="Texture2D" path="res://assets/parts/brows_02.png" id="2_1xhm2"]
+
+[resource]
+script = ExtResource("1_ofpa2")
+id = &"brows_02"
+display_name = "高扬"
+slot = 2
+tier = 2
+texture = ExtResource("2_1xhm2")
+joy = 2.0

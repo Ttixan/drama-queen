@@ -31,6 +31,13 @@ enum Tier { A_LOW, B_SMALL, C_COMMERCIAL, D_ARTHOUSE, E_MAJOR }
 ## 角色档位（龙套 / 配角 / 主角）
 @export var roles: Array[RoleRequirement] = []
 
+@export_group("经济")
+## 该公司**龙套**档的片酬。配角/主角由 RoleRequirement.payout_ratio 乘上去。
+##
+## 【收益归属】钱由公司档次决定，演技由角色难度决定，互不交叉（决策记录 1.3）。
+## 数值表值：A40 / B64 / C80 / D96 / E120；配角 ×2、主角 ×3。
+@export var extra_payout: int = 0
+
 @export_group("叙事")
 ## 经纪人线索文案，每周漏一条给玩家
 @export_multiline var hint: String = ""
@@ -54,3 +61,10 @@ func total_condition_weight() -> float:
 	for c: AuditionCondition in conditions:
 		t += c.weight
 	return t
+
+
+## 某角色的实际片酬。角色不存在时返回 0。
+func payout_for(role: RoleRequirement) -> int:
+	if role == null:
+		return 0
+	return int(round(float(extra_payout) * role.payout_ratio))

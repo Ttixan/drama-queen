@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_7oci7"]
+[ext_resource type="Texture2D" path="res://assets/parts/mouth_07.png" id="2_b0y4h"]
+
+[resource]
+script = ExtResource("1_7oci7")
+id = &"mouth_07"
+display_name = "咬牙切齿"
+slot = 1
+tier = 7
+texture = ExtResource("2_b0y4h")
+anger = 3.0
