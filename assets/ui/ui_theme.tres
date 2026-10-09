@@ -1,0 +1,19 @@
+[gd_resource type="Theme" load_steps=2 format=3]
+
+; 全局 UI 主题
+;
+; 【为什么需要它】项目里没有任何字体资源，Godot 默认主题的字体不含中文字形，
+; 全靠「系统字体回退」侥幸显示。这在 Windows 上能看，但 Android 导出后不可控。
+; 这里用 SystemFont + 候选列表，不引入任何字体二进制文件（21 天工期不值得为字体
+; 折腾仓库体积），同时把「用什么字体、多大字号」从代码里挪出来，扉师改这里就行。
+;
+; 【为什么不塞进 project.godot 的 gui/theme/custom】本轮的录像机是独立测试场景，
+; 不该顺手改全局配置 —— 等手机壳立起来再决定要不要全局挂载。
+
+[sub_resource type="SystemFont" id="SystemFont_ui"]
+font_names = PackedStringArray("Source Han Sans SC", "思源黑体", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "SimHei")
+allow_system_fallback = true
+
+[resource]
+default_font = SubResource("SystemFont_ui")
+default_font_size = 18

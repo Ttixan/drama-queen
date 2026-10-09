@@ -1,0 +1,400 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/apps/recorder_app.gd" id="1_recorder"]
+[ext_resource type="Theme" path="res://assets/ui/ui_theme.tres" id="2_theme"]
+
+[node name="RecorderApp" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_recorder")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0862745, 0.0862745, 0.101961, 1)
+
+[node name="Page" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="PanelContainer" parent="Page"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+
+[node name="TopMargin" type="MarginContainer" parent="Page/TopBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 12
+
+[node name="TopRow" type="HBoxContainer" parent="Page/TopBar/TopMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="RecGroup" type="HBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="RecDot" type="Panel" parent="Page/TopBar/TopMargin/TopRow/RecGroup"]
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="RecText" type="Label" parent="Page/TopBar/TopMargin/TopRow/RecGroup"]
+layout_mode = 2
+text = "REC"
+vertical_alignment = 1
+
+[node name="TitleBox" type="VBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="Page/TopBar/TopMargin/TopRow/TitleBox"]
+layout_mode = 2
+text = "录像机"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Page/TopBar/TopMargin/TopRow/TitleBox"]
+layout_mode = 2
+text = "拼好 3 帧表情包，拿去投稿"
+horizontal_alignment = 1
+
+[node name="InfoBox" type="VBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="FrameIndicator" type="Label" parent="Page/TopBar/TopMargin/TopRow/InfoBox"]
+layout_mode = 2
+text = "正在编辑：帧 1 / 3"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="RuleHint" type="Label" parent="Page/TopBar/TopMargin/TopRow/InfoBox"]
+layout_mode = 2
+text = "眼 / 嘴 / 眉 必填，其他可留空"
+horizontal_alignment = 2
+
+[node name="BodyWrap" type="MarginContainer" parent="Page"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Body" type="HBoxContainer" parent="Page/BodyWrap"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="PreviewPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.3
+
+[node name="PreviewMargin" type="MarginContainer" parent="Page/BodyWrap/Body/PreviewPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="PreviewBox" type="VBoxContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="ViewFinder" type="PanelContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ViewCenter" type="CenterContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder"]
+layout_mode = 2
+
+[node name="FaceCanvas" type="Control" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter"]
+custom_minimum_size = Vector2(512, 512)
+layout_mode = 2
+
+[node name="CanvasFrame" type="Panel" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="FaceHint" type="Label" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+text = "在这块 512 × 512 的画板上拼脸
+四个部件同坐标叠加，就和成一张"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="LayerBrows" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LayerEyes" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LayerMouth" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LayerExtra" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="FrameBadge" type="Label" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 14.0
+offset_top = 12.0
+offset_right = 102.0
+offset_bottom = 48.0
+text = "帧 1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EmotionStrip" type="PanelContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox"]
+layout_mode = 2
+
+[node name="EmotionMargin" type="MarginContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 10
+
+[node name="EmotionRow" type="HBoxContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip/EmotionMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="EmotionCaption" type="Label" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip/EmotionMargin/EmotionRow"]
+layout_mode = 2
+text = "当前帧情绪"
+vertical_alignment = 1
+
+[node name="EmotionValue" type="Label" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip/EmotionMargin/EmotionRow"]
+layout_mode = 2
+text = "平静"
+vertical_alignment = 1
+
+[node name="EmotionSpacer" type="Control" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip/EmotionMargin/EmotionRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EmotionParts" type="Label" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip/EmotionMargin/EmotionRow"]
+layout_mode = 2
+text = "—"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="SequenceLabel" type="Label" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox"]
+layout_mode = 2
+text = "帧序列：平静 → 平静 → 平静"
+
+[node name="EditPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EditMargin" type="MarginContainer" parent="Page/BodyWrap/Body/EditPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 22
+
+[node name="EditBox" type="VBoxContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TabsRow" type="HBoxContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TabEyes" type="Button" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/TabsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "眼"
+
+[node name="TabMouth" type="Button" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/TabsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "嘴"
+
+[node name="TabBrows" type="Button" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/TabsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "眉"
+
+[node name="TabExtra" type="Button" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/TabsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "其他"
+
+[node name="GridScroll" type="ScrollContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="PageEyes" type="GridContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/GridScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 6
+columns = 3
+
+[node name="PageMouth" type="GridContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/GridScroll"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 6
+columns = 3
+
+[node name="PageBrows" type="GridContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/GridScroll"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 6
+columns = 3
+
+[node name="PageExtra" type="GridContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/GridScroll"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 6
+columns = 3
+
+[node name="BottomBar" type="PanelContainer" parent="Page"]
+custom_minimum_size = Vector2(0, 148)
+layout_mode = 2
+
+[node name="BottomMargin" type="MarginContainer" parent="Page/BottomBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 16
+
+[node name="BottomRow" type="HBoxContainer" parent="Page/BottomBar/BottomMargin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="SlotsBox" type="VBoxContainer" parent="Page/BottomBar/BottomMargin/BottomRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 8
+
+[node name="SlotsCaption" type="Label" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox"]
+layout_mode = 2
+text = "帧槽"
+
+[node name="SlotsRow" type="HBoxContainer" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Slot1" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox/SlotsRow"]
+layout_mode = 2
+toggle_mode = true
+text = "帧 1"
+
+[node name="Slot2" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox/SlotsRow"]
+layout_mode = 2
+toggle_mode = true
+text = "帧 2"
+
+[node name="Slot3" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox/SlotsRow"]
+layout_mode = 2
+toggle_mode = true
+text = "帧 3"
+
+[node name="BottomSpacer" type="Control" parent="Page/BottomBar/BottomMargin/BottomRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StatusBox" type="VBoxContainer" parent="Page/BottomBar/BottomMargin/BottomRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 4
+
+[node name="StatusLabel" type="Label" parent="Page/BottomBar/BottomMargin/BottomRow/StatusBox"]
+layout_mode = 2
+text = "还没拼完"
+horizontal_alignment = 2
+
+[node name="StatusHint" type="Label" parent="Page/BottomBar/BottomMargin/BottomRow/StatusBox"]
+layout_mode = 2
+text = "眼 / 嘴 / 眉 三件必填，其他可留空"
+horizontal_alignment = 2
+
+[node name="ActionsRow" type="HBoxContainer" parent="Page/BottomBar/BottomMargin/BottomRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 14
+
+[node name="ClearButton" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/ActionsRow"]
+custom_minimum_size = Vector2(180, 64)
+layout_mode = 2
+text = "清空本帧"
+
+[node name="ConfirmButton" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/ActionsRow"]
+custom_minimum_size = Vector2(240, 64)
+layout_mode = 2
+text = "确认 · 录好"

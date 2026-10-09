@@ -27,6 +27,11 @@ signal hr_replied(company_code: String, passed: bool, mail: Dictionary)
 ## 表情包一次性消耗后进入作品集／履历
 signal clip_recorded(clip_summary: String, labels: Array)
 
+# ---- 录像机 → 微信 ----
+## 玩家在录像机点「确认」，产出一段完整的 3 帧表情包。
+## 这是录像机与投递之间的**唯一接口** —— 录像机不认识任何公司，也不知道怎么投递。
+signal recorder_finished(clip: Clip)
+
 # ---- 播出反馈 ----
 ## 本周末的《有瓜有戏》
 signal broadcast_published(week: int, headlines: Array)
