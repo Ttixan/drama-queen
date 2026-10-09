@@ -24,8 +24,8 @@ var day: int = 1               ## 1 .. 21
 var ap_left_today: int = AP_PER_DAY
 
 ## ---- 计数（结局判定用）----
-var submissions_total: int = 0       ## 投递次数 —— 「龙套之王」用这个口径，不是成功次数
-var successes_total: int = 0         ## 成功演出次数
+var submissions_total: int = 0       ## 投递次数（成败都算）—— 「被解雇」用失败次数
+var successes_total: int = 0         ## 成功演出次数 —— 还要按档位/公司细分见 count_success_by_*
 var submissions_this_week: int = 0
 var days_without_success: int = 0
 
@@ -98,13 +98,41 @@ func advance_day() -> bool:
 	return false
 
 
-## 「龙套之王」条件提醒：演技单调递增，所以这条路必须用【投递次数】口径，
-## 用成功次数会推出「演技必然 >= 成功数」的矛盾。
+## 是否演过某个档位的角色（「文艺片女神」要 D 公司主角、「影后」要 E 公司主角）
 func has_ever_played(tier: int) -> bool:
 	for h: Dictionary in history:
 		if h.get("passed", false) and h.get("role_tier", -1) == tier:
 			return true
 	return false
+
+
+## ---- 结局判定的计数口径 ----
+##
+## 【为什么不能直接用 successes_total】「龙套之王」要的是「演过多少个小角色」，
+## 不是「演过多少部戏」。同样是 8 次成功，全是龙套和全是主角是两种人生。
+## 所以结局条件必须能按档位 / 按公司分别计数，不能只有一个总数。
+
+## 按角色档位统计成功演出次数
+func count_success_by_tier(tier: int) -> int:
+	var n := 0
+	for h: Dictionary in history:
+		if h.get("passed", false) and h.get("role_tier", -1) == tier:
+			n += 1
+	return n
+
+
+## 按公司代号统计成功演出次数（「烂片女王」传 ["A", "B"]）
+func count_success_by_company(codes: Array) -> int:
+	var n := 0
+	for h: Dictionary in history:
+		if h.get("passed", false) and h.get("company_code", "") in codes:
+			n += 1
+	return n
+
+
+## 累计失败投递次数 —— 「被解雇」结局用这个口径
+func failed_submissions() -> int:
+	return submissions_total - successes_total
 
 
 func to_save_dict() -> Dictionary:

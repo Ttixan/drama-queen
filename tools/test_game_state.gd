@@ -20,6 +20,7 @@ func _initialize() -> void:
 	_test_week_boundary()
 	_test_submission_counters()
 	_test_dragon_extra_ending()
+	_test_fired_ending()
 	_test_save_roundtrip()
 
 	print("")
@@ -114,33 +115,72 @@ func _test_submission_counters() -> void:
 	print("   周额度会重置，累计数不会")
 
 
-## 「龙套之王」结局的口径验证
-## 演技单调递增，所以「演出次数多 + 演技低」必须用【投递次数】口径 ——
-## 用成功次数的话，成功 N 次 = 至少 N 点演技，条件自相矛盾。
+## 「龙套之王」与「烂片女王」的口径验证
+##
+## 这两个结局必须测【不同的东西】，否则玩家分不出它们的区别：
+##   龙套之王 = 数量 —— 成功了 8 次，但全是龙套（演技上不去）
+##   烂片女王 = 品质 —— 成功了 6 次，但全是 A/B 两家的烂片
+##
+## 另有一条数学死结要守住：演技单调递增，所以「成功演出 ≥ N」必然推出「演技 ≥ N」。
+## 任何写成「成功 ≥ N 且 演技 ≤ M」的结局，必须有 M > N，否则条件自相矛盾。
 func _test_dragon_extra_ending() -> void:
-	print("[5] 龙套之王结局口径")
+	print("[5] 龙套之王 / 烂片女王 口径")
 	var s := GameState.new()
-	# 投 10 次，只成功了 3 次，且全是龙套（+1 演技）
-	for i in 10:
-		var passed := i < 3
-		if passed:
-			s.acting += 1
-		s.record_submission(passed, {"company_code": "A", "role_tier": 0})
+	# 演 8 次龙套，全在 A 烂片厂，演技 8
+	for i in 8:
+		s.acting += 1
+		s.record_submission(true, {"company_code": "A", "role_tier": RoleRequirement.Tier.EXTRA})
 
-	_check("投递次数", s.submissions_total, 10)
-	_check("成功次数", s.successes_total, 3)
-	print("   投递10次 / 成功3次 / 演技%d —— 条件「投递≥10 且 演技≤5」成立" % s.acting)
+	_check("成功次数", s.successes_total, 8)
+	_check("龙套档成功次数", s.count_success_by_tier(RoleRequirement.Tier.EXTRA), 8)
+	_check("A/B 公司成功次数", s.count_success_by_company(["A", "B"]), 8)
+	_check("演技", s.acting, 8)
 
-	var ok := s.submissions_total >= 10 and s.acting <= 5
-	_check("龙套之王条件可达成", ok, true)
+	var king := s.count_success_by_tier(RoleRequirement.Tier.EXTRA) >= 8 and s.acting <= 12
+	_check("龙套之王达成（龙套≥8 且 演技≤12）", king, true)
 
-	# 反证：若改用成功次数口径就不可达
-	var broken := s.successes_total >= 10
-	_check("成功次数口径不可达（证明必须用投递口径）", broken, false)
+	# 反证：8 次龙套成功必然带来 ≥8 点演技，旧口径「演技≤5」永远不可达 ——
+	# 这正是原稿那个死结，涨到 12 才解得开。
+	var dead := s.count_success_by_tier(RoleRequirement.Tier.EXTRA) >= 8 and s.acting <= 5
+	_check("旧口径（演技≤5）不可达 —— 证明上限必须 >8", dead, false)
+
+	# ---- 烂片女王走的是另一条路：成功次数够，但龙套不够多 ----
+	var q := GameState.new()
+	for i in 4:
+		q.acting += 1
+		q.record_submission(true, {"company_code": "A", "role_tier": RoleRequirement.Tier.EXTRA})
+	for i in 2:
+		q.acting += 2
+		q.record_submission(true, {"company_code": "B", "role_tier": RoleRequirement.Tier.SUPPORTING})
+
+	_check("烂片女王·成功次数", q.successes_total, 6)
+	_check("烂片女王·龙套只演了 4 次", q.count_success_by_tier(RoleRequirement.Tier.EXTRA), 4)
+	_check("龙套之王不成立（龙套不足 8）",
+			q.count_success_by_tier(RoleRequirement.Tier.EXTRA) >= 8, false)
+	_check("烂片女王成立（A/B 成功 6 次 且 演技 8≤12）",
+			q.count_success_by_company(["A", "B"]) >= 6 and q.acting <= 12, true)
+	print("   两个结局走不同的路 —— 一个看数量，一个看品质")
+
+
+## 「被解雇」的口径验证
+func _test_fired_ending() -> void:
+	print("[6] 被解雇 / 欠债 口径")
+	var s := GameState.new()
+	for i in 9:
+		s.record_submission(false, {"company_code": "A", "role_tier": 0})
+
+	_check("投递次数", s.submissions_total, 9)
+	_check("失败次数", s.failed_submissions(), 9)
+
+	s.money = -10
+	_check("被解雇达成（失败≥8 且 金钱<0）", s.failed_submissions() >= 8 and s.money < 0, true)
+	s.money = 5
+	_check("不欠债则不触发", s.failed_submissions() >= 8 and s.money < 0, false)
+	print("   欠债 = 金钱为负，失败次数 = 投递数 − 成功数")
 
 
 func _test_save_roundtrip() -> void:
-	print("[6] 存档往返")
+	print("[7] 存档往返")
 	var s := GameState.new()
 	s.money = 1234
 	s.acting = 17
