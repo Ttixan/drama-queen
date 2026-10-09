@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CastingPool" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/casting_pool.gd" id="1_2patl"]
+
+[resource]
+script = ExtResource("1_2patl")
+player_name = "林小满"
+play_titles = Array[String](["赘婿归来", "神医下山", "战神无双", "重生之豪门千金", "真假千金", "总裁的替身新娘", "我的霸道前妻", "八零年代小娇妻", "逆袭从离婚开始", "退婚后我成了首富", "闪婚老公是首富", "九零年代暴富记"])
+places = Array[String](["横店影视城", "象山影视基地", "城郊老厂房摄影棚", "影视城 3 号棚", "郊区实景基地", "南郊民国街"])
+role_names_extra = Array[String](["保安", "前台", "服务员", "路人甲", "快递小哥", "群演"])
+role_names_support = Array[String](["王管家", "林秘书", "张医生", "李助理", "赵老板", "陈经理"])
+role_names_lead = Array[String](["沈砚清", "陆慕白", "顾向南", "江晚吟", "苏离", "傅司晏"])

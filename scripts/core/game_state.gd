@@ -35,9 +35,28 @@ var days_without_success: int = 0
 ## 供电子报的「标题调用条件」判断玩家过往经历。
 var history: Array[Dictionary] = []
 
+## ---- HR 解锁 ----
+## 决策 12：先在 Boss直聘 逛过某家公司，微信里才会解锁它的 HR。
+##
+## 【为什么放在 GameState 而不是 UI 里】它是**进度**（要进存档），
+## 而且决定了「哪家公司现在能投」—— 是玩法状态，不是显示状态。
+var unlocked_hr: Array[String] = []
+
 ## ---- 结局标记 ----
 var ending_flags: Dictionary = {}
 var finished: bool = false
+
+
+## 解锁某家公司的 HR。返回 true 表示这次是**新**解锁的。
+func unlock_hr(code: String) -> bool:
+	if code.is_empty() or unlocked_hr.has(code):
+		return false
+	unlocked_hr.append(code)
+	return true
+
+
+func is_hr_unlocked(code: String) -> bool:
+	return unlocked_hr.has(code)
 
 
 func week() -> int:
@@ -143,6 +162,7 @@ func to_save_dict() -> Dictionary:
 		"submissions_total": submissions_total, "successes_total": successes_total,
 		"submissions_this_week": submissions_this_week,
 		"days_without_success": days_without_success,
+		"unlocked_hr": unlocked_hr,
 		"history": history, "ending_flags": ending_flags, "finished": finished,
 	}
 
@@ -159,6 +179,7 @@ func from_save_dict(d: Dictionary) -> void:
 	successes_total = int(d.get("successes_total", 0))
 	submissions_this_week = int(d.get("submissions_this_week", 0))
 	days_without_success = int(d.get("days_without_success", 0))
+	unlocked_hr.assign(d.get("unlocked_hr", []))
 	history.assign(d.get("history", []))
 	ending_flags = d.get("ending_flags", {})
 	finished = bool(d.get("finished", false))

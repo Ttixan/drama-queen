@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="MailTemplate" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/mail_letter.gd" id="1_v66qc"]
+[ext_resource type="Script" path="res://scripts/data/mail_template.gd" id="2_mdegc"]
+
+[sub_resource type="Resource" id="Resource_0sbjx"]
+script = ExtResource("1_v66qc")
+subject = "《【剧名】》试镜结果通知"
+body = "【玩家名】，你好：
+
+《【剧名】》本轮选角已结束，很遗憾，你未通过此次试镜。
+
+本次不再安排复试，后续如有合适角色，我们会另行联系。
+
+感谢参与。"
+signature = "E公司｜演员统筹"
+
+[sub_resource type="Resource" id="Resource_l4rsa"]
+script = ExtResource("1_v66qc")
+subject = "《【剧名】》定角通知"
+body = "【玩家名】，你好：
+
+你已通过《【剧名】》的试镜，确定出演【角色名】。请于【截止时间】前回复，逾期未回复视为放弃。
+
+合同及进组安排将由工作人员与你对接。拍摄期间不接受轧戏，请提前处理好个人事务，全天候配合剧组通告。"
+signature = "E公司｜演员统筹"
+
+[resource]
+script = ExtResource("2_mdegc")
+company_code = "E"
+success = SubResource("Resource_l4rsa")
+fail = SubResource("Resource_0sbjx")

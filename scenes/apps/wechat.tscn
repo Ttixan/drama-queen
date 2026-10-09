@@ -1,0 +1,282 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/apps/wechat_app.gd" id="1_wechat"]
+[ext_resource type="Theme" path="res://assets/ui/ui_theme.tres" id="2_theme"]
+
+[node name="WeChatApp" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_wechat")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0862745, 0.0862745, 0.101961, 1)
+
+[node name="Page" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="PanelContainer" parent="Page"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+
+[node name="TopMargin" type="MarginContainer" parent="Page/TopBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 12
+
+[node name="TopRow" type="HBoxContainer" parent="Page/TopBar/TopMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BrandRow" type="HBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BrandChip" type="Panel" parent="Page/TopBar/TopMargin/TopRow/BrandRow"]
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="BrandText" type="Label" parent="Page/TopBar/TopMargin/TopRow/BrandRow"]
+layout_mode = 2
+text = "微信"
+vertical_alignment = 1
+
+[node name="TopCenter" type="VBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopCenter"]
+layout_mode = 2
+text = "私聊 HR"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopCenter"]
+layout_mode = 2
+text = "发一段表情包过去 —— 这就是投递"
+horizontal_alignment = 1
+
+[node name="TopRight" type="VBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+custom_minimum_size = Vector2(560, 0)
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="StatusLabel" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopRight"]
+layout_mode = 2
+text = "第 1 天"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="ChannelLabel" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopRight"]
+layout_mode = 2
+text = "本周还可投递 4 次"
+horizontal_alignment = 2
+
+[node name="BodyWrap" type="MarginContainer" parent="Page"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Body" type="HBoxContainer" parent="Page/BodyWrap"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="ContactsPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
+custom_minimum_size = Vector2(460, 0)
+layout_mode = 2
+
+[node name="ContactsMargin" type="MarginContainer" parent="Page/BodyWrap/Body/ContactsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="ContactsBox" type="VBoxContainer" parent="Page/BodyWrap/Body/ContactsPanel/ContactsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="ContactsCaption" type="Label" parent="Page/BodyWrap/Body/ContactsPanel/ContactsMargin/ContactsBox"]
+layout_mode = 2
+text = "联系人"
+
+[node name="ContactsScroll" type="ScrollContainer" parent="Page/BodyWrap/Body/ContactsPanel/ContactsMargin/ContactsBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ContactList" type="VBoxContainer" parent="Page/BodyWrap/Body/ContactsPanel/ContactsMargin/ContactsBox/ContactsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="ContactsHint" type="Label" parent="Page/BodyWrap/Body/ContactsPanel/ContactsMargin/ContactsBox"]
+layout_mode = 2
+text = "灰色的联系人还没解锁"
+autowrap_mode = 3
+
+[node name="ChatPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ChatMargin" type="MarginContainer" parent="Page/BodyWrap/Body/ChatPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 18
+
+[node name="ChatBox" type="VBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="ChatHeader" type="PanelContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox"]
+layout_mode = 2
+
+[node name="HeaderMargin" type="MarginContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHeader"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 12
+
+[node name="HeaderBox" type="HBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHeader/HeaderMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="PeerBox" type="VBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHeader/HeaderMargin/HeaderBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="PeerName" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHeader/HeaderMargin/HeaderBox/PeerBox"]
+layout_mode = 2
+text = "还没选联系人"
+vertical_alignment = 1
+
+[node name="PeerMeta" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHeader/HeaderMargin/HeaderBox/PeerBox"]
+layout_mode = 2
+text = "左边挑一个 HR 开始私聊"
+
+[node name="HeaderSpacer" type="Control" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHeader/HeaderMargin/HeaderBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RequirementLabel" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHeader/HeaderMargin/HeaderBox"]
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+size_flags_vertical = 4
+text = "—"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="ChatScroll" type="ScrollContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ChatLog" type="VBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Composer" type="PanelContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox"]
+layout_mode = 2
+
+[node name="ComposerMargin" type="MarginContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="ComposerBox" type="VBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="RoleRow" type="HBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="RoleCaption" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/RoleRow"]
+layout_mode = 2
+text = "投哪个角色"
+vertical_alignment = 1
+
+[node name="RoleButtons" type="HBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/RoleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="AttachRow" type="HBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="AttachCard" type="PanelContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/AttachRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="AttachMargin" type="MarginContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/AttachRow/AttachCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 10
+
+[node name="AttachBox" type="VBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/AttachRow/AttachCard/AttachMargin"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="AttachTitle" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/AttachRow/AttachCard/AttachMargin/AttachBox"]
+layout_mode = 2
+text = "还没有表情包"
+autowrap_mode = 3
+
+[node name="AttachDetail" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/AttachRow/AttachCard/AttachMargin/AttachBox"]
+layout_mode = 2
+text = "点右边「去录像机」拼一段 3 帧的"
+autowrap_mode = 3
+
+[node name="OpenRecorderButton" type="Button" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/AttachRow"]
+custom_minimum_size = Vector2(220, 68)
+layout_mode = 2
+text = "去录像机"
+
+[node name="SendRow" type="HBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="StatusLine" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/SendRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "先选一个联系人"
+autowrap_mode = 3
+vertical_alignment = 1
+
+[node name="SendButton" type="Button" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/SendRow"]
+custom_minimum_size = Vector2(320, 68)
+layout_mode = 2
+text = "发送表情包 = 投递"

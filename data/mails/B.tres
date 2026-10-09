@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="MailTemplate" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/mail_letter.gd" id="1_6e743"]
+[ext_resource type="Script" path="res://scripts/data/mail_template.gd" id="2_rxn2t"]
+
+[sub_resource type="Resource" id="Resource_yv1k8"]
+script = ExtResource("1_6e743")
+subject = "试镜结果"
+body = "【玩家名】，这次没通过。
+
+我们选演员也看态度，光会演还不够。具体原因就不一一解释了，先把自己的问题找一找。"
+signature = "B公司｜选角负责人"
+
+[sub_resource type="Resource" id="Resource_b5j4n"]
+script = ExtResource("1_6e743")
+subject = "试镜通过，确定能来再回复！"
+body = "【玩家名】，跟导演争取了一下，【角色名】这个角色可以让你试试。
+
+【日期】进组。新人有机会就好好把握，现场多听、多学，勤快一点。
+
+确定能来再回复，别答应了又不来！！！"
+signature = "B公司｜选角负责人"
+
+[resource]
+script = ExtResource("2_rxn2t")
+company_code = "B"
+success = SubResource("Resource_b5j4n")
+fail = SubResource("Resource_yv1k8")

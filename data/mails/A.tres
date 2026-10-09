@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="MailTemplate" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/mail_letter.gd" id="1_l2wgg"]
+[ext_resource type="Script" path="res://scripts/data/mail_template.gd" id="2_gvnhg"]
+
+[sub_resource type="Resource" id="Resource_aa51a"]
+script = ExtResource("1_l2wgg")
+subject = "《【剧名】》试镜结果"
+body = "同学你好，这次没选上，角色已经定了其他人。
+
+资料我们留着，下部戏有合适的角色再联系你。"
+signature = "A公司｜选角组"
+
+[sub_resource type="Resource" id="Resource_cgw8s"]
+script = ExtResource("1_l2wgg")
+subject = "《【剧名】》试镜通过"
+body = "同学你好，【角色名】这个角色定你了。
+
+【日期】进组，剧本稍后发你，提前背好台词。现场可能会改词，到时候听导演安排。
+
+能来请尽快回复，我们好排通告。"
+signature = "A公司｜选角组"
+
+[resource]
+script = ExtResource("2_gvnhg")
+company_code = "A"
+success = SubResource("Resource_cgw8s")
+fail = SubResource("Resource_aa51a")

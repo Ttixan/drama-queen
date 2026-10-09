@@ -31,6 +31,8 @@ signal clip_recorded(clip_summary: String, labels: Array)
 ## 玩家在录像机点「确认」，产出一段完整的 3 帧表情包。
 ## 这是录像机与投递之间的**唯一接口** —— 录像机不认识任何公司，也不知道怎么投递。
 signal recorder_finished(clip: Clip)
+## 微信里新解锁了一个 HR（先在 Boss直聘 逛过该公司）
+signal hr_unlocked(company_code: String)
 
 # ---- 播出反馈 ----
 ## 本周末的《有瓜有戏》

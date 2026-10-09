@@ -83,9 +83,24 @@ func add_reputation(delta: int) -> void:
 
 
 # ============================================================
+# HR 解锁（决策 12：先在 Boss直聘 逛过该公司，微信里才解锁它的 HR）
+# ============================================================
+## 返回 true 表示这次是新解锁的
+func unlock_hr(code: String) -> bool:
+	if not state.unlock_hr(code):
+		return false
+	EventBus.hr_unlocked.emit(code)
+	return true
+
+
+func is_hr_unlocked(code: String) -> bool:
+	return state.is_hr_unlocked(code)
+
+
+# ============================================================
 # 投递
 # ============================================================
-## 一次投递的完整流程：校验 → 扣行动点 → 判定 → 记履历 → 发信号
+## 一次投递的完整流程：校验 → 扣行动点 → 判定 → 记履历 → 配回信 → 发信号
 ##
 ## 【重要】这里**只出通过/失败，不发钱、不发演技** ——
 ## 钱、演技、知名度、风评全部留到本周末结算（见决策记录 1.5）。
@@ -98,6 +113,12 @@ func submit_audition(clip: Clip, company: CompanyData, role: RoleRequirement) ->
 	if not clip.is_complete():
 		return {"passed": false, "rejected": true,
 				"fail_reasons": ["表情包没拼完（眼/嘴/眉必须齐全）"]}
+	# 投递只能走微信私聊，所以 HR 没解锁就没这条渠道。
+	# 【为什么在核心层也拦一道】决策 12 是玩法规则，不是界面规则 ——
+	# 只写在界面里的话，界面漏判一次就等于规则失效。
+	if not state.is_hr_unlocked(company.code):
+		return {"passed": false, "rejected": true,
+				"fail_reasons": ["还没加上 %s 的 HR（先去 Boss直聘 逛一圈）" % company.code]}
 	if state.submissions_this_week >= GameState.MAX_SUBMIT_PER_WEEK:
 		return {"passed": false, "rejected": true,
 				"fail_reasons": ["本周投递次数已用完（上限 %d）" % GameState.MAX_SUBMIT_PER_WEEK]}
@@ -109,11 +130,26 @@ func submit_audition(clip: Clip, company: CompanyData, role: RoleRequirement) ->
 	result["company_code"] = company.code
 	result["role_tier"] = role.tier
 
+	# 定角抽签：**只抽一次**，写进履历和回信。之后任何地方再显示都读同一份，
+	# 否则读档回来会发现同一部戏改了名。
+	var seed_value := state.day * 1000 + state.submissions_total
+	var casting := MailComposer.roll_casting(
+			MailLibrary.casting_pool(), seed_value, role.tier)
+	result["casting"] = casting
+	result["mail"] = MailComposer.compose_reply(
+			MailLibrary.for_company(company.code), company, role, casting,
+			state.day, result["passed"])
+
 	state.record_submission(result["passed"], {
 		"company_code": company.code,
 		"role_tier": role.tier,
 		"match_rate": result["match_rate"],
 		"labels": clip.all_labels(),
+		"play_title": casting.get("剧名", ""),
+		"role_name": casting.get("角色名", ""),
+		# 回信原文也存进去 —— 微信的聊天记录要能完整还原，
+		# 否则读档回来只剩一条「投递过」的摘要，玩家没法回看邮件
+		"mail": result["mail"],
 	})
 
 	# 表情包一次性消耗 —— 记进履历供电子报的「标题调用条件」判定过往经历

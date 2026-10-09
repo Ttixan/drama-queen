@@ -10,30 +10,27 @@ extends Control
 ## 运行：godot --path <项目> res://scenes/minigame/recorder.tscn
 
 # ============================================================
-# 配色 —— 与占位图同源（tools/gen_placeholder_art.gd），开发期一眼能对上向量
+# 配色 —— 全部来自 UiPalette，与微信 / 占位图共用同一套
 # ============================================================
 
-const EMOTION_COLORS := {
-	Emotion.Kind.JOY: Color("ffd447"),
-	Emotion.Kind.ANGER: Color("e5484d"),
-	Emotion.Kind.SORROW: Color("4a7fe5"),
-	Emotion.Kind.SHOCK: Color("a855f7"),
-	Emotion.Kind.CHARM: Color("ff7ab6"),
-	Emotion.Kind.AWKWARD: Color("8b8b8b"),
-}
+const EMOTION_COLORS := UiPalette.EMOTION_COLORS
 
-const C_BG := Color("16161a")
-const C_PANEL := Color("232329")
-const C_PANEL_SOFT := Color("2b2b33")
-const C_LINE := Color("3a3a45")
-const C_PAPER := Color("f5f1e8")
-const C_INK := Color("16161a")
-const C_TEXT := Color("f5f1e8")
-const C_TEXT_DIM := Color("a0a0aa")
-const C_ACCENT := Color("ffd447")
-const C_POSITIVE := Color("4caf6e")
-const C_DANGER := Color("e5484d")
-const NEUTRAL_COLOR := Color("a0a0aa")
+const C_BG := UiPalette.BG
+const C_PANEL := UiPalette.PANEL
+const C_PANEL_SOFT := UiPalette.PANEL_SOFT
+const C_LINE := UiPalette.LINE
+const C_PAPER := UiPalette.PAPER
+const C_INK := UiPalette.INK
+const C_TEXT := UiPalette.TEXT
+const C_TEXT_DIM := UiPalette.TEXT_DIM
+const C_ACCENT := UiPalette.ACCENT
+const C_POSITIVE := UiPalette.POSITIVE
+const C_DANGER := UiPalette.DANGER
+const NEUTRAL_COLOR := UiPalette.TEXT_DIM
+
+## 被当成「子页面」用时（微信里点「去录像机」、以后的手机壳）才需要返回。
+## 独立运行时它是主场景，没有"上一步"可返回，所以按钮默认隐藏。
+signal cancelled
 
 ## 卡高受「4 行必须放得下」约束：嘴有 10 件 = 4 行，EditPanel 里留给网格的高度约 670。
 ## 4 × 154 + 3 × 6 = 634，留出余量，免得无谓地弹出滚动条。
@@ -78,6 +75,7 @@ const P_TOP := "Page/TopBar/TopMargin/TopRow"
 @onready var _status_label: Label = get_node(P_BOTTOM + "/StatusBox/StatusLabel")
 @onready var _status_hint: Label = get_node(P_BOTTOM + "/StatusBox/StatusHint")
 @onready var _clear_button: Button = get_node(P_BOTTOM + "/ActionsRow/ClearButton")
+@onready var _back_button: Button = get_node(P_BOTTOM + "/ActionsRow/BackButton")
 @onready var _confirm_button: Button = get_node(P_BOTTOM + "/ActionsRow/ConfirmButton")
 
 # ============================================================
@@ -143,6 +141,12 @@ func _collect_nodes() -> void:
 
 	_clear_button.pressed.connect(_on_clear_pressed)
 	_confirm_button.pressed.connect(_on_confirm_pressed)
+	_back_button.pressed.connect(func() -> void: cancelled.emit())
+
+
+## 让调用方把录像机嵌进来时打开「返回」（见 wechat_app.gd 的「去录像机」）
+func enable_back() -> void:
+	_back_button.visible = true
 
 
 # ============================================================
@@ -557,8 +561,8 @@ func _apply_styles() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = Vector2(150, 74)
 		b.add_theme_font_size_override("font_size", 16)
-		b.add_theme_stylebox_override("normal", _button_sb(Color("e3ddd0"), Color("cfc8b8"), 2, 12, 0, 12))
-		b.add_theme_stylebox_override("hover", _button_sb(Color("efeadf"), C_ACCENT, 2, 12, 0, 12))
+		b.add_theme_stylebox_override("normal", _button_sb(UiPalette.PAPER_SOFT, UiPalette.PAPER_LINE, 2, 12, 0, 12))
+		b.add_theme_stylebox_override("hover", _button_sb(UiPalette.PAPER_HOVER, C_ACCENT, 2, 12, 0, 12))
 		b.add_theme_stylebox_override("pressed", _button_sb(C_INK, C_ACCENT, 3, 12, 4, 8))
 		b.add_theme_stylebox_override("focus", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 12))
 		b.add_theme_color_override("font_color", C_INK)
@@ -566,28 +570,22 @@ func _apply_styles() -> void:
 		b.add_theme_color_override("font_pressed_color", C_ACCENT)
 
 	# 底部按钮（纸面带上，用深色按钮压住）
-	_style_button(_clear_button, Color("e3ddd0"), C_INK, C_LINE, 20)
+	_style_button(_clear_button, UiPalette.PAPER_SOFT, C_INK, C_LINE, 20)
 	_style_button(_confirm_button, C_INK, C_ACCENT, C_ACCENT, 24)
 	_confirm_button.add_theme_stylebox_override("disabled",
-			_button_sb(Color("ddd6c8"), Color(0, 0, 0, 0), 0, 14, 0, 14))
-	_confirm_button.add_theme_color_override("font_disabled_color", Color("9a948a"))
+			_button_sb(UiPalette.PAPER_DISABLED, Color(0, 0, 0, 0), 0, 14, 0, 14))
+	_confirm_button.add_theme_color_override("font_disabled_color", UiPalette.TEXT_DISABLED)
 
 	# 底部文字
 	_txt(get_node(P_BOTTOM + "/SlotsBox/SlotsCaption"), 15, C_TEXT_DIM)
 	_txt(_status_label, 20, C_ACCENT)
 	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_txt(_status_hint, 14, Color("8a8478"))
+	_txt(_status_hint, 14, UiPalette.TEXT_ON_PAPER_DIM)
 	_status_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 
 
 func _panel(node: Node, bg: Color, radius: int, border: int, border_color: Color = C_LINE) -> void:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.set_corner_radius_all(radius)
-	if border > 0:
-		sb.set_border_width_all(border)
-		sb.border_color = border_color
-	node.add_theme_stylebox_override("panel", sb)
+	node.add_theme_stylebox_override("panel", UiPalette.panel(bg, radius, border, border_color))
 
 
 func _style_button(b: Button, bg: Color, fg: Color, border: Color, font_size: int) -> void:
@@ -602,29 +600,13 @@ func _style_button(b: Button, bg: Color, fg: Color, border: Color, font_size: in
 
 
 func _rounded(bg: Color, radius := 5) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.set_corner_radius_all(radius)
-	return sb
+	return UiPalette.rounded(bg, radius)
 
 
 func _txt(node: Node, size: int, color: Color) -> void:
-	var l := node as Control
-	if l == null:
-		return
-	l.add_theme_font_size_override("font_size", size)
-	l.add_theme_color_override("font_color", color)
+	UiPalette.text(node, size, color)
 
 
 func _button_sb(bg: Color, border: Color, width: int, radius: int,
 		content_lift := 0, pad := 14) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.set_corner_radius_all(radius)
-	sb.set_border_width_all(width)
-	sb.border_color = border
-	sb.content_margin_left = pad
-	sb.content_margin_right = pad
-	sb.content_margin_top = max(pad - content_lift, 2)
-	sb.content_margin_bottom = pad + content_lift
-	return sb
+	return UiPalette.button(bg, border, width, radius, content_lift, pad)
