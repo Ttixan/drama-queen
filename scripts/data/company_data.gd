@@ -6,9 +6,10 @@ extends Resource
 ##     A L0 无要求 / B L1 单情绪 / C L2 情绪纯度 / D L3 情绪曲线 / L4 帧间反转
 ## 每一档教玩家一个表演概念。
 ##
-## 【线索】隐藏公式下，玩家靠**经纪人邮件**学习偏好。
-## hint 字段就是那条线索的文案（"C公司最近在找纯真路线的新人"），
+## 【线索】隐藏公式下，玩家靠**招聘页上的口味线索**学习偏好。
+## hint 字段就是那条线索的文案（"C 公司嘴上说「纯真」。重点在纯 —— 掺一点别的情绪就不算数了。"），
 ## 条件越复杂，hint 必须越密 —— 这是机制的必需品，不是可选叙事。
+## 【Day 2 修订】原设计是「经纪人邮件每周漏一条」，**经纪人角色已砍**（见开发计划 1.10）。
 
 enum Tier { A_LOW, B_SMALL, C_COMMERCIAL, D_ARTHOUSE, E_MAJOR }
 
@@ -58,7 +59,8 @@ enum Tier { A_LOW, B_SMALL, C_COMMERCIAL, D_ARTHOUSE, E_MAJOR }
 @export_multiline var posting_note: String = ""
 
 @export_group("叙事")
-## 经纪人线索文案，每周漏一条给玩家
+## 公司偏好线索 —— 展示在**这家公司自己的招聘页**上（Boss直聘）。
+## 【它是方向不是答案】「重点在纯」≠「纯度 ≥ 0.55」，玩家仍要把它翻译成一段表演。
 @export_multiline var hint: String = ""
 ## HR 姓名/职位，用于微信联系人
 @export var hr_name: String = ""

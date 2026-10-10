@@ -230,7 +230,7 @@ theme_override_constants/separation = 4
 
 [node name="HintCaption" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/HintPanel/HintMargin/HintBox"]
 layout_mode = 2
-text = "这家的口味（经纪人打听来的）"
+text = "这家的口味"
 
 [node name="HintText" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/HintPanel/HintMargin/HintBox"]
 layout_mode = 2

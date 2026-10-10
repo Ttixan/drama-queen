@@ -386,9 +386,10 @@ func _rebuild_chat() -> void:
 		_add_note("你还没在 Boss直聘 上看过 %s 的招聘页，微信里加不上这位 HR" % _current.code)
 		return
 
-	# 线索：隐藏公式下的学习通道。完整的「经纪人每周漏一条」邮件留下一步做，
-	# 但这里必须先给到，否则玩家在完全不知情的情况下投递，纯靠碰运气。
-	_add_note("经纪人说：" + _current.hint)
+	# 口味线索：隐藏公式下的学习通道。**正本在 Boss直聘 的招聘页上**
+	# （进过那页才解锁了这家 HR，所以这里不会提前泄底）；
+	# 这里复述一条是**便利**，不是新增信息 —— 拼表情包时不用来回切 App。
+	_add_note("这家的偏好：" + _current.hint)
 
 	var found := 0
 	for entry: Dictionary in Game.state.history:
