@@ -1,0 +1,258 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/apps/boss_app.gd" id="1_boss"]
+[ext_resource type="Theme" path="res://assets/ui/ui_theme.tres" id="2_theme"]
+
+[node name="BossApp" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_boss")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0862745, 0.0862745, 0.101961, 1)
+
+[node name="Page" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="PanelContainer" parent="Page"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+
+[node name="TopMargin" type="MarginContainer" parent="Page/TopBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 12
+
+[node name="TopRow" type="HBoxContainer" parent="Page/TopBar/TopMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BrandRow" type="HBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+custom_minimum_size = Vector2(340, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BrandChip" type="Panel" parent="Page/TopBar/TopMargin/TopRow/BrandRow"]
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="BrandText" type="Label" parent="Page/TopBar/TopMargin/TopRow/BrandRow"]
+layout_mode = 2
+text = "Boss直聘"
+vertical_alignment = 1
+
+[node name="TopCenter" type="VBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopCenter"]
+layout_mode = 2
+text = "看看谁在招人"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopCenter"]
+layout_mode = 2
+text = "进过招聘页，微信里才会加上这家公司的 HR"
+horizontal_alignment = 1
+
+[node name="TopRight" type="VBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="StatusLabel" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopRight"]
+layout_mode = 2
+text = "已联系 0 / 5 家"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="ChannelLabel" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopRight"]
+layout_mode = 2
+text = "这里只能看，投递去微信私聊 HR"
+horizontal_alignment = 2
+
+[node name="BodyWrap" type="MarginContainer" parent="Page"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Body" type="HBoxContainer" parent="Page/BodyWrap"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="ListPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+
+[node name="ListMargin" type="MarginContainer" parent="Page/BodyWrap/Body/ListPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="ListBox" type="VBoxContainer" parent="Page/BodyWrap/Body/ListPanel/ListMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="ListCaption" type="Label" parent="Page/BodyWrap/Body/ListPanel/ListMargin/ListBox"]
+layout_mode = 2
+text = "公司"
+
+[node name="ListScroll" type="ScrollContainer" parent="Page/BodyWrap/Body/ListPanel/ListMargin/ListBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="CompanyList" type="VBoxContainer" parent="Page/BodyWrap/Body/ListPanel/ListMargin/ListBox/ListScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="ListHint" type="Label" parent="Page/BodyWrap/Body/ListPanel/ListMargin/ListBox"]
+layout_mode = 2
+text = "点开一家，HR 会出现在微信的联系人里"
+autowrap_mode = 3
+
+[node name="PostPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PostMargin" type="MarginContainer" parent="Page/BodyWrap/Body/PostPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 18
+
+[node name="PostBox" type="VBoxContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="PostScroll" type="ScrollContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="PostContent" type="VBoxContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="CompanyName" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
+layout_mode = 2
+text = "还没选公司"
+vertical_alignment = 1
+
+[node name="CompanyTagline" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
+layout_mode = 2
+text = "左边点一家公司看它的招聘页"
+autowrap_mode = 3
+
+[node name="LockState" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
+layout_mode = 2
+text = "—"
+autowrap_mode = 3
+
+[node name="MetaRow" type="HBoxContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="JobPanel" type="PanelContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
+layout_mode = 2
+
+[node name="JobMargin" type="MarginContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/JobPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 16
+
+[node name="JobBox" type="VBoxContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/JobPanel/JobMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="JobTitle" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/JobPanel/JobMargin/JobBox"]
+layout_mode = 2
+text = "—"
+autowrap_mode = 3
+
+[node name="JobSalary" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/JobPanel/JobMargin/JobBox"]
+layout_mode = 2
+text = "—"
+
+[node name="JobExperience" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/JobPanel/JobMargin/JobBox"]
+layout_mode = 2
+text = "—"
+
+[node name="TagRow" type="HBoxContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/JobPanel/JobMargin/JobBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HintPanel" type="PanelContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
+layout_mode = 2
+
+[node name="HintMargin" type="MarginContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/HintPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 14
+
+[node name="HintBox" type="VBoxContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/HintPanel/HintMargin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HintCaption" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/HintPanel/HintMargin/HintBox"]
+layout_mode = 2
+text = "这家的口味（经纪人打听来的）"
+
+[node name="HintText" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/HintPanel/HintMargin/HintBox"]
+layout_mode = 2
+text = "—"
+autowrap_mode = 3
+
+[node name="DetailCaption" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
+layout_mode = 2
+text = "职位详情"
+
+[node name="DetailText" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
+layout_mode = 2
+text = "—"
+autowrap_mode = 3
+
+[node name="NoteLabel" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
+layout_mode = 2
+text = "—"
+autowrap_mode = 3
+
+[node name="BackButton" type="Button" parent="Page"]
+visible = false
+custom_minimum_size = Vector2(0, 76)
+layout_mode = 2
+text = "← 返回微信"

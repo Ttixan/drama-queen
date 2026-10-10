@@ -17,22 +17,12 @@ const P_HEADER := P_CHAT + "/ChatHeader/HeaderMargin/HeaderBox"
 const P_COMPOSER := P_CHAT + "/Composer/ComposerMargin/ComposerBox"
 
 const RECORDER_SCENE := "res://scenes/minigame/recorder.tscn"
+const BOSS_SCENE := "res://scenes/apps/boss.tscn"
 const BUBBLE_WIDTH := 720
 const CONTACT_AVATAR := 54
 
-## 【开发脚手架】Boss直聘 还没做，所以决策 12 的「逛过才解锁 HR」没有地方触发。
-## 打开它，进场景就把五家 HR 全解锁，让投递链路先能玩起来。
-## ⚠️ Boss直聘 上线后**必须删掉这一段**（连同这个常量），
-## 改由「浏览过该公司招聘页」去调 `Game.unlock_hr(code)`。
-const DEV_UNLOCK_ALL := true
-
-const TIER_COLORS := {
-	CompanyData.Tier.A_LOW: Color("8b8b8b"),
-	CompanyData.Tier.B_SMALL: Color("a855f7"),
-	CompanyData.Tier.C_COMMERCIAL: Color("4a7fe5"),
-	CompanyData.Tier.D_ARTHOUSE: Color("ff7ab6"),
-	CompanyData.Tier.E_MAJOR: Color("ffd447"),
-}
+## 公司档位配色统一在 UiPalette（Boss直聘 的联系人头像用同一套）
+const TIER_COLORS := UiPalette.COMPANY_TIER_COLORS
 
 @onready var _status_label: Label = get_node(P_TOP + "/TopRight/StatusLabel")
 @onready var _channel_label: Label = get_node(P_TOP + "/TopRight/ChannelLabel")
@@ -47,6 +37,7 @@ const TIER_COLORS := {
 @onready var _attach_card: PanelContainer = get_node(P_COMPOSER + "/AttachRow/AttachCard")
 @onready var _attach_title: Label = get_node(P_COMPOSER + "/AttachRow/AttachCard/AttachMargin/AttachBox/AttachTitle")
 @onready var _attach_detail: Label = get_node(P_COMPOSER + "/AttachRow/AttachCard/AttachMargin/AttachBox/AttachDetail")
+@onready var _go_boss_button: Button = get_node(P_CONTACTS + "/GoBossButton")
 @onready var _open_recorder_button: Button = get_node(P_COMPOSER + "/AttachRow/OpenRecorderButton")
 @onready var _status_line: Label = get_node(P_COMPOSER + "/SendRow/StatusLine")
 @onready var _send_button: Button = get_node(P_COMPOSER + "/SendRow/SendButton")
@@ -58,7 +49,7 @@ var _pending: Clip
 var _rows: Dictionary = {}            ## code -> Button
 var _row_labels: Dictionary = {}      ## code -> {name, state}
 var _role_buttons: Dictionary = {}    ## tier -> Button
-var _recorder: Node
+var _overlay: Node                    ## 当前嵌进来盖在整页上的子 App
 ## 程序化改按钮状态时会触发 toggled，用它挡住自己绕自己
 var _syncing := false
 
@@ -68,10 +59,11 @@ func _ready() -> void:
 
 	_apply_styles()
 	_build_contacts()
-	_dev_unlock()
 
 	EventBus.hr_unlocked.connect(_on_hr_unlocked)
 	EventBus.ap_changed.connect(_on_ap_changed)
+	EventBus.state_reset.connect(_on_state_reset)
+	_go_boss_button.pressed.connect(_on_open_boss)
 	_open_recorder_button.pressed.connect(_on_open_recorder)
 	_send_button.pressed.connect(_on_send)
 
@@ -79,17 +71,9 @@ func _ready() -> void:
 	if first != "":
 		_select_company(first)
 	else:
+		# 开局五家全锁是正常状态 —— 玩家还没逛过 Boss直聘
 		_refresh_all()
-
-
-# ============================================================
-# 开发脚手架
-# ============================================================
-func _dev_unlock() -> void:
-	if not DEV_UNLOCK_ALL:
-		return
-	for c: CompanyData in _companies:
-		Game.unlock_hr(c.code)
+		_rebuild_chat()
 
 
 # ============================================================
@@ -173,14 +157,15 @@ func _make_contact_row(co: CompanyData) -> Button:
 	return row
 
 
-## 默认选中第一家**已解锁**的公司；都没解锁就选第一家（让玩家看到"为什么不能聊"）
+## 默认选中第一家**已解锁**的公司。
+## 【都没解锁时不选任何一家】开局五家全锁是**正常状态**（还没逛过 Boss直聘），
+## 强行选中第一家只会让玩家看到一个"能点但发不出去"的界面；
+## 不选 + 右边一句「点下面去 Boss直聘」更直接。
 func _first_contact_code() -> String:
-	if _companies.is_empty():
-		return ""
 	for co: CompanyData in _companies:
 		if Game.is_hr_unlocked(co.code):
 			return co.code
-	return _companies[0].code
+	return ""
 
 
 func _on_contact_toggled(on: bool, code: String) -> void:
@@ -344,7 +329,7 @@ func _block_reason() -> String:
 	if _current == null:
 		return "先在左边挑一个联系人"
 	if not Game.is_hr_unlocked(_current.code):
-		return "还没加上 %s 的 HR —— 先去 Boss直聘 逛一圈" % _current.code
+		return "还没加上 %s 的 HR —— 点下面「去 Boss直聘」看它的招聘页" % _current.code
 	if _pending == null:
 		return "还没有表情包 —— 点「去录像机」拼一段 3 帧的"
 	if _role == null:
@@ -380,7 +365,10 @@ func _refresh_composer() -> void:
 		_status_line.text = reason
 		_status_line.add_theme_color_override("font_color", UiPalette.ACCENT)
 
-	_open_recorder_button.disabled = _recorder != null
+	# 有子页面盖上来时，两个入口都别再点（避免叠两层 App）
+	var covered := _overlay != null
+	_open_recorder_button.disabled = covered
+	_go_boss_button.disabled = covered
 
 
 # ============================================================
@@ -390,6 +378,7 @@ func _rebuild_chat() -> void:
 	for child in _chat_log.get_children():
 		child.queue_free()
 	if _current == null:
+		_add_note("还没有联系人 —— 点下面「去 Boss直聘」看一家公司的招聘页，就能加上它的 HR")
 		return
 
 	var unlocked := Game.is_hr_unlocked(_current.code)
@@ -515,45 +504,55 @@ func _on_send() -> void:
 
 
 # ============================================================
-# 录像机
+# 子页面（录像机 / Boss直聘）
 # ============================================================
-## 真机上这一步由手机壳的 App 切换完成。手机壳还没做，所以先在这里内嵌打开，
-## 既让 M1 的全链路能手动走通，也让「录像机 → 微信」的握手先跑起来。
-func _on_open_recorder() -> void:
-	if _recorder != null:
-		return
-	_recorder = load(RECORDER_SCENE).instantiate()
-	add_child(_recorder)
-	if _recorder.has_method("enable_back"):
-		_recorder.enable_back()
-	_recorder.connect("cancelled", _on_recorder_cancelled)
-	EventBus.recorder_finished.connect(_on_clip_ready)
+## 真机上这两个 App 由手机壳切换。手机壳还没做，所以先内嵌打开。
+##
+## 【这不是"又一个开发脚手架"】上个版本这里是一个 `DEV_UNLOCK_ALL` 开关，
+## 直接把「先逛 Boss直聘 才解锁 HR」短路掉了。现在换成真的能打开 Boss直聘 ——
+## 于是这条规则**真的会生效**：从零解锁一家公司、再投出去，全程没有作弊开关。
+func _open_overlay(scene_path: String) -> Node:
+	if _overlay != null:
+		return null
+	_overlay = load(scene_path).instantiate()
+	add_child(_overlay)
+	if _overlay.has_method("enable_back"):
+		_overlay.enable_back()
+	if _overlay.has_signal("cancelled"):
+		_overlay.connect("cancelled", _close_overlay)
 	_refresh_composer()
+	return _overlay
 
 
-func _detach_recorder_signals() -> void:
-	if _recorder != null and _recorder.is_connected("cancelled", _on_recorder_cancelled):
-		_recorder.disconnect("cancelled", _on_recorder_cancelled)
+func _close_overlay() -> void:
+	if _overlay != null:
+		if _overlay.is_connected("cancelled", _close_overlay):
+			_overlay.disconnect("cancelled", _close_overlay)
+		_overlay.queue_free()
+		_overlay = null
 	if EventBus.recorder_finished.is_connected(_on_clip_ready):
 		EventBus.recorder_finished.disconnect(_on_clip_ready)
-
-
-func _free_recorder() -> void:
-	_detach_recorder_signals()
-	if _recorder != null:
-		_recorder.queue_free()
-		_recorder = null
 	_refresh_composer()
 
 
-func _on_recorder_cancelled() -> void:
-	_free_recorder()
+func _on_open_recorder() -> void:
+	if _open_overlay(RECORDER_SCENE) == null:
+		return
+	# 只在这时候订阅：录像机点「确认」才会 emit，平时挂着没意义
+	EventBus.recorder_finished.connect(_on_clip_ready)
 
 
-## 录像机点「确认」→ 拿到待投递的表情包，关掉录像机
+func _on_open_boss() -> void:
+	var boss := _open_overlay(BOSS_SCENE)
+	if boss != null:
+		_add_note("去看看谁在招人 —— 加上的 HR 会直接出现在左边的联系人里")
+		_scroll_chat_to_bottom()
+
+
+## 录像机点「确认」→ 拿到待投递的表情包，关掉子页面
 func _on_clip_ready(clip: Clip) -> void:
 	_pending = clip
-	_free_recorder()
+	_close_overlay()
 	_add_note("录好了一段表情包，选好角色就能发给 %s" % _current.hr_name)
 	_scroll_chat_to_bottom()
 
@@ -561,14 +560,36 @@ func _on_clip_ready(clip: Clip) -> void:
 # ============================================================
 # 信号
 # ============================================================
-func _on_hr_unlocked(_code: String) -> void:
+func _on_hr_unlocked(code: String) -> void:
 	_refresh_contacts()
-	_refresh_header()
+	if _current == null:
+		# 从 Boss直聘 回来时本来没选中任何人 —— 直接把刚加上的这位打开
+		_select_company(code)
+	else:
+		_refresh_header()
+		_refresh_composer()
 
 
 func _on_ap_changed(_left: int) -> void:
 	_refresh_top()
 	_refresh_composer()
+
+
+## 状态被整个换掉（开新局 / 读档）：选中联系人、待投递表情包、子页面 —— 一样都不能留
+func _on_state_reset() -> void:
+	_close_overlay()
+	_current = null
+	_pending = null
+	_role = null
+	for child in _role_buttons_row.get_children():
+		child.queue_free()
+	_role_buttons.clear()
+	_syncing = true
+	for c: String in _rows:
+		(_rows[c] as Button).button_pressed = false
+	_syncing = false
+	_refresh_all()
+	_rebuild_chat()
 
 
 # ============================================================
@@ -611,6 +632,7 @@ func _apply_styles() -> void:
 	UiPalette.text(_attach_detail, 15, UiPalette.TEXT_DIM)
 	UiPalette.text(_status_line, 16, UiPalette.ACCENT)
 
+	_style_action(_go_boss_button, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.ACCENT, 18)
 	_style_action(_open_recorder_button, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.LINE, 20)
 	_style_action(_send_button, UiPalette.ACCENT, UiPalette.INK, UiPalette.ACCENT, 24)
 	_send_button.add_theme_stylebox_override("disabled",

@@ -44,6 +44,17 @@ acting_threshold = 15
 conditions = Array[ExtResource("1_ou5t8")]([SubResource("Resource_2n8ow"), SubResource("Resource_f6nd1")])
 roles = Array[ExtResource("2_0lt77")]([SubResource("Resource_711sn"), SubResource("Resource_p6y5r"), SubResource("Resource_3bt7y")])
 extra_payout = 96
+tagline = "高门槛文艺公司"
+industry = "广播／影视"
+funding = "未融资"
+scale = "20—99 人"
+position_title = "编导／文学策划"
+salary = "6—8K"
+experience = "3—5 年｜硕士"
+tags = Array[String](["作者电影", "现实题材", "文学改编", "独立创作"])
+posting_text = "关于我们
+我们相信影像仍然能够呈现人的处境，也愿意为一个人物的沉默留出时间。
+团队专注于具有文学性和作者表达的中短篇影像。寻找有审美判断、有人文关怀，愿意认真完成作品的创作者。"
 hint = "D 公司要「幻灭」。第一帧还亮着，最后一帧得暗下去 —— 一路滑下来，不是中间掉头。"
 hr_name = "徐女士"
 hr_title = "制片人"

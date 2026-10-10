@@ -18,6 +18,8 @@ func new_game(init_money: int = 0, init_acting: int = 0) -> void:
 	state.money = init_money
 	state.acting = init_acting
 	EventBus.ap_changed.emit(state.ap_left_today)
+	# 放在最后：界面收到它时，新状态已经就位，可以放心照着重画
+	EventBus.state_reset.emit()
 
 
 # ============================================================
@@ -196,4 +198,6 @@ func load_from(path: String = "user://save.json") -> bool:
 		return false
 	state.from_save_dict(parsed)
 	EventBus.ap_changed.emit(state.ap_left_today)
+	# 读档对界面来说和开新局一样：状态整个换了，必须照着重画
+	EventBus.state_reset.emit()
 	return true

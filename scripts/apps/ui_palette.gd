@@ -39,6 +39,16 @@ const DANGER := Color("e5484d")
 const WECHAT := Color("4caf6e")   ## 微信的品牌色，用一个偏冷的绿把它和「成功」区分开
 const CHAT_SELF := Color("3d4a2a") ## 自己发的消息气泡底色
 
+## 公司档位配色 —— Boss直聘 与微信的联系人头像共用。
+## 从灰到黄是一条「越往上越亮」的梯度：玩家不用看字就知道哪家更高级。
+const COMPANY_TIER_COLORS := {
+	CompanyData.Tier.A_LOW: Color("8b8b8b"),
+	CompanyData.Tier.B_SMALL: Color("a855f7"),
+	CompanyData.Tier.C_COMMERCIAL: Color("4a7fe5"),
+	CompanyData.Tier.D_ARTHOUSE: Color("ff7ab6"),
+	CompanyData.Tier.E_MAJOR: Color("ffd447"),
+}
+
 ## 与 tools/gen_placeholder_art.gd 的 EMO_COLORS 一一对应
 const EMOTION_COLORS := {
 	Emotion.Kind.JOY: Color("ffd447"),

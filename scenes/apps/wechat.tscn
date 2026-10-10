@@ -139,6 +139,11 @@ layout_mode = 2
 text = "灰色的联系人还没解锁"
 autowrap_mode = 3
 
+[node name="GoBossButton" type="Button" parent="Page/BodyWrap/Body/ContactsPanel/ContactsMargin/ContactsBox"]
+custom_minimum_size = Vector2(0, 68)
+layout_mode = 2
+text = "去 Boss直聘 加联系人"
+
 [node name="ChatPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
 layout_mode = 2
 size_flags_horizontal = 3

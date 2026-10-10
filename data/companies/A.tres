@@ -37,6 +37,27 @@ display_name = "A 公司"
 conditions = Array[ExtResource("1_eagp2")]([SubResource("Resource_m8ys4")])
 roles = Array[ExtResource("2_3n4am")]([SubResource("Resource_3tmev"), SubResource("Resource_04nrh"), SubResource("Resource_cqnkl")])
 extra_payout = 40
+tagline = "流水线烂片小厂"
+industry = "广播／影视"
+funding = "未融资"
+scale = "0—20 人"
+position_title = "短剧编剧／网文改编（可接受新人）"
+salary = "4—6K"
+experience = "经验不限｜学历不限"
+tags = Array[String](["短剧", "小说改编", "日更", "提供模板"])
+posting_text = "公司长期招聘短剧编剧，有没有经验都可以，会写网文的优先。题材稳定，项目多，不用自己找选题。
+工作内容：
+1. 根据公司提供的大纲和人物模板完成分集剧本，每集 1—2 分钟。
+2. 题材主要为赘婿、神医、战神、重生、真假千金、豪门认亲。以上题材可自由组合。
+3. 每日交稿 10 集，要求开头有冲突，中间有打脸，结尾有悬念。人物关系不要太复杂，观众不用做笔记。
+4. 根据审核意见修改，及时调整身份、职业、性别及亲子鉴定结果。
+任职要求：
+熟悉短剧套路，能接受重复性创作。有执行力，不纠结，不拖稿。
+公司有成熟案例，按要求写就行，不需要重新发明一套。
+现实题材、复杂人性、开放式结局剧本暂不考虑。
+薪资：底薪＋过稿提成，多写多得。
+上班时间：9:00 上班，21—23 点下班，不需要倒班。"
+posting_note = "模板里的人名请替换干净，上个月有三部剧认了同一个爹。"
 hint = "A 厂什么都收。别全程一张臭脸就行 —— 他们自己也知道片子烂，不挑。"
 hr_name = "王先生"
 hr_title = "招聘负责人"

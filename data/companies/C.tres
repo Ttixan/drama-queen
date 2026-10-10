@@ -44,6 +44,17 @@ acting_threshold = 8
 conditions = Array[ExtResource("1_3nuwj")]([SubResource("Resource_jud2a"), SubResource("Resource_w6wuu")])
 roles = Array[ExtResource("2_gtl06")]([SubResource("Resource_d55ta"), SubResource("Resource_k0jyu"), SubResource("Resource_fmbot")])
 extra_payout = 80
-hint = "C 公司嘴上说「纯真」。重点在**纯** —— 掺一点别的情绪就不算数了。"
+tagline = "正规公司，简短招聘"
+industry = "广播／影视"
+funding = "不需要融资"
+scale = "100—499 人"
+position_title = "视频剪辑师（双休／五险一金）"
+salary = "6—9K·13 薪"
+experience = "1—3 年｜大专"
+tags = Array[String](["视频剪辑", "PR", "AE", "商业短片"])
+posting_text = "岗位职责
+1. 负责商业短片及短剧的剪辑、调色、字幕与音效制作。
+2. 配合编导完成成片修改，整理归档项目素材。"
+hint = "C 公司嘴上说「纯真」。重点在纯 —— 掺一点别的情绪就不算数了。"
 hr_name = "陈女士"
 hr_title = "人事"

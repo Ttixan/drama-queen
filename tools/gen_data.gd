@@ -6,7 +6,13 @@ extends SceneTree
 ##   godot --headless --path <项目> --import        # 再让 Godot 认识新 .tres
 ##
 ## 【为什么用脚本生成而不是手搓 .tres】37 个资源、每个十几个字段，手搓必然漂移。
-## 这里生成的 .tres 是**产物**，定义源是 tools/part_catalog.gd 和本文件。
+## 这里生成的 .tres 是**产物**，定义源是：
+##   - 部件  → `tools/part_catalog.gd`（纯代码定义）
+##   - 公司  → **本文件**（数值 / 条件 / 门槛）+ `data/companies/{代号}_*.md`（招聘页文案）
+##
+## 【公司文案为什么也要走生成】`data/companies/*.md` 是 docx 的可读副本，也是内容源，
+## 但 **md 进不了 Godot 的导出包** —— 打包后读不到，招聘页会整页空。
+## 所以真值一律落进 `.tres`：md 只当可读副本，改完文案重跑本脚本。
 ##
 ## 【公司条件直接取自 tools/test_resolver.gd 里验证过的那套】
 ## 不是数值表 sheet 4 的早期草案 —— 那份有两个坑（A 公司零条件、E-3 与 E-1 重复），
@@ -85,13 +91,163 @@ func _gen_companies() -> int:
 		co.extra_payout = spec["extra_payout"]
 		co.conditions = spec["conditions"]
 		co.roles = _roles()
-		co.hint = spec["hint"]
+		# 线索文案里写了 `**纯**` 这种强调。Label 不认 markdown，星号会原样显示出来，
+		# 于是玩家看到的是「重点在**纯**」—— 去掉星号，字还是那几个字。
+		co.hint = String(spec["hint"]).replace("**", "")
 		co.hr_name = spec["hr_name"]
 		co.hr_title = spec["hr_title"]
+
+		# 招聘页那批字段来自 data/companies/{代号}_*.md（docx 的可读副本）
+		var posting := _load_posting(spec["code"])
+		co.tagline = posting.get("tagline", "")
+		co.industry = posting.get("industry", "")
+		co.funding = posting.get("funding", "")
+		co.scale = posting.get("scale", "")
+		co.position_title = posting.get("position_title", "")
+		co.salary = posting.get("salary", "")
+		co.experience = posting.get("experience", "")
+		co.tags.assign(posting.get("tags", []))
+		co.posting_text = posting.get("posting_text", "")
+		co.posting_note = posting.get("posting_note", "")
 
 		if _save(co, "%s/%s.tres" % [COMPANY_DIR, spec["code"]]):
 			n += 1
 	return n
+
+
+# ============================================================
+# 招聘页文案（data/companies/{代号}_*.md）
+# ============================================================
+## 从 md 里抠出招聘页字段。
+##
+## 【为什么必须按小节切，不能逐行 grep】职位详情正文里也有 `**薪资**：`、
+## `**上班时间**：` 这类行。逐行 grep 会把正文里的字当成招聘页头部字段，
+## 于是「薪资」一栏变成「底薪＋过稿提成」—— 看着还挺像对的，最麻烦的那种错。
+## 所以状态机只认「## 公司信息 / ## 招聘页 / ### 职位详情」三个小节。
+func _load_posting(code: String) -> Dictionary:
+	var out := {}
+	var path := _find_company_md(code)
+	if path.is_empty():
+		push_warning("找不到 %s 公司的招聘文案 md，招聘页会空着" % code)
+		return out
+
+	var info := {}
+	var head := {}
+	var detail: Array[String] = []
+	var note := ""
+	var state := ""
+
+	for raw: String in FileAccess.get_file_as_string(path).split("\n"):
+		var t := raw.strip_edges()
+		if t.begins_with("### "):
+			# 「## 招聘页」底下的**任何** ### 都是详情正文的小标题。
+			# 【别写死成 `### 职位详情`】五家公司的分节各不相同：
+			# A 用「职位详情」，C 拆成「岗位职责 / 任职要求 / 福利待遇」，
+			# D 还多一个「关于我们」。只认一个标题名会把 C、D 的正文整段丢掉 ——
+			# 而且不会报错，只是招聘页上正文凭空消失。
+			if state == "posting":
+				state = "detail"
+				var heading := t.substr(4).strip_edges()
+				# 「职位详情」是**容器标题**，不是正文的小标题 —— 页面自己已经有一行
+				# 「职位详情」了，再收进正文就变成同一句话连出现两次。
+				# 但「岗位职责 / 任职要求 / 关于我们」这些是真·分节标题，必须留着。
+				if heading != "职位详情":
+					detail.append(heading)
+			else:
+				state = ""
+			continue
+		if t.begins_with("## "):
+			var name := t.substr(3).strip_edges()
+			if name == "公司信息":
+				state = "info"
+			elif name == "招聘页":
+				state = "posting"
+			else:
+				state = ""
+			continue
+		if t.begins_with("# "):
+			var parts := t.substr(2).split("｜")
+			if parts.size() >= 2:
+				out["tagline"] = parts[1].strip_edges()
+			continue
+		if t.is_empty():
+			continue
+
+		match state:
+			"info":
+				var row := _table_row(t)
+				if row.size() >= 2:
+					info[row[0]] = row[1]
+			"posting":
+				var kv := _bold_kv(t)
+				if kv.size() >= 2:
+					head[kv[0]] = kv[1]
+			"detail":
+				if t.begins_with(">"):
+					note = t.substr(1).strip_edges().trim_prefix("注：").strip_edges()
+				else:
+					# 正文里还有 `**薪资**：` 这类小标题。Label 不认 markdown，
+					# 留着星号会原样显示成「**薪资**」—— 去掉星号，字还是那几个字。
+					detail.append(t.replace("**", ""))
+
+	out["industry"] = info.get("行业", "")
+	out["funding"] = info.get("融资", "")
+	out["scale"] = info.get("规模", "")
+	out["position_title"] = head.get("职位", "")
+	out["salary"] = head.get("薪资", "")
+	out["experience"] = head.get("经验", "")
+	out["tags"] = _split_tags(str(head.get("标签", "")))
+	out["posting_text"] = "\n".join(detail)
+	out["posting_note"] = note
+	return out
+
+
+func _find_company_md(code: String) -> String:
+	var dir := DirAccess.open(COMPANY_DIR)
+	if dir == null:
+		return ""
+	for f: String in dir.get_files():
+		if f.begins_with(code + "_") and f.ends_with(".md"):
+			return "%s/%s" % [COMPANY_DIR, f]
+	return ""
+
+
+## `| 行业 | 广播／影视 |` → ["行业", "广播／影视"]
+func _table_row(line: String) -> Array:
+	if not line.begins_with("|"):
+		return []
+	var out: Array = []
+	for c: String in line.split("|"):
+		var s := c.strip_edges()
+		if not s.is_empty() and not s.begins_with("---"):
+			out.append(s)
+	if out.size() < 2:
+		return []
+	return [out[0], out[1]]
+
+
+## `**职位**：短剧编剧` → ["职位", "短剧编剧"]
+func _bold_kv(line: String) -> Array:
+	if not line.begins_with("**"):
+		return []
+	var close := line.find("**", 2)
+	if close < 0:
+		return []
+	var key := line.substr(2, close - 2).strip_edges()
+	var value := line.substr(close + 2).strip_edges()
+	while value.begins_with("：") or value.begins_with(":"):
+		value = value.substr(1).strip_edges()
+	return [key, value]
+
+
+## 标签之间用全角空格分隔（`短剧　小说改编`），顺手兼容半角
+func _split_tags(text: String) -> Array[String]:
+	var out: Array[String] = []
+	for t: String in text.replace("　", " ").split(" "):
+		var s := t.strip_edges()
+		if not s.is_empty():
+			out.append(s)
+	return out
 
 
 func _roles() -> Array[RoleRequirement]:

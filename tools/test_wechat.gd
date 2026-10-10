@@ -40,16 +40,18 @@ func _run_all() -> void:
 	_bus = root.get_node_or_null("EventBus")
 	_check("Game autoload 可用", _game != null, true)
 	_check("EventBus autoload 可用", _bus != null, true)
-	if _game == null or _bus == null or _app._current == null:
+	# 【注意别拿 _current 当就绪探针】开局「谁都没选中」是**正常状态**（五家还没解锁）。
+	# 用 @onready 的节点引用判断 _ready 有没有跑完才靠谱。
+	if _game == null or _bus == null or _app._send_button == null:
 		print("❌ 环境没起来，后面的断言没有意义")
 		quit(1)
 		return
 
-	print("[1] 公司库与开发脚手架")
+	print("[1] 开局：五家 HR 全锁（还没逛过 Boss直聘）")
 	_check("公司数", CompanyLibrary.count(), 5)
 	_check("联系人行数", _app._rows.size(), 5)
-	_check("开发脚手架把五家都解锁了（Boss直聘 上线后要删）",
-			_game.state.unlocked_hr.size(), 5)
+	_check("开局零解锁", _game.state.unlocked_hr.size(), 0)
+	_check("开局不选中任何联系人（避免「能点但发不出去」）", _app._current, null)
 
 	print("")
 	print("[2] 核心层校验（未解锁 / 未拼完 / 行动点）")
@@ -102,24 +104,36 @@ func _run_all() -> void:
 	_check("跨周后本周计数清零", _game.state.submissions_this_week, 0)
 
 	print("")
-	print("[4] UI 链路：录像机 → 微信 → 投递 → 回信 → 消耗")
+	print("[4] 真实链路：去 Boss直聘 解锁 → 回来投递")
 	_game.new_game()
-	for c: CompanyData in CompanyLibrary.all():
-		_game.unlock_hr(c.code)
 	_app._refresh_all()
-	_app._select_company("A")
-	_check("选中了 A 的 HR", _app._current.code, "A")
-	_check("清空状态：还没有附件", _app._pending, null)
+	_check("重开后没有联系人", _app._current, null)
+
+	# 从零开始：微信里打开 Boss直聘（上个版本这里是个 DEV_UNLOCK_ALL 作弊开关）
+	_app._on_open_boss()
+	_check("Boss直聘 被嵌进来了", _app._overlay != null, true)
+	_check("子页面盖上来时「去 Boss直聘」置灰", _app._go_boss_button.disabled, true)
+	var boss = _app._overlay
+	boss._select_company("A")   # 模拟玩家点开 A 的招聘页
+	_check("看过招聘页后 A 的 HR 解锁了", _game.is_hr_unlocked("A"), true)
+	_check("Boss 里那一行也标成已联系", String(boss._row_labels["A"]["state"].text), "已联系")
+	_check("回车键之外的老路：不能再靠 DEV 开关白送", _game.state.unlocked_hr.size(), 1)
+
+	_app._close_overlay()
+	_check("子页面关掉了", _app._overlay, null)
+	_check("回来时自动打开了刚加上的 HR", _app._current.code, "A")
+	_check("「去 Boss直聘」重新可用", _app._go_boss_button.disabled, false)
+	_check("还没有附件", _app._pending, null)
 	_check("没有附件时发送按钮置灰", _app._send_button.disabled, true)
 
 	# 走真实握手：打开内嵌录像机 → 它 emit recorder_finished → 微信接住
 	_app._on_open_recorder()
-	_check("录像机被嵌进来了", _app._recorder != null, true)
+	_check("录像机被嵌进来了", _app._overlay != null, true)
 	_check("录像机打开时「去录像机」置灰", _app._open_recorder_button.disabled, true)
 	var clip := _flat_clip()
 	_bus.recorder_finished.emit(clip)
 	_check("微信接住了表情包", _app._pending, clip)
-	_check("录像机已关闭", _app._recorder, null)
+	_check("录像机已关闭", _app._overlay, null)
 	_check("「去录像机」重新可用", _app._open_recorder_button.disabled, false)
 	_check("有附件后发送按钮解禁", _app._send_button.disabled, false)
 

@@ -43,3 +43,7 @@ signal black_fame_triggered()
 # ---- 其他 ----
 signal hint_received(company_code: String, text: String)
 signal save_requested()
+## 整个状态被换掉了（`Game.new_game()` 开新局 / `load_from()` 读档）。
+## 界面收到后必须**清掉自己的全部显示状态** —— 否则重开时玩家会看到上一局的
+## 联系人和待投递表情包还挂在那里。两者对界面来说没有区别，所以共用一条信号。
+signal state_reset()

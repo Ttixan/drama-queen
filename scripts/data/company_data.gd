@@ -38,11 +38,28 @@ enum Tier { A_LOW, B_SMALL, C_COMMERCIAL, D_ARTHOUSE, E_MAJOR }
 ## 数值表值：A40 / B64 / C80 / D96 / E120；配角 ×2、主角 ×3。
 @export var extra_payout: int = 0
 
+@export_group("Boss直聘")
+## 一句话定位，取自 md 标题「# A 公司｜流水线烂片小厂」的竖线后半段。
+## 公司真名还没定（狗牙在编），所以列表里真正让五家区分开的是这个定位。
+@export var tagline: String = ""
+@export var industry: String = ""
+@export var funding: String = ""
+@export var scale: String = ""
+## 【只展示一个代表性职位】见 data/companies/README.md —— 玩家不在这里求职，
+## 所以职位卡是"公司长什么样"的一部分，不是可投递的岗位。
+@export var position_title: String = ""
+@export var salary: String = ""
+@export var experience: String = ""
+## 招聘页标签，渲染成一排小色块
+@export var tags: Array[String] = []
+## 职位详情正文（原文照搬，含它自带的风格线索）
+@export_multiline var posting_text: String = ""
+## 正文末尾那条「> 注：」的碎碎念，单独存是为了能排版成注脚而不是正文
+@export_multiline var posting_note: String = ""
+
 @export_group("叙事")
 ## 经纪人线索文案，每周漏一条给玩家
 @export_multiline var hint: String = ""
-## Boss直聘招聘页内容，来自 data/companies/*.md
-@export_multiline var posting_text: String = ""
 ## HR 姓名/职位，用于微信联系人
 @export var hr_name: String = ""
 @export var hr_title: String = ""
