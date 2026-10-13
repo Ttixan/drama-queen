@@ -1,0 +1,175 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/apps/phone_shell.gd" id="1_shell"]
+[ext_resource type="Theme" path="res://assets/ui/ui_theme.tres" id="2_theme"]
+
+[node name="PhoneShell" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_shell")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0862745, 0.0862745, 0.101961, 1)
+
+[node name="Page" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="StatusBar" type="PanelContainer" parent="Page"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+
+[node name="StatusMargin" type="MarginContainer" parent="Page/StatusBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 10
+
+[node name="StatusRow" type="HBoxContainer" parent="Page/StatusBar/StatusMargin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="LeftBox" type="HBoxContainer" parent="Page/StatusBar/StatusMargin/StatusRow"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Spacer" type="Control" parent="Page/StatusBar/StatusMargin/StatusRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RightBox" type="HBoxContainer" parent="Page/StatusBar/StatusMargin/StatusRow"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="BodyWrap" type="MarginContainer" parent="Page"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Body" type="HBoxContainer" parent="Page/BodyWrap"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="PlanPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PlanMargin" type="MarginContainer" parent="Page/BodyWrap/Body/PlanPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 26
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 26
+theme_override_constants/margin_bottom = 22
+
+[node name="PlanBox" type="VBoxContainer" parent="Page/BodyWrap/Body/PlanPanel/PlanMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PlanCaption" type="Label" parent="Page/BodyWrap/Body/PlanPanel/PlanMargin/PlanBox"]
+layout_mode = 2
+text = "今日安排"
+
+[node name="PlanHint" type="Label" parent="Page/BodyWrap/Body/PlanPanel/PlanMargin/PlanBox"]
+layout_mode = 2
+text = "一天只能做一件事"
+autowrap_mode = 3
+
+[node name="PlanList" type="VBoxContainer" parent="Page/BodyWrap/Body/PlanPanel/PlanMargin/PlanBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+
+[node name="InfoPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
+custom_minimum_size = Vector2(560, 0)
+layout_mode = 2
+
+[node name="InfoMargin" type="MarginContainer" parent="Page/BodyWrap/Body/InfoPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 22
+
+[node name="InfoBox" type="VBoxContainer" parent="Page/BodyWrap/Body/InfoPanel/InfoMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="InfoCaption" type="Label" parent="Page/BodyWrap/Body/InfoPanel/InfoMargin/InfoBox"]
+layout_mode = 2
+text = "这一周"
+
+[node name="InfoList" type="VBoxContainer" parent="Page/BodyWrap/Body/InfoPanel/InfoMargin/InfoBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="RestartButton" type="Button" parent="Page/BodyWrap/Body/InfoPanel/InfoMargin/InfoBox"]
+custom_minimum_size = Vector2(0, 54)
+layout_mode = 2
+text = "重开一局"
+
+[node name="Dock" type="PanelContainer" parent="Page"]
+custom_minimum_size = Vector2(0, 140)
+layout_mode = 2
+
+[node name="DockMargin" type="MarginContainer" parent="Page/Dock"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 14
+
+[node name="DockRow" type="HBoxContainer" parent="Page/Dock/DockMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="DockIcons" type="HBoxContainer" parent="Page/Dock/DockMargin/DockRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="DockHint" type="Label" parent="Page/Dock/DockMargin/DockRow"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "点图标打开 App"
+horizontal_alignment = 2
+
+[node name="AppLayer" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ReportLayer" type="Control" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

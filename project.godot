@@ -21,6 +21,14 @@ run/main_scene="res://scenes/main_scene.tscn"
 EventBus="*res://scripts/core/event_bus.gd"
 Game="*res://scripts/core/game.gd"
 
+[gui]
+
+; 全局 UI 主题。手机壳是主场景之后，这一条才敢开 ——
+; 在此之前只有独立场景在跑，不该顺手改全局配置。
+; 【它是兜底，不是唯一来源】各 App 的 .tscn 仍然显式挂着同一个主题，
+; 这里只是保证「新加的界面忘了挂 theme」时中文也不会掉进系统字体回退。
+theme/custom="res://assets/ui/ui_theme.tres"
+
 [display]
 
 window/size/viewport_width=1920

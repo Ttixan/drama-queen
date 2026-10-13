@@ -37,6 +37,12 @@ const ACCENT := Color("ffd447")   ## 选中 / 强调
 const POSITIVE := Color("4caf6e")
 const DANGER := Color("e5484d")
 const WECHAT := Color("4caf6e")   ## 微信的品牌色，用一个偏冷的绿把它和「成功」区分开
+const WEIBO := Color("ff7a45")    ## 微博的品牌色（橙红）——《有瓜有戏》是它的内容
+const BOSS := Color("4a7fe5")     ## Boss直聘的品牌色（蓝），同时是「公司档位」里 C 档的色
+## 周初事件的说话人（导演 / 老同学 / 发小…）。
+## 【为什么必须另开一个色】它会和公司档位头像出现在**同一个联系人列表**里，
+## 用档位色里任何一个都会让玩家以为「这家公司又来了个联系人」。
+const EVENT := Color("4dd0e1")
 const CHAT_SELF := Color("3d4a2a") ## 自己发的消息气泡底色
 
 ## 公司档位配色 —— Boss直聘 与微信的联系人头像共用。

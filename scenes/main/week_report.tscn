@@ -1,0 +1,100 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/apps/week_report.gd" id="1_report"]
+[ext_resource type="Theme" path="res://assets/ui/ui_theme.tres" id="2_theme"]
+
+[node name="WeekReport" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_report")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.72)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Card" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(1560, 950)
+layout_mode = 2
+
+[node name="CardMargin" type="MarginContainer" parent="Center/Card"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 32
+
+[node name="CardBox" type="VBoxContainer" parent="Center/Card/CardMargin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Header" type="HBoxContainer" parent="Center/Card/CardMargin/CardBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="HeaderBox" type="VBoxContainer" parent="Center/Card/CardMargin/CardBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="ReportTitle" type="Label" parent="Center/Card/CardMargin/CardBox/Header/HeaderBox"]
+layout_mode = 2
+text = "《有瓜有戏》"
+
+[node name="ReportSubtitle" type="Label" parent="Center/Card/CardMargin/CardBox/Header/HeaderBox"]
+layout_mode = 2
+text = "本周播出的戏，都在这一版里"
+
+[node name="DayLabel" type="Label" parent="Center/Card/CardMargin/CardBox/Header"]
+layout_mode = 2
+size_flags_vertical = 4
+text = "第 7 天"
+horizontal_alignment = 2
+
+[node name="Rule" type="ColorRect" parent="Center/Card/CardMargin/CardBox"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+color = Color(0.956863, 0.831373, 0.278431, 1)
+
+[node name="Scroll" type="ScrollContainer" parent="Center/Card/CardMargin/CardBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Content" type="VBoxContainer" parent="Center/Card/CardMargin/CardBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="Footer" type="HBoxContainer" parent="Center/Card/CardMargin/CardBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="FootHint" type="Label" parent="Center/Card/CardMargin/CardBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = ""
+autowrap_mode = 3
+vertical_alignment = 1
+
+[node name="NextButton" type="Button" parent="Center/Card/CardMargin/CardBox/Footer"]
+custom_minimum_size = Vector2(360, 72)
+layout_mode = 2
+text = "翻篇"

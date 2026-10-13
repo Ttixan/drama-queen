@@ -285,3 +285,9 @@ vertical_alignment = 1
 custom_minimum_size = Vector2(320, 68)
 layout_mode = 2
 text = "发送表情包 = 投递"
+
+[node name="BackButton" type="Button" parent="Page"]
+visible = false
+custom_minimum_size = Vector2(0, 76)
+layout_mode = 2
+text = "← 返回桌面"

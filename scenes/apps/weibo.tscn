@@ -1,0 +1,131 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/apps/weibo_app.gd" id="1_weibo"]
+[ext_resource type="Theme" path="res://assets/ui/ui_theme.tres" id="2_theme"]
+
+[node name="WeiboApp" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_weibo")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0862745, 0.0862745, 0.101961, 1)
+
+[node name="Page" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="PanelContainer" parent="Page"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+
+[node name="TopMargin" type="MarginContainer" parent="Page/TopBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 12
+
+[node name="TopRow" type="HBoxContainer" parent="Page/TopBar/TopMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BrandRow" type="HBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BrandChip" type="Panel" parent="Page/TopBar/TopMargin/TopRow/BrandRow"]
+custom_minimum_size = Vector2(46, 46)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="BrandText" type="Label" parent="Page/TopBar/TopMargin/TopRow/BrandRow"]
+layout_mode = 2
+text = "微博"
+vertical_alignment = 1
+
+[node name="TopCenter" type="VBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopCenter"]
+layout_mode = 2
+text = "《有瓜有戏》"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopCenter"]
+layout_mode = 2
+text = "每周一期，播你上周投出去的戏"
+horizontal_alignment = 1
+
+[node name="TopRight" type="VBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
+custom_minimum_size = Vector2(460, 0)
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="StatusLabel" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopRight"]
+layout_mode = 2
+text = "第 1 天"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="PendingLabel" type="Label" parent="Page/TopBar/TopMargin/TopRow/TopRight"]
+layout_mode = 2
+text = "本周还没投过"
+horizontal_alignment = 2
+
+[node name="BodyWrap" type="MarginContainer" parent="Page"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Body" type="VBoxContainer" parent="Page/BodyWrap"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="FeedCaption" type="Label" parent="Page/BodyWrap/Body"]
+layout_mode = 2
+text = "往期"
+
+[node name="FeedHint" type="Label" parent="Page/BodyWrap/Body"]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+
+[node name="FeedScroll" type="ScrollContainer" parent="Page/BodyWrap/Body"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Feed" type="VBoxContainer" parent="Page/BodyWrap/Body/FeedScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 14
+
+[node name="BackButton" type="Button" parent="Page"]
+visible = false
+custom_minimum_size = Vector2(0, 76)
+layout_mode = 2
+text = "← 返回桌面"
