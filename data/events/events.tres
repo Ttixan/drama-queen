@@ -1,0 +1,107 @@
+[gd_resource type="Resource" script_class="EventBook" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/event_data.gd" id="1_ahepy"]
+[ext_resource type="Script" path="res://scripts/data/event_option.gd" id="2_1bk0v"]
+[ext_resource type="Script" path="res://scripts/data/event_book.gd" id="3_gtd0l"]
+
+[sub_resource type="Resource" id="Resource_fwu0s"]
+script = ExtResource("2_1bk0v")
+label = "买"
+reply = "成交，周六早上九点，别迟到。"
+note = "半价上了一节课，演技涨了。"
+ap_cost = 1
+money = -50
+acting = 3
+
+[sub_resource type="Resource" id="Resource_hxkj4"]
+script = ExtResource("2_1bk0v")
+label = "不买"
+reply = "行，下次满班可就没这个价了。"
+note = "省下这笔钱，课没上成。"
+
+[sub_resource type="Resource" id="Resource_ewv7m"]
+script = ExtResource("1_ahepy")
+id = &"class_discount"
+speaker = &"trainer"
+speaker_name = "表演班老师"
+intro = "这周有个小班课还差一个人，给你算半价，来不来？"
+week = 1
+priority = 10
+options = Array[ExtResource("2_1bk0v")]([SubResource("Resource_fwu0s"), SubResource("Resource_hxkj4")])
+
+[sub_resource type="Resource" id="Resource_xb8of"]
+script = ExtResource("2_1bk0v")
+label = "接"
+reply = "那就这么定了，我把你微信推给他。"
+note = "三天拍完，钱到手了，本子烂得没人想提。"
+ap_cost = 1
+money = 200
+
+[sub_resource type="Resource" id="Resource_rdxew"]
+script = ExtResource("2_1bk0v")
+label = "拒"
+reply = "也是，你现在这个路子，不缺这一个。"
+note = "没接这活。"
+
+[sub_resource type="Resource" id="Resource_bgx0p"]
+script = ExtResource("1_ahepy")
+id = &"bad_film_offer"
+speaker = &"acquaintance"
+speaker_name = "老同学"
+intro = "我认识个制片，手上有个戏缺人，三天拍完，钱给得爽快。就是……戏有点糙。"
+week = 2
+priority = 10
+options = Array[ExtResource("2_1bk0v")]([SubResource("Resource_xb8of"), SubResource("Resource_rdxew")])
+
+[sub_resource type="Resource" id="Resource_dot4u"]
+script = ExtResource("2_1bk0v")
+label = "去"
+reply = "那就明天下午两点，老地方见。"
+note = "跑了一趟，试镜没定，但导演记住了你。"
+ap_cost = 1
+money = -80
+acting = 1
+
+[sub_resource type="Resource" id="Resource_h3wev"]
+script = ExtResource("2_1bk0v")
+label = "不去"
+reply = "那算了，下次吧。"
+note = "钱和省下的时间都留下了，机会错过了。"
+
+[sub_resource type="Resource" id="Resource_g4r2v"]
+script = ExtResource("1_ahepy")
+id = &"director_audition"
+speaker = &"director"
+speaker_name = "王导"
+intro = "我这儿有个戏，明天来试一段？对你来说是个机会。"
+week = 3
+priority = 10
+options = Array[ExtResource("2_1bk0v")]([SubResource("Resource_dot4u"), SubResource("Resource_h3wev")])
+
+[sub_resource type="Resource" id="Resource_kqfm8"]
+script = ExtResource("2_1bk0v")
+label = "借"
+reply = "谢了，真记你这回。"
+note = "借出去一百块，人情记下了。"
+money = -100
+fame = 2
+
+[sub_resource type="Resource" id="Resource_j7s8j"]
+script = ExtResource("2_1bk0v")
+label = "不借"
+reply = "行吧，我再问问别人。"
+note = "钱保住了。"
+
+[sub_resource type="Resource" id="Resource_lf7ui"]
+script = ExtResource("1_ahepy")
+id = &"friend_loan"
+speaker = &"friend"
+speaker_name = "发小"
+intro = "兄弟，急事，先借我一百，下个月一定还你。"
+repeatable = true
+require_money_min = 150
+options = Array[ExtResource("2_1bk0v")]([SubResource("Resource_kqfm8"), SubResource("Resource_j7s8j")])
+
+[resource]
+script = ExtResource("3_gtd0l")
+entries = Array[ExtResource("1_ahepy")]([SubResource("Resource_ewv7m"), SubResource("Resource_bgx0p"), SubResource("Resource_g4r2v"), SubResource("Resource_lf7ui")])
