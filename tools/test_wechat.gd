@@ -198,7 +198,92 @@ func _run_all() -> void:
 			String((_game.state.history[0] as Dictionary)["mail"]["text"]), before_mail)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 
+	print("")
+	print("[7] 周初事件：自动打开会话 + 二选一")
+	_game.new_game()
+	# 开新局时第 1 周的事件已经排好了（`Game.new_game` 里排的）
+	var ev: EventData = _game.pending_event()
+	_check("开新局就排出了第 1 周的事件", ev != null, true)
+	# 【闸门】后面每条都要读 ev 的字段，为 null 时中断会让这一节静默变绿
+	if ev == null:
+		print("❌ 没有事件可验，本节跳过")
+		_finish()
+		return
+
+	# 【为什么按代价找下标而不是写死 0/1】占位文案里是「买 / 不买」，
+	# 但狗牙完全可以把收费项写在后面。按 ap_cost 找才测的是规则本身。
+	var paid := -1
+	var free := -1
+	for i in ev.options.size():
+		if ev.options[i].ap_cost > 0:
+			paid = i
+		else:
+			free = i
+	_check("占位事件里有一个收费项和一个免费项", paid >= 0 and free >= 0, true)
+	if paid < 0 or free < 0:
+		_finish()
+		return
+
+	_check("事件会话被自动打开了", String(_app._event_speaker), String(ev.speaker))
+	_check("开着事件会话时不选中任何 HR", _app._current, null)
+	_check("事件说话人出现在联系人列表里", _app._event_rows.has(ev.speaker), true)
+	_check("两个选项按钮都在", _app._event_buttons.size(), 2)
+	_check("HR 那三排 composer 藏起来了", _app._role_row.visible, false)
+	_check("事件那排 composer 露出来了", _app._event_row.visible, true)
+	_check("聊天记录里有开场白", _chat_has(String(ev.intro)), true)
+	_check("按钮上带着代价与收益",
+			String(_app._event_buttons[paid].text).contains(ev.options[paid].label), true)
+
+	# 行动点花光之后：收费那个灰掉，免费那个照旧 —— 这一周不会被卡死
+	_game.state.ap_left_today = 0
+	_app._refresh_all()
+	_check("没行动点时收费选项灰掉", _app._event_buttons[paid].disabled, true)
+	_check("免费选项仍然可点", _app._event_buttons[free].disabled, false)
+	_check("灰掉的原因写在状态行里", _app._event_status.text.contains("行动点"), true)
+
+	# 点免费那个（GDD 的「拒」那一侧）
+	_game.state.ap_left_today = 1
+	_app._refresh_all()
+	var ap_before: int = _game.ap_left()
+	var money_before: int = _game.money()
+	_app._event_buttons[free].pressed.emit()
+	_check("处理完之后不再有待处理事件", _game.pending_event(), null)
+	_check("聊天记录里出现了我的回话", _chat_has(String(ev.options[free].label)), true)
+	_check("聊天记录里出现了对方的回话", _chat_has(String(ev.options[free].reply)), true)
+	_check("免费选项没花钱", _game.money(), money_before)
+	_check("行动点没被扣", _game.ap_left(), ap_before)
+	_check("这条会话的状态变成「已回过」", _app._speaker_state(ev.speaker), "已回过")
+	_check("本周不会再来第二件", _game.pending_event(), null)
+	_check("处理完事件那排按钮收起来了", _app._event_buttons[paid].visible, false)
+
+	# 切回 HR 会话，composer 要换回来
+	_game.unlock_hr("A")
+	_app._select_company("A")
+	_check("切回 HR 后角色那排回来了", _app._role_row.visible, true)
+	_check("切回 HR 后附件那排回来了", _app._attach_row.visible, true)
+	_check("切回 HR 后事件那排藏起来", _app._event_row.visible, false)
+	print("   自动打开 → 门槛预演 → 二选一 → 切回 HR，全程走通")
+
 	_finish()
+
+
+# ============================================================
+# 聊天记录里有没有出现某段文字（气泡是动态建的，只能按内容找）
+# ============================================================
+func _chat_has(text: String) -> bool:
+	for child: Node in _app._chat_log.get_children():
+		if _has_label(child, text):
+			return true
+	return false
+
+
+func _has_label(node: Node, text: String) -> bool:
+	if node is Label and (node as Label).text == text:
+		return true
+	for c: Node in node.get_children():
+		if _has_label(c, text):
+			return true
+	return false
 
 
 # ============================================================
