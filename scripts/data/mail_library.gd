@@ -53,19 +53,15 @@ static func _ensure() -> void:
 		return
 	_loaded = true
 
-	var dir := DirAccess.open(MAIL_DIR)
-	if dir == null:
-		push_error("[MailLibrary] 打不开目录 " + MAIL_DIR)
-		return
-	for f: String in dir.get_files():
-		if not f.ends_with(".tres"):
-			continue
-		var res: Resource = load("%s/%s" % [MAIL_DIR, f])
+	# 【必须走 ResourceDir】与 PartLibrary 同病：导出包里是 `A.tres.remap`，
+	# 手写后缀判断会让五封邮件模板全读不到 —— 发送表情包投递后收不到回信。
+	for path: String in ResourceDir.list_tres(MAIL_DIR):
+		var res: Resource = load(path)
 		if res is MailTemplate:
 			var t := res as MailTemplate
 			_by_code[t.company_code] = t
 		else:
-			push_error("[MailLibrary] %s 不是 MailTemplate，已跳过" % f)
+			push_error("[MailLibrary] %s 不是 MailTemplate，已跳过" % path)
 
 	var pool_res: Resource = load(POOL_PATH)
 	if pool_res is CastingPool:

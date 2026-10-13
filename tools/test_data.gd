@@ -84,11 +84,10 @@ func _initialize() -> void:
 
 # ============================================================
 func _load_parts() -> void:
-	var d := DirAccess.open(PART_DIR)
-	for f: String in d.get_files():
-		if not f.ends_with(".tres"):
-			continue
-		var p: PartData = load("%s/%s" % [PART_DIR, f])
+	# 走 ResourceDir 而不是自己手写目录循环 —— 同一条扫描逻辑只该有一份，
+	# 游戏里那份已经因为「导出后是 .tres.remap」栽过一次。
+	for path: String in ResourceDir.list_tres(PART_DIR):
+		var p: PartData = load(path)
 		_parts[String(p.id)] = p
 
 

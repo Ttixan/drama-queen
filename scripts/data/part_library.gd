@@ -127,18 +127,14 @@ static func _ensure() -> void:
 
 static func _read_dir() -> Array[PartData]:
 	var out: Array[PartData] = []
-	var dir := DirAccess.open(PART_DIR)
-	if dir == null:
-		push_error("[PartLibrary] 打不开目录 " + PART_DIR)
-		return out
-	for f: String in dir.get_files():
-		if not f.ends_with(".tres"):
-			continue
-		var res: Resource = load("%s/%s" % [PART_DIR, f])
+	# 【必须走 ResourceDir】导出包里目录里躺的是 `xxx.tres.remap`，
+	# 手写 `.ends_with(".tres")` 会让 32 件部件在读成 0 件（真出过这个 bug）。
+	for path: String in ResourceDir.list_tres(PART_DIR):
+		var res: Resource = load(path)
 		if res is PartData:
 			out.append(res as PartData)
 		else:
-			push_error("[PartLibrary] %s 不是 PartData，已跳过" % f)
+			push_error("[PartLibrary] %s 不是 PartData，已跳过" % path)
 	return out
 
 
