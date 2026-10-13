@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="BalanceData" format=3]
+
+; 数值表（docs/数值表_v1.xlsx）的运行时镜像。
+;
+; 【改数值的正确姿势】在 Godot 检查器里打开本文件直接改，或改这里再跑一次测试。
+; 每一个值都能在数值表里找到对应的行；改了之后请顺手更新数值表，
+; 否则「文档说 80、代码跑 60」这种事迟早会发生。
+;
+; 【不要改这里的字段名】`scripts/core/*.gd` 与 `tools/test_economy.gd` 按名字读它们。
+
+[ext_resource type="Script" path="res://scripts/data/balance_data.gd" id="1_balance"]
+
+[resource]
+script = ExtResource("1_balance")
+
+; ---- 起始 ----
+init_money = 200
+init_acting = 0
+acting_cap = 30
+
+; ---- 取值范围 ----
+fame_max = 100
+rep_min = -50
+rep_max = 50
+
+; ---- 经济 · 固定支出 ----
+rent_per_week = 80
+
+; ---- 经济 · 打工 ----
+work_income = 30
+work_max_per_week = 2
+
+; ---- 经济 · 表演课 ----
+class_price = 100
+class_gain = 3
+class_max_per_week = 1
+
+; ---- 经济 · PS5 分期 ----
+ps5_total = 405
+ps5_installments = 3
+ps5_amount_per = 135
+ps5_overdue_rep_penalty = 5
+
+; ---- 播出反馈 · 分档线 ----
+grade_high_line = 0.7
+grade_normal_line = 0.4
+
+; ---- 播出反馈 · 结果档增量 ----
+high_fame = 2
+high_rep = 2
+high_neg = 0
+normal_fame = 1
+normal_rep = 0
+normal_neg = 0
+low_fame = 1
+low_rep = -2
+low_neg = 1
+
+; ---- 播出反馈 · 戏份档知名度增量 ----
+fame_per_extra = 1
+fame_per_supporting = 2
+fame_per_lead = 3
+
+; ---- 播出反馈 · 点名与黑红 ----
+fame_named_threshold = 20
+black_fame_threshold = 5

@@ -1,0 +1,210 @@
+[gd_resource type="Resource" script_class="HeadlineBook" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/headline.gd" id="1_njvyw"]
+[ext_resource type="Script" path="res://scripts/data/headline_book.gd" id="2_0122t"]
+
+[sub_resource type="Resource" id="Resource_y7gra"]
+script = ExtResource("1_njvyw")
+id = &"main_A_high"
+company_code = "A"
+grade = 2
+text = "【公司名】又出烂片，这回倒把【报道对象】捧红了！"
+
+[sub_resource type="Resource" id="Resource_olinu"]
+script = ExtResource("1_njvyw")
+id = &"main_A_normal"
+company_code = "A"
+grade = 1
+text = "【公司名】又出烂片！《【剧名】》你能撑几集？"
+
+[sub_resource type="Resource" id="Resource_draqm"]
+script = ExtResource("1_njvyw")
+id = &"main_A_low"
+company_code = "A"
+grade = 0
+text = "【报道对象】演活了一个死人"
+
+[sub_resource type="Resource" id="Resource_ayfj0"]
+script = ExtResource("1_njvyw")
+id = &"main_B_high"
+company_code = "B"
+grade = 2
+text = "草台班子捡到宝！【报道对象】火了"
+
+[sub_resource type="Resource" id="Resource_ku671"]
+script = ExtResource("1_njvyw")
+id = &"main_B_normal"
+company_code = "B"
+grade = 1
+text = "《【剧名】》上线，还是熟悉的土味"
+
+[sub_resource type="Resource" id="Resource_ke4pu"]
+script = ExtResource("1_njvyw")
+id = &"main_B_low"
+company_code = "B"
+grade = 0
+text = "《【剧名】》演员哪找的？下次别找了"
+
+[sub_resource type="Resource" id="Resource_dip4g"]
+script = ExtResource("1_njvyw")
+id = &"main_C_high"
+company_code = "C"
+grade = 2
+text = "【报道对象】这段戏，值得一个热搜"
+
+[sub_resource type="Resource" id="Resource_bkpu2"]
+script = ExtResource("1_njvyw")
+id = &"main_C_normal"
+company_code = "C"
+grade = 1
+text = "《【剧名】》：能看，但别抱太大期待"
+
+[sub_resource type="Resource" id="Resource_1xgin"]
+script = ExtResource("1_njvyw")
+id = &"main_C_low"
+company_code = "C"
+grade = 0
+text = "全剧都在认真演，就【报道对象】在拖后腿"
+
+[sub_resource type="Resource" id="Resource_fhe01"]
+script = ExtResource("1_njvyw")
+id = &"main_D_high"
+company_code = "D"
+grade = 2
+text = "谁说【报道对象】只会演烂剧？"
+
+[sub_resource type="Resource" id="Resource_lcyae"]
+script = ExtResource("1_njvyw")
+id = &"main_D_normal"
+company_code = "D"
+grade = 1
+text = "《【剧名】》：看不懂就算高级？"
+
+[sub_resource type="Resource" id="Resource_7o1fi"]
+script = ExtResource("1_njvyw")
+id = &"main_D_low"
+company_code = "D"
+grade = 0
+text = "【报道对象】不演霸总，改演木头了？"
+
+[sub_resource type="Resource" id="Resource_jbb07"]
+script = ExtResource("1_njvyw")
+id = &"main_E_high"
+company_code = "E"
+grade = 2
+text = "砸钱真砸出个明星！【报道对象】爆了"
+
+[sub_resource type="Resource" id="Resource_8vjew"]
+script = ExtResource("1_njvyw")
+id = &"main_E_normal"
+company_code = "E"
+grade = 1
+text = "热搜上了一圈，【报道对象】还是没火"
+
+[sub_resource type="Resource" id="Resource_o01jh"]
+script = ExtResource("1_njvyw")
+id = &"main_E_low"
+company_code = "E"
+grade = 0
+text = "钱全花宣发了？【报道对象】这演技也敢吹！"
+
+[sub_resource type="Resource" id="Resource_lylie"]
+script = ExtResource("1_njvyw")
+id = &"extra_high_good"
+group = 1
+grade = 2
+play_good = 1
+text = "《【剧名】》连龙套都这么会演！"
+
+[sub_resource type="Resource" id="Resource_y2ept"]
+script = ExtResource("1_njvyw")
+id = &"extra_high_bad"
+group = 1
+grade = 2
+play_good = 0
+text = "《【剧名】》最好的一场戏，竟然是龙套演的"
+
+[sub_resource type="Resource" id="Resource_1qfpb"]
+script = ExtResource("1_njvyw")
+id = &"extra_normal_good"
+group = 1
+grade = 1
+play_good = 1
+text = "《【剧名】》口碑发酵，这次真能追！"
+
+[sub_resource type="Resource" id="Resource_8aumg"]
+script = ExtResource("1_njvyw")
+id = &"extra_normal_bad"
+group = 1
+grade = 1
+play_good = 0
+text = "《【剧名】》又来了，换批演员接着烂"
+
+[sub_resource type="Resource" id="Resource_ajkom"]
+script = ExtResource("1_njvyw")
+id = &"extra_low_good"
+group = 1
+grade = 0
+play_good = 1
+text = "谁把这个【角色名】塞进剧组的？"
+
+[sub_resource type="Resource" id="Resource_0q0v0"]
+script = ExtResource("1_njvyw")
+id = &"extra_low_bad"
+group = 1
+grade = 0
+play_good = 0
+text = "《【剧名】》烂出新低，龙套还在加戏"
+
+[sub_resource type="Resource" id="Resource_0qoih"]
+script = ExtResource("1_njvyw")
+id = &"special_extra_star"
+group = 2
+kind = &"extra_star"
+text = "全网找人！《【剧名】》里的【角色名】是谁演的？"
+
+[sub_resource type="Resource" id="Resource_x30np"]
+script = ExtResource("1_njvyw")
+id = &"special_black_fame"
+group = 2
+kind = &"black_fame"
+text = "都在骂【玩家名】，怎么谁都认识【玩家名】了？"
+
+[sub_resource type="Resource" id="Resource_tvdep"]
+script = ExtResource("1_njvyw")
+id = &"special_black_fame_repeat"
+group = 2
+kind = &"black_fame_repeat"
+text = "又是【玩家名】！怎么最近刷到的离谱短剧里都有你？"
+
+[sub_resource type="Resource" id="Resource_gob3c"]
+script = ExtResource("1_njvyw")
+id = &"special_fallback_d_high"
+group = 2
+kind = &"fallback_d_high"
+text = "《【剧名】》里的【报道对象】，真有点东西！"
+
+[sub_resource type="Resource" id="Resource_5e5vr"]
+script = ExtResource("1_njvyw")
+id = &"special_fallback_d_low"
+group = 2
+kind = &"fallback_d_low"
+text = "【报道对象】这演技，文艺滤镜也救不了！"
+
+[sub_resource type="Resource" id="Resource_udkrb"]
+script = ExtResource("1_njvyw")
+id = &"special_fallback_low_bad"
+group = 2
+kind = &"fallback_low_bad"
+text = "【报道对象】这演技，烂片都接不住"
+
+[sub_resource type="Resource" id="Resource_pqvu6"]
+script = ExtResource("1_njvyw")
+id = &"special_fallback_b_low"
+group = 2
+kind = &"fallback_b_low"
+text = "《【剧名】》的【角色定位】哪找的？下次别找了"
+
+[resource]
+script = ExtResource("2_0122t")
+entries = Array[ExtResource("1_njvyw")]([SubResource("Resource_y7gra"), SubResource("Resource_olinu"), SubResource("Resource_draqm"), SubResource("Resource_ayfj0"), SubResource("Resource_ku671"), SubResource("Resource_ke4pu"), SubResource("Resource_dip4g"), SubResource("Resource_bkpu2"), SubResource("Resource_1xgin"), SubResource("Resource_fhe01"), SubResource("Resource_lcyae"), SubResource("Resource_7o1fi"), SubResource("Resource_jbb07"), SubResource("Resource_8vjew"), SubResource("Resource_o01jh"), SubResource("Resource_lylie"), SubResource("Resource_y2ept"), SubResource("Resource_1qfpb"), SubResource("Resource_8aumg"), SubResource("Resource_ajkom"), SubResource("Resource_0q0v0"), SubResource("Resource_0qoih"), SubResource("Resource_x30np"), SubResource("Resource_tvdep"), SubResource("Resource_gob3c"), SubResource("Resource_5e5vr"), SubResource("Resource_udkrb"), SubResource("Resource_pqvu6")])
