@@ -10,13 +10,35 @@ var state: GameState
 
 
 func _ready() -> void:
-	new_game()
+	# 「该存档了」的广播由本单例自己接住 —— 这样结算流程（WeekCycle 的调用方）
+	# 不必知道存档文件在哪，将来加「手动存档按钮」也只是再 emit 一次。
+	EventBus.save_requested.connect(_on_save_requested)
+
+	# 【开局先试着读档】决策 1.1 只说了「每周结算自动存档」——
+	# **存了却没人读，那份存档就是死的**。读不到（第一次玩 / 文件坏了 / 格式对不上）
+	# 才开新局，所以这里不需要额外的"有没有存档"判断。
+	#
+	# 【为什么必须在 _ready 里读】手机壳会在它自己的 `_ready()` 里读 `Game.state` 建界面，
+	# 而 autoload 的 `_ready()` 先跑 —— 存档必须在那之前就位，否则界面建的是空局，
+	# 玩家要等下一次刷新才会看到自己的进度。
+	if not load_from():
+		new_game()
 
 
-func new_game(init_money: int = 0, init_acting: int = 0) -> void:
+## 开新局。两个参数传 -1 = 用数值表里的起始值（`data/balance.tres`）。
+## 【为什么保留覆盖参数】工具与测试要能造「开局就有一千块」的局面，
+## 而不用先跑十二天打工把状态凑出来。
+func new_game(init_money: int = -1, init_acting: int = -1) -> void:
+	var bal := BalanceLibrary.data()
 	state = GameState.new()
-	state.money = init_money
-	state.acting = init_acting
+	state.money = bal.init_money if init_money < 0 else init_money
+	state.acting = bal.init_acting if init_acting < 0 else init_acting
+	# 【为什么随机种子在开局抽、之后再也不抽】事件每周要挑一次，而挑出来的
+	# 会被玩家看到（「这周找上门的是谁」）。读档重抽就会换一出戏 ——
+	# 与定角抽签同一个道理：抽一次，之后谁都读同一份，模拟器也能复现整局。
+	state.event_seed = randi()
+	# 第 1 天就是第 1 周的第一天，所以这里要排一次
+	_roll_week_event()
 	EventBus.ap_changed.emit(state.ap_left_today)
 	# 放在最后：界面收到它时，新状态已经就位，可以放心照着重画
 	EventBus.state_reset.emit()
@@ -61,27 +83,75 @@ func submissions_left_this_week() -> int:
 	return maxi(0, GameState.MAX_SUBMIT_PER_WEEK - state.submissions_this_week)
 
 
+## PS5 已付累计（界面显示「进度 2/3」用）
+func ps5_paid() -> int:
+	return state.ps5_paid
+
+
+func ps5_paid_off() -> bool:
+	return Economy.ps5_paid_off(state)
+
+
+func ending_id() -> StringName:
+	return state.ending_id
+
+
 # ============================================================
 # 属性变更 —— 改值 + 发信号，成对出现
 # ============================================================
+# 【为什么这里要夹取值范围】名气与风评都有上下限（数值表 5），
+# 而累加发生在好几个地方（结算、事件、惩罚）。夹在唯一的写入口上，
+# 就不会出现「某条路径忘了夹」的漏网之鱼。
+# 【为什么夹完要发**实际**增量】界面上的 "+3" 跳字读的是 delta。
+# 只差 1 点到顶时发 +3，玩家会看到数字没跟上跳字，像是卡了。
 func add_money(delta: int) -> void:
 	state.money += delta
-	EventBus.money_changed.emit(state.money, delta)
+	_notify_money(delta)
 
 
 func add_acting(delta: int) -> void:
-	state.acting += delta
-	EventBus.acting_changed.emit(state.acting, delta)
+	var cap: int = BalanceLibrary.data().acting_cap
+	var before := state.acting
+	state.acting = clampi(state.acting + delta, 0, cap)
+	_notify_acting(state.acting - before)
 
 
 func add_fame(delta: int) -> void:
-	state.fame += delta
-	EventBus.fame_changed.emit(state.fame, delta)
+	var bal := BalanceLibrary.data()
+	var before := state.fame
+	state.fame = clampi(state.fame + delta, 0, bal.fame_max)
+	_notify_fame(state.fame - before)
 
 
 func add_reputation(delta: int) -> void:
-	state.reputation += delta
-	EventBus.reputation_changed.emit(state.reputation, delta)
+	var bal := BalanceLibrary.data()
+	var before := state.reputation
+	state.reputation = clampi(state.reputation + delta, bal.rep_min, bal.rep_max)
+	_notify_reputation(state.reputation - before)
+
+
+## 【为什么要把「改值」和「通知」拆开】`DailyActions` 是唯一改状态的地方
+## （模拟器也得走它）。所以 Game 这边只剩通知 —— 再调一次 `add_money()`
+## 会把同一个增量**加两遍**，而且表面上完全看不出来。
+## 这两个函数就是给那种场景用的：值已经改好了，只需要让界面知道。
+func _notify_money(delta: int) -> void:
+	if delta != 0:
+		EventBus.money_changed.emit(state.money, delta)
+
+
+func _notify_acting(delta: int) -> void:
+	if delta != 0:
+		EventBus.acting_changed.emit(state.acting, delta)
+
+
+func _notify_fame(delta: int) -> void:
+	if delta != 0:
+		EventBus.fame_changed.emit(state.fame, delta)
+
+
+func _notify_reputation(delta: int) -> void:
+	if delta != 0:
+		EventBus.reputation_changed.emit(state.reputation, delta)
 
 
 # ============================================================
@@ -102,60 +172,18 @@ func is_hr_unlocked(code: String) -> bool:
 # ============================================================
 # 投递
 # ============================================================
-## 一次投递的完整流程：校验 → 扣行动点 → 判定 → 记履历 → 配回信 → 发信号
+## 一次投递。
 ##
-## 【重要】这里**只出通过/失败，不发钱、不发演技** ——
-## 钱、演技、知名度、风评全部留到本周末结算（见决策记录 1.5）。
-## 返回的 Dictionary 里 rejected=true 表示根本没投出去（没扣行动点）。
+## 【规则不在这里】校验、扣行动点、判定、定角抽签、记履历全在
+## `scripts/core/daily_actions.gd` —— 那里是纯 RefCounted，数值模拟器不加载场景树也能调。
+## 本函数只做一件事：把结果转成信号。
 func submit_audition(clip: Clip, company: CompanyData, role: RoleRequirement) -> Dictionary:
-	if company == null or role == null:
-		return {"passed": false, "rejected": true, "fail_reasons": ["公司或角色未指定"]}
-	if state.finished:
-		return {"passed": false, "rejected": true, "fail_reasons": ["本局已结束"]}
-	if not clip.is_complete():
-		return {"passed": false, "rejected": true,
-				"fail_reasons": ["表情包没拼完（眼/嘴/眉必须齐全）"]}
-	# 投递只能走微信私聊，所以 HR 没解锁就没这条渠道。
-	# 【为什么在核心层也拦一道】决策 12 是玩法规则，不是界面规则 ——
-	# 只写在界面里的话，界面漏判一次就等于规则失效。
-	if not state.is_hr_unlocked(company.code):
-		return {"passed": false, "rejected": true,
-				"fail_reasons": ["还没加上 %s 的 HR（先去 Boss直聘 逛一圈）" % company.code]}
-	if state.submissions_this_week >= GameState.MAX_SUBMIT_PER_WEEK:
-		return {"passed": false, "rejected": true,
-				"fail_reasons": ["本周投递次数已用完（上限 %d）" % GameState.MAX_SUBMIT_PER_WEEK]}
-	if not state.spend_ap(company.ap_cost):
-		return {"passed": false, "rejected": true, "fail_reasons": ["行动点不够"]}
-
-	var result := AuditionResolver.resolve(clip, company, role, state.acting)
-	result["rejected"] = false
-	result["company_code"] = company.code
-	result["role_tier"] = role.tier
-
-	# 定角抽签：**只抽一次**，写进履历和回信。之后任何地方再显示都读同一份，
-	# 否则读档回来会发现同一部戏改了名。
-	var seed_value := state.day * 1000 + state.submissions_total
-	var casting := MailComposer.roll_casting(
-			MailLibrary.casting_pool(), seed_value, role.tier)
-	result["casting"] = casting
-	result["mail"] = MailComposer.compose_reply(
-			MailLibrary.for_company(company.code), company, role, casting,
-			state.day, result["passed"])
-
-	state.record_submission(result["passed"], {
-		"company_code": company.code,
-		"role_tier": role.tier,
-		"match_rate": result["match_rate"],
-		"labels": clip.all_labels(),
-		"play_title": casting.get("剧名", ""),
-		"role_name": casting.get("角色名", ""),
-		# 回信原文也存进去 —— 微信的聊天记录要能完整还原，
-		# 否则读档回来只剩一条「投递过」的摘要，玩家没法回看邮件
-		"mail": result["mail"],
-	})
+	var result := DailyActions.submit(state, clip, company, role)
+	if result.get("rejected", true):
+		return result
 
 	# 表情包一次性消耗 —— 记进履历供电子报的「标题调用条件」判定过往经历
-	EventBus.clip_recorded.emit(clip.summarize(), clip.all_labels())
+	EventBus.clip_recorded.emit(result["clip_summary"], result["labels"])
 	EventBus.ap_changed.emit(state.ap_left_today)
 	EventBus.audition_submitted.emit(result)
 	EventBus.hr_replied.emit(company.code, result["passed"], result)
@@ -164,14 +192,134 @@ func submit_audition(clip: Clip, company: CompanyData, role: RoleRequirement) ->
 
 
 # ============================================================
-# 时间推进（周末结算的实现在 M2）
+# 打工 / 表演课（即时到账，不走周末结算）
 # ============================================================
-## 推进一天。返回 true 表示跨过了周末，调用方应触发周结算。
-func advance_day() -> bool:
-	var crossed_week := state.advance_day()
+## 【规则同样不在这里】见 `daily_actions.gd`。这两个包装只负责把结果转成信号。
+func work() -> Dictionary:
+	var r := DailyActions.work(state)
+	if r.get("ok", false):
+		_notify_money(int(r["income"]))
+		EventBus.ap_changed.emit(state.ap_left_today)
+	return r
+
+
+## 上一次表演课
+func take_class() -> Dictionary:
+	var money_before := state.money
+	var acting_before := state.acting
+	var r := DailyActions.take_class(state)
+	if r.get("ok", false):
+		# 【为什么用差值而不是再算一次】夹了演技上限之后，实际涨的不一定是 class_gain ——
+		# 界面上的 "+3" 跳字必须读**真实发生**的增量
+		_notify_money(state.money - money_before)
+		_notify_acting(state.acting - acting_before)
+		EventBus.ap_changed.emit(state.ap_left_today)
+	return r
+
+
+# ============================================================
+# 周初事件（第四个动作）
+# ============================================================
+## 本周等着处理的事件。没有就返回 null —— 界面拿它决定微信里显不显示。
+func pending_event() -> EventData:
+	return DailyActions.pending_event(state)
+
+
+## 这个选项现在能不能选？"" = 可以。界面拿它把按钮灰掉并写明原因。
+func event_option_block_reason(index: int) -> String:
+	return DailyActions.event_option_block_reason(state, index)
+
+
+## 玩家在微信里选了第几个选项。规则在 `daily_actions.gd`，这里只把结果转成信号。
+func resolve_event(index: int) -> Dictionary:
+	# 状态快照要在调用**之前**取：DailyActions 会直接改 state
+	var money_before := state.money
+	var acting_before := state.acting
+	var fame_before := state.fame
+	var rep_before := state.reputation
+	# 同理，事件 id 也要先记下来 —— 处理完 `pending_event` 就被清空了
+	var event_id := state.pending_event
+
+	var r := DailyActions.resolve_event(state, index)
+	if not r.get("ok", false):
+		return r
+
+	# 【为什么全用差值】选项里的数字会被上下限夹住（演技到顶、风评触底），
+	# 界面上的 "+3" 跳字必须读**真实发生**的增量（与 take_class 同一个理由）
+	_notify_money(state.money - money_before)
+	_notify_acting(state.acting - acting_before)
+	_notify_fame(state.fame - fame_before)
+	_notify_reputation(state.reputation - rep_before)
+	EventBus.ap_changed.emit(state.ap_left_today)
+	EventBus.week_event_resolved.emit(event_id, index)
+	return r
+
+
+# ============================================================
+# 时间推进 + 周末结算
+# ============================================================
+## 结束今天 —— 玩家在手机壳桌面上按的那个按钮。
+##
+## 【为什么结算不写在 advance_day 里】`GameState.advance_day()` 是纯状态推进，谁都能调；
+## 它是结算的**触发器**，不是结算本身。混在一起的话，数值模拟器想「只推进不结算」
+## 就做不到了。所以：结束今天 → 若今天是本周最后一天就先结算 → 再推进。
+##
+## 返回 {settled: bool, report: Dictionary}
+func end_day() -> Dictionary:
+	if state.finished:
+		return {"settled": false, "report": {}}
+
+	if state.is_week_end():
+		# 【为什么要在结算前先料理事件】没处理的事件若跟着状态溜进下一周，
+		# `EventScheduler.pick` 会因为它还挂着而把**上一周**那条端出来 ——
+		# 玩家会觉得事件赖着不走。所以周一到头就记一笔「没理会」再清掉。
+		DailyActions.miss_pending_event(state)
+		var report := WeekCycle.settle(state, state.week())
+		EventBus.week_settled.emit(report)
+		EventBus.broadcast_published.emit(state.week(), report.get("headlines", []))
+		if report.get("black_fame", false):
+			EventBus.black_fame_triggered.emit()
+		if state.finished:
+			EventBus.game_finished.emit(state.ending_id)
+		# 每周结算自动存档（决策 1.1）。发信号而不是直接写文件 ——
+		# 「什么时候存档」和「存到哪个文件」是两件事，后者归 _on_save_requested。
+		EventBus.save_requested.emit()
+		# 【第 21 天不再推进】day 会被夹在 21 上，is_week_end() 永远为真，
+		# 靠 state.finished 挡住重复结算（见 GameState.advance_day 的注释）
+		if not state.finished:
+			_advance()
+		return {"settled": true, "report": report}
+
+	_advance()
+	return {"settled": false, "report": {}}
+
+
+func _advance() -> void:
+	state.advance_day()
 	EventBus.ap_changed.emit(state.ap_left_today)
 	EventBus.day_advanced.emit(state.day, state.week())
-	return crossed_week
+	_roll_week_event()
+
+
+## 周初：新的一周开始时，把这一周的事件排进来（GDD 3.5「阶段1：周初（事件推送）」）。
+##
+## 【为什么挂在推进之后，而不是结算之前】GDD 的阶段顺序是
+## 周初事件 → 周中行动 → 周末结算。事件属于**新一周的第一天**，
+## 结算是**上一周的最后一天** —— 同一次「结束今天」里，两件事分属两周。
+func _roll_week_event() -> void:
+	if state.finished or state.day_of_week() != 1:
+		return
+	var ev := EventScheduler.pick(state, state.week())
+	if ev == null:
+		return
+	state.pending_event = ev.id
+	EventBus.week_event_offered.emit(ev.id)
+
+
+func _on_save_requested() -> void:
+	var err := save_to()
+	if err != OK:
+		push_error("[Game] 自动存档失败：%s" % error_string(err))
 
 
 # ============================================================
@@ -196,6 +344,14 @@ func load_from(path: String = "user://save.json") -> bool:
 	f.close()
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
+	# 【为什么在这里新建 GameState，而不是往已有实例里灌】
+	# 1. `_ready()` 会在 `new_game()` **之前**调本函数，那一刻 `state` 还是 null ——
+	#    往 null 上调 `from_save_dict()` 会报错，而**报错只会中断本函数**，
+	#    于是 `load_from()` 返回 null（falsy）、`_ready()` 转身开新局：
+	#    表现就是「读档静默失效」。这个坑 Day 2 真踩过一次。
+	# 2. 语义上也该如此：读档是「用存档造一份状态」，不是「往旧状态里覆盖」——
+	#    后者会留下没被覆盖到的字段（上一局的残留）。
+	state = GameState.new()
 	state.from_save_dict(parsed)
 	EventBus.ap_changed.emit(state.ap_left_today)
 	# 读档对界面来说和开新局一样：状态整个换了，必须照着重画

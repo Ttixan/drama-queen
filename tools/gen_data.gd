@@ -317,7 +317,13 @@ func _company_specs() -> Array[Dictionary]:
 		},
 		{
 			"code": "E", "display_name": "E 公司", "tier": CompanyData.Tier.E_MAJOR,
-			"threshold": 25, "extra_payout": 120,
+			# 【门槛为什么是 20，而不是文档里写的 25】Day 2 数值模拟器实测推翻了那个数：
+			# 演技的增量在**周末结算**时才兑现（决策 1.5），所以每一周**之内**演技是冻结的。
+			# 玩家在任何一个可投递时刻能有的演技上限是 **21**（7 → 18 → 21，见 1.11 第 10 条）。
+			# 门槛 25 越过了这条线 → E 公司永远进不去 → 挂在上面的「影后」变成死结局。
+			# 降到 20（留 1 点冗余）之后影后实测 100% 可达，而 E 仍是五家里门槛最高的（D 是 15）。
+			# ⚠️ 这个数**不能**再往上调超过 21 —— `tools/test_economy.gd` 有一条断言守着它。
+			"threshold": 20, "extra_payout": 120,
 			"conditions": _conds([
 				# L4 帧间反转：教「转折」。中间必须掉头，慢慢滑下来的不算。
 				_cond(AuditionCondition.Type.VALENCE_REVERSAL, Emotion.Kind.JOY, 1.0, 2.0, 0, true),

@@ -40,6 +40,13 @@ signal broadcast_published(week: int, headlines: Array)
 ## 黑红条件触发（不做成成就系统，只发一条标题）
 signal black_fame_triggered()
 
+# ---- 周初事件 ----
+## 每周初排定了这一周的事件（GDD 3.5「阶段1：周初（事件推送）」）。
+## 微信凭它刷新会话列表 —— 事件不是弹窗，是**一条会话**。
+signal week_event_offered(event_id: StringName)
+## 玩家在微信里选了第几个选项（下标对应 `EventData.options`）
+signal week_event_resolved(event_id: StringName, index: int)
+
 # ---- 其他 ----
 signal hint_received(company_code: String, text: String)
 signal save_requested()

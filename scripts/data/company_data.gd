@@ -19,7 +19,10 @@ enum Tier { A_LOW, B_SMALL, C_COMMERCIAL, D_ARTHOUSE, E_MAJOR }
 @export var tier: Tier = Tier.A_LOW
 
 @export_group("门槛")
-## 公司演技门槛。文档值：0 / 3 / 8 / 15 / 25
+## 公司演技门槛。当前值：0 / 3 / 8 / 15 / 20
+##
+## 【E 为什么是 20 不是文档里的 25】演技到周末才兑现，玩家在**可投递时刻**的演技上限是 21，
+## 25 会让 E 公司永远进不去（连带「影后」变成死结局）。详见 `tools/gen_data.gd` 里 E 那一段。
 @export var acting_threshold: int = 0
 ## 投入本公司的每日行动点消耗
 @export var ap_cost: int = 1

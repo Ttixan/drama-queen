@@ -29,6 +29,21 @@ var successes_total: int = 0         ## 成功演出次数 —— 还要按档�
 var submissions_this_week: int = 0
 var days_without_success: int = 0
 
+## ---- 每周动作计数（跨周清零）----
+## 【为什么「打工 / 上课」的次数要存在这里】两者的周上限（2 次 / 1 次）
+## 决定了行动点怎么被吃掉，是**玩法状态**；放在界面里就等于界面一刷新上限就重来。
+var work_this_week: int = 0
+var class_this_week: int = 0
+
+## ---- 目标与特殊标记（跨周累加）----
+var ps5_paid: int = 0            ## PS5 已付累计 —— 「凑齐 PS5 费」= 这个数 ≥ ps5_total
+var black_fame_seen: bool = false ## 黑红标题出现过没有：第一次是惊奇，之后是嫌烦，文案不同
+var extra_star_seen: bool = false ## 龙套「首次出圈」出现过没有 —— 看过一次就不该再「全网找人」
+
+## ---- 周报（微博可以翻往期）----
+## 每条 = WeekCycle.trim() 过的周报。最多 3 条，存档体积可忽略。
+var reports: Array[Dictionary] = []
+
 ## ---- 履历 ----
 ## 每条：{day, company_code, role_tier, passed, match_rate, labels, play_title, role_name}
 ## 表情包一次性消耗，所以这里天然按时间顺序记录「你演过什么」，
@@ -42,9 +57,33 @@ var history: Array[Dictionary] = []
 ## 而且决定了「哪家公司现在能投」—— 是玩法状态，不是显示状态。
 var unlocked_hr: Array[String] = []
 
+## ---- 周初事件 ----
+## 【为什么种子要进存档】事件是抽签选出来的，读档重抽会让「这周那出戏」变成另一出。
+## 与定角抽签同一个道理（决策：抽一次，之后谁都读同一份）：
+## 开局抽一次（`Game.new_game`），之后每周期由它派生，模拟器也能复现同一局。
+var event_seed: int = 0
+## 本周等着处理的事件 id。空 = 这周没有事件（内容没配 / 已处理 / 条件不满足）
+var pending_event: StringName = &""
+## 已经出现过的事件 id（**含错过的**）—— 除 `repeatable` 外不再重复出现
+var seen_events: Array[String] = []
+## 每次处理的记录：{week, day, event, speaker, choice, label, note}
+## `choice == -1` 表示周结束时也没处理（作废）。微信与模拟器都读这一份。
+var event_history: Array[Dictionary] = []
+
 ## ---- 结局标记 ----
 var ending_flags: Dictionary = {}
+var ending_id: StringName = &""   ## 判出来的结局 id（空 = 还没到第 21 天）
 var finished: bool = false
+
+
+## 本周有没有等着处理的事件
+func has_pending_event() -> bool:
+	return pending_event != &""
+
+
+## 这个事件出现过没有（含错过的）—— 事件表用它决定要不要再让同一条出现
+func has_seen_event(id: StringName) -> bool:
+	return seen_events.has(String(id))
 
 
 ## 解锁某家公司的 HR。返回 true 表示这次是**新**解锁的。
@@ -107,12 +146,17 @@ func record_submission(passed: bool, payload: Dictionary) -> void:
 
 
 ## 推进到第二天。跨周时返回 true，调用方据此触发周末结算。
+##
+## 【第 21 天之后不再前进】day 会被夹在 TOTAL_DAYS 上，于是 is_week_end() 永远为真 ——
+## 调用方必须靠 state.finished 挡住重复结算，否则第 3 周的账会一遍遍算下去。
 func advance_day() -> bool:
 	var was_week_end := is_week_end()
 	day = mini(day + 1, TOTAL_DAYS)
 	ap_left_today = AP_PER_DAY
 	if was_week_end:
 		submissions_this_week = 0
+		work_this_week = 0
+		class_this_week = 0
 		return true
 	return false
 
@@ -149,6 +193,19 @@ func count_success_by_company(codes: Array) -> int:
 	return n
 
 
+## 公司 × 档位 —— 「影后」要 E 公司**主角**、「文艺片女神」要 D 公司主角。
+## 【为什么不能只用 has_ever_played(tier)】那只能回答「演过主角没有」，
+## 答不了「在哪家演的主角」。在 A 厂演主角和在大厂演主角不是一回事。
+func count_success_by_company_tier(codes: Array, tier: int) -> int:
+	var n := 0
+	for h: Dictionary in history:
+		if h.get("passed", false) \
+				and h.get("company_code", "") in codes \
+				and int(h.get("role_tier", -1)) == tier:
+			n += 1
+	return n
+
+
 ## 累计失败投递次数 —— 「被解雇」结局用这个口径
 func failed_submissions() -> int:
 	return submissions_total - successes_total
@@ -162,8 +219,20 @@ func to_save_dict() -> Dictionary:
 		"submissions_total": submissions_total, "successes_total": successes_total,
 		"submissions_this_week": submissions_this_week,
 		"days_without_success": days_without_success,
+		"work_this_week": work_this_week, "class_this_week": class_this_week,
+		"ps5_paid": ps5_paid,
+		"black_fame_seen": black_fame_seen, "extra_star_seen": extra_star_seen,
 		"unlocked_hr": unlocked_hr,
-		"history": history, "ending_flags": ending_flags, "finished": finished,
+		"reports": reports,
+		"history": history,
+		# 【pending_event 存成空串而不是 null】JSON 里 StringName 落不住，
+		# 读回来一律走 StringName(...) —— 与 ending_id 同一个处理方式
+		"event_seed": event_seed,
+		"pending_event": String(pending_event),
+		"seen_events": seen_events,
+		"event_history": event_history,
+		"ending_flags": ending_flags,
+		"ending_id": String(ending_id), "finished": finished,
 	}
 
 
@@ -179,7 +248,18 @@ func from_save_dict(d: Dictionary) -> void:
 	successes_total = int(d.get("successes_total", 0))
 	submissions_this_week = int(d.get("submissions_this_week", 0))
 	days_without_success = int(d.get("days_without_success", 0))
+	work_this_week = int(d.get("work_this_week", 0))
+	class_this_week = int(d.get("class_this_week", 0))
+	ps5_paid = int(d.get("ps5_paid", 0))
+	black_fame_seen = bool(d.get("black_fame_seen", false))
+	extra_star_seen = bool(d.get("extra_star_seen", false))
 	unlocked_hr.assign(d.get("unlocked_hr", []))
+	reports.assign(d.get("reports", []))
 	history.assign(d.get("history", []))
+	event_seed = int(d.get("event_seed", 0))
+	pending_event = StringName(d.get("pending_event", ""))
+	seen_events.assign(d.get("seen_events", []))
+	event_history.assign(d.get("event_history", []))
 	ending_flags = d.get("ending_flags", {})
+	ending_id = StringName(d.get("ending_id", ""))
 	finished = bool(d.get("finished", false))
