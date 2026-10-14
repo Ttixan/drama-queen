@@ -68,6 +68,14 @@ enum Tier { A_LOW, B_SMALL, C_COMMERCIAL, D_ARTHOUSE, E_MAJOR }
 ## HR 姓名/职位，用于微信联系人
 @export var hr_name: String = ""
 @export var hr_title: String = ""
+## HR 的活跃状态 —— md 里 HR 那行的后半段（「刚刚活跃｜今日回复 100+ 次」）。
+## 【空字符串就不显示这一行】文案没写就不编：宁可少一行，不要假一行。
+@export var hr_status: String = ""
+## 「初次沟通」的对话（点 HR 进聊天界面时逐条播）。
+## 内容在 `data/companies/{代号}_*.md` 的「## 初次沟通」小节里，格式见该目录的 README。
+## 【为什么开头那几句不能省】它是**从「看招聘页」到「微信里多一个联系人」的那一步**，
+## 玩家得先跟 HR 说上话，才拿得到联系方式。
+@export var opening_chat: Array[ChatLine] = []
 
 
 func role_of(tier_wanted: RoleRequirement.Tier) -> RoleRequirement:

@@ -938,9 +938,25 @@ func _on_send() -> void:
 ## 【这不是"又一个开发脚手架"】上个版本这里是一个 `DEV_UNLOCK_ALL` 开关，
 ## 直接把「先逛 Boss直聘 才解锁 HR」短路掉了。现在换成真的能打开 Boss直聘 ——
 ## 于是这条规则**真的会生效**：从零解锁一家公司、再投出去，全程没有作弊开关。
-## 让调用方把本页当 App 打开时显示「返回桌面」（见 phone_shell.gd）
+## 让调用方把本页当 App 打开时显示「返回桌面」（见 phone_screen.gd）
 func enable_back() -> void:
 	_back_button.visible = true
+
+
+## 手机屏把左栏让出来时，本 App 交出自己的**联系人列表**（改版：
+## 左栏从「App 列表」换成「当前 App 的二级列表」，微信这一列就是联系人）。
+##
+## 【为什么可以直接把它搬走】本类的引用都在 `@onready` 里抓好了（`_contact_list`
+## 那些），`@onready` 在 `_ready()` 就执行完 —— 所以**只要等本场景进了树**再搬，
+## 引用依然有效，绝对路径不再被用到。手机屏那边就是先 `add_child` 再问的。
+## 反过来说：搬走之后 `_apply_styles()` 里的 `get_node(P_CONTACTS + ...)` 会失效，
+## 所以本方法只该在 `_ready()` 之后被调用（手机屏不会在建树期间调它）。
+func take_sidebar() -> Control:
+	return get_node("Page/BodyWrap/Body/ContactsPanel")
+
+
+func sidebar_title() -> String:
+	return "微信 · 联系人"
 
 
 func _open_overlay(scene_path: String) -> Node:

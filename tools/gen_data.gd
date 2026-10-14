@@ -109,6 +109,8 @@ func _gen_companies() -> int:
 		co.tags.assign(posting.get("tags", []))
 		co.posting_text = posting.get("posting_text", "")
 		co.posting_note = posting.get("posting_note", "")
+		co.hr_status = posting.get("hr_status", "")
+		co.opening_chat = _chat_lines(posting.get("chat", []))
 
 		if _save(co, "%s/%s.tres" % [COMPANY_DIR, spec["code"]]):
 			n += 1
@@ -134,6 +136,7 @@ func _load_posting(code: String) -> Dictionary:
 	var info := {}
 	var head := {}
 	var detail: Array[String] = []
+	var chat: Array[Dictionary] = []
 	var note := ""
 	var state := ""
 
@@ -162,6 +165,10 @@ func _load_posting(code: String) -> Dictionary:
 				state = "info"
 			elif name == "招聘页":
 				state = "posting"
+			elif name == "初次沟通":
+				# 「点 HR 之后那段有来有回」的对话。它排在「## 招聘页」**之后**，
+				# 所以同时起一个作用：结束详情正文 —— 不然正文会一路吃到文件尾。
+				state = "chat"
 			else:
 				state = ""
 			continue
@@ -182,6 +189,10 @@ func _load_posting(code: String) -> Dictionary:
 				var kv := _bold_kv(t)
 				if kv.size() >= 2:
 					head[kv[0]] = kv[1]
+			"chat":
+				var row := _table_row(t)
+				if row.size() >= 2 and _is_chat_who(row[0]):
+					chat.append({"who": _who_of(row[0]), "text": row[1]})
 			"detail":
 				if t.begins_with(">"):
 					note = t.substr(1).strip_edges().trim_prefix("注：").strip_edges()
@@ -199,6 +210,47 @@ func _load_posting(code: String) -> Dictionary:
 	out["tags"] = _split_tags(str(head.get("标签", "")))
 	out["posting_text"] = "\n".join(detail)
 	out["posting_note"] = note
+	out["hr_status"] = _hr_status(str(head.get("HR", "")))
+	out["chat"] = chat
+	return out
+
+
+## md 的 HR 行长这样：`赵女士·高级人才招聘专家 · 刚刚活跃｜今日回复 100+ 次`
+## 前一段是「名字·职位」（已在 `_company_specs` 里写死，程序要用到），
+## 后一段是活跃状态（只有界面要用）—— 这里只抠后一段。
+## 【抠不到就返回空】界面上宁可少一行，也不要编一句出来。
+func _hr_status(text: String) -> String:
+	var parts := text.split(" · ")
+	return parts[1].strip_edges() if parts.size() >= 2 else ""
+
+
+## 表格的**表头行**（`| 谁 | 话 |`）和分隔行也长成表格的样子。
+## 【必须在这里挡掉】挡不住的话「话」会变成第一条消息真的发出来 —— 一句凭空多的话，
+## 比直接报错更难发现。所以只认那三个词。
+func _is_chat_who(label: String) -> bool:
+	var t := label.strip_edges()
+	return t == "HR" or t == "hr" or t == "我" or t == "玩家" or t == "系统"
+
+
+## md 里写「HR / 我 / 系统」，程序里用 "hr" / "me" / "system"
+func _who_of(label: String) -> String:
+	match label.strip_edges():
+		"HR", "hr":
+			return "hr"
+		"我", "玩家":
+			return "me"
+		_:
+			return "system"
+
+
+## 把 md 表格的行转成 ChatLine 资源
+func _chat_lines(rows: Array) -> Array[ChatLine]:
+	var out: Array[ChatLine] = []
+	for row: Dictionary in rows:
+		var line := ChatLine.new()
+		line.who = String(row["who"])
+		line.text = String(row["text"])
+		out.append(line)
 	return out
 
 

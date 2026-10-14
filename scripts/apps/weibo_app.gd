@@ -30,7 +30,7 @@ func _ready() -> void:
 	_refresh_all()
 
 
-## 让调用方把本页当 App 打开时显示「返回桌面」（见 phone_shell.gd）
+## 让调用方把本页当 App 打开时显示「返回桌面」（见 phone_screen.gd）
 func enable_back() -> void:
 	_back_button.visible = true
 

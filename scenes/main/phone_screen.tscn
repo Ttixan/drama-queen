@@ -1,0 +1,120 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/apps/phone_screen.gd" id="1_phone"]
+
+[node name="PhoneScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_phone")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.086, 0.086, 0.102, 1)
+
+[node name="Page" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 0
+
+[node name="HudBar" type="PanelContainer" parent="Page"]
+custom_minimum_size = Vector2(0, 78)
+layout_mode = 2
+
+[node name="HudMargin" type="MarginContainer" parent="Page/HudBar"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 12
+
+[node name="HudRow" type="HBoxContainer" parent="Page/HudBar/HudMargin"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="HudLeft" type="HBoxContainer" parent="Page/HudBar/HudMargin/HudRow"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="HudSpacer" type="Control" parent="Page/HudBar/HudMargin/HudRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HudRight" type="HBoxContainer" parent="Page/HudBar/HudMargin/HudRow"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="BodyWrap" type="MarginContainer" parent="Page"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 28
+
+[node name="Body" type="HBoxContainer" parent="Page/BodyWrap"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="AppColumn" type="PanelContainer" parent="Page/BodyWrap/Body"]
+custom_minimum_size = Vector2(470, 0)
+layout_mode = 2
+
+[node name="ColumnMargin" type="MarginContainer" parent="Page/BodyWrap/Body/AppColumn"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="ColumnBox" type="VBoxContainer" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ColumnHead" type="HBoxContainer" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ColumnCaption" type="Label" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox/ColumnHead"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "App"
+
+[node name="ColumnBack" type="Button" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox/ColumnHead"]
+visible = false
+layout_mode = 2
+text = "← 全部"
+
+[node name="ColumnHint" type="Label" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox"]
+layout_mode = 2
+text = "悬浮看每个 App 是干什么的"
+autowrap_mode = 3
+
+[node name="AppList" type="VBoxContainer" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="SidebarHost" type="VBoxContainer" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ContentPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ContentMargin" type="MarginContainer" parent="Page/BodyWrap/Body/ContentPanel"]
+layout_mode = 2
+
+[node name="ContentHost" type="Control" parent="Page/BodyWrap/Body/ContentPanel/ContentMargin"]
+layout_mode = 2
+mouse_filter = 2

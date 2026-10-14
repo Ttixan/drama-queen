@@ -1,33 +1,47 @@
 [gd_resource type="Resource" script_class="CompanyData" format=3]
 
-[ext_resource type="Script" path="res://scripts/data/audition_condition.gd" id="1_3nuwj"]
-[ext_resource type="Script" path="res://scripts/data/role_requirement.gd" id="2_gtl06"]
-[ext_resource type="Script" path="res://scripts/data/company_data.gd" id="3_ffk1a"]
+[ext_resource type="Script" path="res://scripts/data/audition_condition.gd" id="1_gtl06"]
+[ext_resource type="Script" path="res://scripts/data/chat_line.gd" id="2_ffk1a"]
+[ext_resource type="Script" path="res://scripts/data/role_requirement.gd" id="3_jud2a"]
+[ext_resource type="Script" path="res://scripts/data/company_data.gd" id="4_w6wuu"]
 
-[sub_resource type="Resource" id="Resource_jud2a"]
-script = ExtResource("1_3nuwj")
+[sub_resource type="Resource" id="Resource_d55ta"]
+script = ExtResource("1_gtl06")
 type = 3
 weight = 2.0
 required = true
 
-[sub_resource type="Resource" id="Resource_w6wuu"]
-script = ExtResource("1_3nuwj")
+[sub_resource type="Resource" id="Resource_k0jyu"]
+script = ExtResource("1_gtl06")
 type = 4
 value = 0.55
 
-[sub_resource type="Resource" id="Resource_d55ta"]
-script = ExtResource("2_gtl06")
+[sub_resource type="Resource" id="Resource_fmbot"]
+script = ExtResource("2_ffk1a")
+text = "你好，剪辑岗双休、五险一金，先看作品。"
 
-[sub_resource type="Resource" id="Resource_k0jyu"]
-script = ExtResource("2_gtl06")
+[sub_resource type="Resource" id="Resource_v02v6"]
+script = ExtResource("2_ffk1a")
+who = "me"
+text = "你好，我有独立成片，可以发你看看。"
+
+[sub_resource type="Resource" id="Resource_p05tr"]
+script = ExtResource("2_ffk1a")
+text = "好，加我微信发我，我们微信上聊。"
+
+[sub_resource type="Resource" id="Resource_foet6"]
+script = ExtResource("3_jud2a")
+
+[sub_resource type="Resource" id="Resource_u46oc"]
+script = ExtResource("3_jud2a")
 tier = 1
 acting_required = 5
 match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_fmbot"]
-script = ExtResource("2_gtl06")
+[sub_resource type="Resource" id="Resource_b6fd2"]
+script = ExtResource("3_jud2a")
 tier = 2
 acting_required = 15
 match_line = 0.7
@@ -35,14 +49,14 @@ acting_gain = 5
 payout_ratio = 3.0
 
 [resource]
-script = ExtResource("3_ffk1a")
+script = ExtResource("4_w6wuu")
 id = &"C"
 code = "C"
 display_name = "C 公司"
 tier = 2
 acting_threshold = 8
-conditions = Array[ExtResource("1_3nuwj")]([SubResource("Resource_jud2a"), SubResource("Resource_w6wuu")])
-roles = Array[ExtResource("2_gtl06")]([SubResource("Resource_d55ta"), SubResource("Resource_k0jyu"), SubResource("Resource_fmbot")])
+conditions = Array[ExtResource("1_gtl06")]([SubResource("Resource_d55ta"), SubResource("Resource_k0jyu")])
+roles = Array[ExtResource("3_jud2a")]([SubResource("Resource_foet6"), SubResource("Resource_u46oc"), SubResource("Resource_b6fd2")])
 extra_payout = 80
 tagline = "正规公司，简短招聘"
 industry = "广播／影视"
@@ -58,3 +72,5 @@ posting_text = "岗位职责
 hint = "C 公司嘴上说「纯真」。重点在纯 —— 掺一点别的情绪就不算数了。"
 hr_name = "陈女士"
 hr_title = "人事"
+hr_status = "今日活跃"
+opening_chat = Array[ExtResource("2_ffk1a")]([SubResource("Resource_fmbot"), SubResource("Resource_v02v6"), SubResource("Resource_p05tr")])

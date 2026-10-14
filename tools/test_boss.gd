@@ -68,12 +68,11 @@ func _run_all() -> void:
 	_check("联系人行数", _app._rows.size(), 5)
 
 	print("")
-	print("[3] 点开一家 = 浏览过 = 解锁 HR")
+	print("[3] 点开一家：先看详情 —— **看招聘页不给联系人**")
 	_app._select_company("A")
 	_check("选中了 A", _app._current.code, "A")
-	_check("A 的 HR 解锁了", _game.is_hr_unlocked("A"), true)
-	_check("只发了 1 次 hr_unlocked", _unlock_events.size(), 1)
-	_check("发的就是 A", _unlock_events[0], "A")
+	_check("看招聘页不解锁", _game.is_hr_unlocked("A"), false)
+	_check("一条解锁事件都没发", _unlock_events.size(), 0)
 	_check("公司名渲染出来", _app._company_name.text, "A 公司")
 	_check("定位渲染出来", _app._company_tagline.text, _md_tagline("A"))
 	_check("职位渲染出来", _app._job_title.text, CompanyLibrary.by_code("A").position_title)
@@ -83,13 +82,50 @@ func _run_all() -> void:
 	_check("卡片都显示出来了", _app._job_panel.visible and _app._hint_panel.visible, true)
 	_check("标签芯片数", _app._tag_row.get_child_count(),
 			CompanyLibrary.by_code("A").tags.size())
+	_check("HR 卡显示出来了", _app._hr_card.visible, true)
+	_check("HR 卡上是真名字",
+			(_app._hr_labels["name"] as Label).text, CompanyLibrary.by_code("A").hr_name)
+	_check("HR 活跃状态来自文案",
+			(_app._hr_labels["status"] as Label).text,
+			CompanyLibrary.by_code("A").hr_status)
+	_check("「还没联系过」写在锁状态里", _app._lock_state.text.contains("还没联系过"), true)
+	_check("顶栏计数还是 0", _app._status_label.text, "已联系 0 / 5 家")
+
+	print("")
+	print("[4] 点 HR 进聊天：逐句放完才拿到联系方式")
+	_check("A 有初次沟通的对话", CompanyLibrary.by_code("A").opening_chat.size(), 3)
+	_app._open_chat()
+	_check("聊天层盖住了详情", _app.chat_open(), true)
+	_check("详情层收起来了", _app._post_panel.visible, false)
+	_check("聊天头上是这位 HR", _app._chat_name.text, CompanyLibrary.by_code("A").hr_name)
+	_check("先摆了一张职位卡 + 第一条", _app._chat_feed.get_child_count(), 2)
+	_check("还没放完时不解锁", _game.is_hr_unlocked("A"), false)
+	_app.skip_chat()
+	_check("话说完就解锁了", _game.is_hr_unlocked("A"), true)
+	_check("只发了 1 次 hr_unlocked", _unlock_events.size(), 1)
+	_check("发的就是 A", _unlock_events[0], "A")
+	# 职位卡 + 3 条对话 + 1 条系统提示（「已加进微信联系人」）
+	_check("对话都进了聊天列表", _app._chat_feed.get_child_count(), 5)
+	_check("出现「去微信聊」", _app._chat_to_wechat.visible, true)
 	_check("解锁后锁状态转绿",
 			_app._lock_state.text.contains("刚加上联系人"), true)
 	_check("顶栏计数", _app._status_label.text, "已联系 1 / 5 家")
+	_app._close_chat()
+	_check("退回详情", _app._post_panel.visible and not _app.chat_open(), true)
 
 	print("")
-	print("[4] 同一家再看一遍：不重复解锁、不重复发信号")
-	_app._select_company("B")
+	print("[5] 话没说完就退出去：不算数")
+	_app._select_company("C")
+	_app._chat_step = 1.0          # 让它处在「正在播」的状态（测试不等它）
+	_app._open_chat()
+	_app._close_chat()             # 第一条刚出来就退
+	_check("C 仍然没解锁", _game.is_hr_unlocked("C"), false)
+	_check("也没发过解锁事件", _unlock_events.count("C"), 0)
+	_app._chat_step = 0.0
+
+	print("")
+	print("[6] 同一家再看一遍：不重复解锁、不重复发信号")
+	_walk_hr_chat("B")
 	_app._select_company("A")
 	_check("A 只解锁过一次", _unlock_events.count("A"), 1)
 	_check("累计 2 次解锁事件（A + B）", _unlock_events.size(), 2)
@@ -97,9 +133,9 @@ func _run_all() -> void:
 	_check("顶栏计数", _app._status_label.text, "已联系 2 / 5 家")
 
 	print("")
-	print("[5] 五家全逛一遍")
+	print("[7] 五家全聊一遍")
 	for code: String in CODES:
-		_app._select_company(code)
+		_walk_hr_chat(code)
 	_check("五家都解锁了", _game.state.unlocked_hr.size(), 5)
 	_check("解锁事件共 5 次（每家一次）", _unlock_events.size(), 5)
 	_check("顶栏计数", _app._status_label.text, "已联系 5 / 5 家")
@@ -111,7 +147,7 @@ func _run_all() -> void:
 	_check("五行的状态都是已联系", states, ["已联系", "已联系", "已联系", "已联系", "已联系"])
 
 	print("")
-	print("[6] 解锁状态进存档")
+	print("[8] 解锁状态进存档")
 	var path := "user://test_boss_save.json"
 	_check("存档成功", _game.save_to(path), OK)
 	_game.new_game()
@@ -120,7 +156,25 @@ func _run_all() -> void:
 	_check("解锁状态还原", _game.state.unlocked_hr.size(), 5)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
+	print("")
+	print("[9] 与手机屏的接口：左栏公司列表 + 「去微信聊」")
+	_check("交得出公司列表（手机屏的左栏）", _app.take_sidebar().name, "ListPanel")
+	_check("左栏标题", _app.sidebar_title(), "Boss直聘 · 公司")
+	var req: Array[String] = []
+	_app.open_app_requested.connect(func(p: String) -> void: req.append(p))
+	_app._chat_to_wechat.pressed.emit()
+	_check("「去微信聊」请上层打开微信", req, ["res://scenes/apps/wechat.tscn"] as Array[String])
+
 	_finish()
+
+
+## 走完「点开一家 → 点 HR → 聊完」这条链路。
+## 【测试里把 `_chat_step` 设成 0】那就是「跳过」按钮走的那条路：一次放完，不必等计时器 ——
+## 否则断言得跟着 0.85 秒的节奏写，又慢又脆。
+func _walk_hr_chat(code: String) -> void:
+	_app._select_company(code)
+	_app._chat_step = 0.0
+	_app._open_chat()
 
 
 # ============================================================

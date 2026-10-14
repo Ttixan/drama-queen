@@ -1,48 +1,41 @@
 extends Control
-## 手机壳 —— 玩家真正拿在手上的那台手机
+## 日历 —— 桌上那本台历，也就是「你的日程与进度」
 ##
-## 【它的职责】桌面 + 状态栏 + 4 个 App 入口。**它自己不含任何玩法逻辑**：
-## 打工、上课、结束今天全是在调 `Game` 上的方法，App 也只是被打开的子场景。
+## 【它的职责】状态栏 + 今日安排 + 本周进度，**外加周末结算浮层与重开一局**。
+## 原来这些都在手机壳里（手机屏的「上半部分」），改版后搬到这儿：
+## 桌子上的台历本来就是「今天该做什么」，4 个 App 才归手机。
+## **它自己不含任何玩法逻辑**：打工、上课、结束今天全是在调 `Game` 上的方法。
 ## 这条边界要守住 —— 一旦把「打工 +30 元」写进这里，数值模拟器就白做了。
 ##
-## 【为什么「今日安排」放在桌面，而不是做成第 5 个 App】
+## 【为什么「今日安排」值得单独一屏】
 ## 数值表定义了打工 30 元/次、表演课 100 元/次，但 GDD 里根本没写玩家在哪儿点它们。
-## 放桌面有三个好处：
-##   1. 一天只有 1 点行动点，桌面一眼就能看清「今天还剩什么能做」
+## 放这一屏有三个好处：
+##   1. 一天只有 1 点行动点，一眼就能看清「今天还剩什么能做」
 ##   2. 门槛原因**直接写在卡片上**（没钱 / 次数用完 / 没行动点），不必进二级页面才知道
 ##   3. 4 个 App 的职责保持 GDD 原样，不用为两个动作再造一个 App
+##
+## 【返回桌面】桌子（`desk_screen.tscn`）把本场景当子页面打开，
+## 所以要有回去的路：与录像机 / 微信 / Boss直聘 被嵌进手机时用的是同一套约定 ——
+## `cancelled` 信号 + `enable_back()`，由调用方决定要不要露出「返回桌面」。
+
+## 上层（桌子）把本场景当子页面打开时，玩家要回去就发这条
+signal cancelled
+## 「去投递」那张卡要把玩家送到手机屏的微信里 —— 但微信不归本屏管（它归手机屏），
+## 所以只发请求，由桌子决定怎么切过去。
+signal open_app_requested(scene_path: String)
 
 const PLAN_MARGIN := "Page/BodyWrap/Body/PlanPanel/PlanMargin/PlanBox"
 const INFO_MARGIN := "Page/BodyWrap/Body/InfoPanel/InfoMargin/InfoBox"
 const P_STATUS := "Page/StatusBar/StatusMargin/StatusRow"
-const P_DOCK := "Page/Dock/DockMargin/DockRow"
 
 const REPORT_SCENE := "res://scenes/main/week_report.tscn"
-
-## 【为什么 App 表写死在代码里】它是**导航结构**（有哪几个 App 是玩法定义，不是数值），
-## 与 `scripts/data/` 里那些"策划要改"的资源不是一类东西。配色沿用 UiPalette 的语义色。
-## mark 是图标里的那个字。**必须显式写死**：按名字取首字会让「微信」和「微博」
-## 都显示「微」，两个图标长得一模一样。
-const APPS := [
-	{"name": "Boss直聘", "mark": "聘", "scene": "res://scenes/apps/boss.tscn",
-		"color": UiPalette.BOSS, "hint": "看公司 · 解锁 HR"},
-	{"name": "录像机", "mark": "录", "scene": "res://scenes/minigame/recorder.tscn",
-		"color": UiPalette.ACCENT, "hint": "拼 3 帧表情包"},
-	{"name": "微信", "mark": "信", "scene": "res://scenes/apps/wechat.tscn",
-		"color": UiPalette.WECHAT, "hint": "私聊 HR 就是投递"},
-	{"name": "微博", "mark": "博", "scene": "res://scenes/apps/weibo.tscn",
-		"color": UiPalette.WEIBO, "hint": "《有瓜有戏》往期"},
-]
 
 @onready var _left_box: HBoxContainer = get_node(P_STATUS + "/LeftBox")
 @onready var _right_box: HBoxContainer = get_node(P_STATUS + "/RightBox")
 @onready var _plan_list: VBoxContainer = get_node(PLAN_MARGIN + "/PlanList")
 @onready var _plan_hint: Label = get_node(PLAN_MARGIN + "/PlanHint")
 @onready var _info_list: VBoxContainer = get_node(INFO_MARGIN + "/InfoList")
-@onready var _dock_icons: HBoxContainer = get_node(P_DOCK + "/DockIcons")
-@onready var _dock_hint: Label = get_node(P_DOCK + "/DockHint")
 @onready var _restart_button: Button = get_node(INFO_MARGIN + "/RestartButton")
-@onready var _app_layer: Control = get_node("AppLayer")
 @onready var _report_layer: Control = get_node("ReportLayer")
 
 ## 「重开一局」的二次确认窗口。**为什么需要它**：
@@ -57,11 +50,12 @@ var _acting_label: Label
 var _fame_label: Label
 var _rep_label: Label
 var _ps5_label: Label
+## 「返回桌面」—— 只有被桌子当子页面打开时才露出来（见 enable_back）
+var _back_button: Button
+var _back_enabled := false
 
 ## 动作卡：key -> {button, title, detail, state}
 var _cards: Dictionary = {}
-## 当前打开的 App（同一时刻只允许一个）
-var _app: Node
 var _report: Node
 ## 重开按钮的待确认时间戳（毫秒）。0 = 不在待确认状态
 var _restart_armed_at := 0
@@ -71,7 +65,6 @@ func _ready() -> void:
 	_apply_styles()
 	_build_status()
 	_build_plan()
-	_build_dock()
 
 	EventBus.state_reset.connect(_on_state_reset)
 	EventBus.ap_changed.connect(_on_ap_changed)
@@ -82,6 +75,21 @@ func _ready() -> void:
 # 状态栏
 # ============================================================
 func _build_status() -> void:
+	# 返回桌面排在最前 —— 独立运行时它一直藏着（那时手机壳就是最外层，没地方可回）
+	_back_button = Button.new()
+	_back_button.text = "← 桌面"
+	_back_button.focus_mode = Control.FOCUS_NONE
+	_back_button.visible = false
+	_back_button.pressed.connect(func() -> void: cancelled.emit())
+	_left_box.add_child(_back_button)
+	UiPalette.text(_back_button, 20, UiPalette.TEXT)
+	_back_button.add_theme_stylebox_override("normal",
+			UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 12, 0, 12))
+	_back_button.add_theme_stylebox_override("hover",
+			UiPalette.button(UiPalette.PANEL_SOFT.lightened(0.1), UiPalette.ACCENT, 3, 12, 0, 12))
+	_back_button.add_theme_stylebox_override("pressed",
+			UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.ACCENT, 3, 12, 0, 12))
+
 	_day_label = _chip(_left_box, 24, UiPalette.TEXT)
 	_ap_label = _chip(_left_box, 22, UiPalette.POSITIVE)
 	_money_label = _chip(_right_box, 24, UiPalette.ACCENT)
@@ -89,6 +97,28 @@ func _build_status() -> void:
 	_fame_label = _chip(_right_box, 20, UiPalette.TEXT)
 	_rep_label = _chip(_right_box, 20, UiPalette.TEXT)
 	_ps5_label = _chip(_right_box, 20, UiPalette.TEXT)
+
+
+## 由上层（桌子）调用：露出「返回桌面」，并让 Esc / 安卓返回键也能回去。
+##
+## 【为什么键盘与按钮都要】PC 上是 Esc，手机上是系统返回键 —— Godot 把两者
+## 都归到 `ui_cancel`，所以一个入口就够；但光有快捷键玩家发现不了，所以按钮也得有。
+func enable_back() -> void:
+	_back_enabled = true
+	if _back_button != null:
+		_back_button.visible = true
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _back_enabled or not event.is_action_pressed("ui_cancel"):
+		return
+	# 【为什么要判 _report】安卓返回键的惯例是「先关掉当前弹层」。
+	# 日历里可能正开着周末结算浮层，那一层才该先吃这一下。
+	# （App 归手机屏管 —— 见 `phone_screen.gd`，那边自己有一份同样的判断）
+	if _report != null:
+		return
+	get_viewport().set_input_as_handled()
+	cancelled.emit()
 
 
 func _chip(parent: Node, size: int, color: Color) -> Label:
@@ -324,94 +354,13 @@ func _row(key: String, value: String, hint: String, value_color: Color = UiPalet
 
 
 # ============================================================
-# 底部 App 栏
-# ============================================================
-func _build_dock() -> void:
-	for app: Dictionary in APPS:
-		_dock_icons.add_child(_make_dock_icon(app))
-
-
-func _make_dock_icon(app: Dictionary) -> Button:
-	var b := Button.new()
-	b.name = "App_" + String(app["name"])
-	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(0, 100)
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side in ["left", "top", "right", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 12)
-	b.add_child(margin)
-
-	var hbox := HBoxContainer.new()
-	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hbox.add_theme_constant_override("separation", 12)
-	margin.add_child(hbox)
-
-	var chip := Panel.new()
-	chip.custom_minimum_size = Vector2(52, 52)
-	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_theme_stylebox_override("panel", UiPalette.rounded(app["color"], 12))
-	hbox.add_child(chip)
-
-	var initial := Label.new()
-	initial.set_anchors_preset(Control.PRESET_FULL_RECT)
-	initial.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	initial.text = String(app["mark"])
-	initial.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	initial.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	UiPalette.text(initial, 24, UiPalette.INK)
-	chip.add_child(initial)
-
-	var text_box := VBoxContainer.new()
-	text_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	text_box.add_theme_constant_override("separation", 2)
-	hbox.add_child(text_box)
-
-	var name_label := Label.new()
-	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	name_label.text = String(app["name"])
-	UiPalette.text(name_label, 20, UiPalette.TEXT)
-	text_box.add_child(name_label)
-
-	var hint := Label.new()
-	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hint.text = String(app["hint"])
-	UiPalette.text(hint, 14, UiPalette.TEXT_DIM)
-	text_box.add_child(hint)
-
-	b.add_theme_stylebox_override("normal",
-			UiPalette.button(UiPalette.PANEL, UiPalette.LINE, 2, 16, 0, 12))
-	b.add_theme_stylebox_override("hover",
-			UiPalette.button(Color("2d2d36"), app["color"], 2, 16, 0, 12))
-	b.add_theme_stylebox_override("pressed",
-			UiPalette.button(app["color"], app["color"], 2, 16, 4, 12))
-	b.add_theme_stylebox_override("disabled",
-			UiPalette.button(Color("1c1c22"), UiPalette.LINE, 1, 16, 0, 12))
-
-	b.pressed.connect(_on_open_app.bind(String(app["scene"])))
-	return b
-
-
-func _refresh_dock() -> void:
-	var blocked := _app != null or _report != null
-	for child in _dock_icons.get_children():
-		(child as Button).disabled = blocked
-	_dock_hint.text = "先关掉手上的页面" if blocked else "点图标打开 App"
-
-
-# ============================================================
 # 动作
 # ============================================================
 func _on_submit_pressed() -> void:
-	# 投递入口在微信里（决策 1.4：Boss直聘 只读）。桌面这张卡只是把玩家送过去，
+	# 投递入口在微信里（决策 1.4：Boss直聘 只读）。这张卡只是把玩家送过去，
 	# **不在这里替玩家投** —— 投哪家、投哪个档位、用哪段表情包都得玩家自己决定。
-	_on_open_app("res://scenes/apps/wechat.tscn")
+	# 微信归**手机屏**管（改版后 App 都在那边），所以只发请求，由桌子切过去。
+	open_app_requested.emit("res://scenes/apps/wechat.tscn")
 
 
 func _on_work_pressed() -> void:
@@ -453,35 +402,10 @@ func _report_action_issue(r: Dictionary) -> void:
 
 
 # ============================================================
-# App 与结算界面
+# 结算界面
 # ============================================================
-func _on_open_app(scene_path: String) -> void:
-	if _app != null or _report != null:
-		return
-	_app = load(scene_path).instantiate()
-	_app_layer.add_child(_app)
-	_app_layer.visible = true
-	# 子页面自己决定要不要显示「返回」按钮；这里只是把它打开
-	if _app.has_method("enable_back"):
-		_app.enable_back()
-	if _app.has_signal("cancelled"):
-		_app.connect("cancelled", _close_app)
-	_refresh_dock()
-
-
-func _close_app() -> void:
-	if _app != null:
-		if _app.has_signal("cancelled") and _app.is_connected("cancelled", _close_app):
-			_app.disconnect("cancelled", _close_app)
-		_app.queue_free()
-		_app = null
-	_app_layer.visible = false
-	# 回来时状态大概率变了（投递花掉行动点、解锁了新 HR），整体重画一遍
-	_refresh_all()
-
-
 func _open_report(report: Dictionary) -> void:
-	if _report != null or _app != null:
+	if _report != null:
 		return
 	_report = load(REPORT_SCENE).instantiate()
 	# 在 add_child 之前把数据放好 —— 这样 _ready() 里能直接用它建界面
@@ -490,7 +414,6 @@ func _open_report(report: Dictionary) -> void:
 	_report_layer.visible = true
 	if _report.has_signal("dismissed"):
 		_report.connect("dismissed", _close_report)
-	_refresh_dock()
 
 
 func _close_report() -> void:
@@ -549,7 +472,6 @@ func _refresh_all() -> void:
 	_refresh_status()
 	_refresh_plan()
 	_refresh_info()
-	_refresh_dock()
 	_refresh_restart()
 
 
@@ -559,7 +481,6 @@ func _on_ap_changed(_left: int) -> void:
 
 ## 状态被整个换掉（开新局 / 读档）
 func _on_state_reset() -> void:
-	_close_app()
 	_close_report()
 	_refresh_all()
 
@@ -576,12 +497,6 @@ func _apply_styles() -> void:
 	bar.border_width_bottom = 3
 	bar.border_color = UiPalette.ACCENT
 	get_node("Page/StatusBar").add_theme_stylebox_override("panel", bar)
-
-	var dock := StyleBoxFlat.new()
-	dock.bg_color = UiPalette.PANEL
-	dock.border_width_top = 3
-	dock.border_color = UiPalette.LINE
-	get_node("Page/Dock").add_theme_stylebox_override("panel", dock)
 
 	_style_panel(get_node("Page/BodyWrap/Body/PlanPanel"), UiPalette.PANEL, 20, 2)
 	_style_panel(get_node("Page/BodyWrap/Body/InfoPanel"), UiPalette.PANEL, 20, 2)
@@ -600,7 +515,6 @@ func _apply_styles() -> void:
 	UiPalette.text(get_node(PLAN_MARGIN + "/PlanCaption"), 30, UiPalette.TEXT)
 	UiPalette.text(_plan_hint, 15, UiPalette.TEXT_DIM)
 	UiPalette.text(get_node(INFO_MARGIN + "/InfoCaption"), 30, UiPalette.TEXT)
-	UiPalette.text(_dock_hint, 15, UiPalette.TEXT_DISABLED)
 
 
 func _style_panel(node: Node, bg: Color, radius: int, border: int) -> void:

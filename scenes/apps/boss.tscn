@@ -214,6 +214,10 @@ text = "—"
 layout_mode = 2
 theme_override_constants/separation = 8
 
+[node name="HrCard" type="Button" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
+custom_minimum_size = Vector2(0, 96)
+layout_mode = 2
+
 [node name="HintPanel" type="PanelContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
 layout_mode = 2
 
@@ -250,6 +254,98 @@ autowrap_mode = 3
 layout_mode = 2
 text = "—"
 autowrap_mode = 3
+
+[node name="PostFoot" type="PanelContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox"]
+layout_mode = 2
+
+[node name="FootMargin" type="MarginContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostFoot"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 12
+
+[node name="FootRow" type="HBoxContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostFoot/FootMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="FootHint" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostFoot/FootMargin/FootRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+text = "想投这一家，得先在微信里加上 HR"
+autowrap_mode = 3
+
+[node name="ContactButton" type="Button" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostFoot/FootMargin/FootRow"]
+custom_minimum_size = Vector2(240, 62)
+layout_mode = 2
+text = "继续沟通"
+
+[node name="ChatPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ChatMargin" type="MarginContainer" parent="Page/BodyWrap/Body/ChatPanel"]
+layout_mode = 2
+
+[node name="ChatBox" type="VBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ChatHead" type="HBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ChatBack" type="Button" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHead"]
+layout_mode = 2
+text = "← 职位"
+
+[node name="ChatWho" type="VBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHead"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="ChatName" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHead/ChatWho"]
+layout_mode = 2
+text = "HR"
+
+[node name="ChatTitle" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHead/ChatWho"]
+layout_mode = 2
+
+[node name="ChatOnline" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHead"]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="ChatScroll" type="ScrollContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ChatFeed" type="VBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="ChatFoot" type="HBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="ChatHint" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatFoot"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+
+[node name="ChatSkip" type="Button" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatFoot"]
+custom_minimum_size = Vector2(150, 56)
+layout_mode = 2
+text = "跳过 ▸▸"
+
+[node name="ChatToWechat" type="Button" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatFoot"]
+visible = false
+custom_minimum_size = Vector2(240, 56)
+layout_mode = 2
+text = "去微信聊"
 
 [node name="BackButton" type="Button" parent="Page"]
 visible = false

@@ -1,5 +1,5 @@
 [gd_scene load_steps=2 format=3 uid="uid://c8dccqu8kwlvk"]
 
-[ext_resource type="PackedScene" path="res://scenes/main/phone_shell.tscn" id="1_shell"]
+[ext_resource type="PackedScene" path="res://scenes/main/desk_screen.tscn" id="1_desk"]
 
-[node name="MainScene" instance=ExtResource("1_shell")]
+[node name="MainScene" instance=ExtResource("1_desk")]

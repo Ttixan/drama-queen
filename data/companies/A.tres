@@ -1,28 +1,42 @@
 [gd_resource type="Resource" script_class="CompanyData" format=3]
 
-[ext_resource type="Script" path="res://scripts/data/audition_condition.gd" id="1_eagp2"]
-[ext_resource type="Script" path="res://scripts/data/role_requirement.gd" id="2_3n4am"]
-[ext_resource type="Script" path="res://scripts/data/company_data.gd" id="3_xd4r1"]
+[ext_resource type="Script" path="res://scripts/data/audition_condition.gd" id="1_3n4am"]
+[ext_resource type="Script" path="res://scripts/data/chat_line.gd" id="2_xd4r1"]
+[ext_resource type="Script" path="res://scripts/data/role_requirement.gd" id="3_m8ys4"]
+[ext_resource type="Script" path="res://scripts/data/company_data.gd" id="4_3tmev"]
 
-[sub_resource type="Resource" id="Resource_m8ys4"]
-script = ExtResource("1_eagp2")
+[sub_resource type="Resource" id="Resource_04nrh"]
+script = ExtResource("1_3n4am")
 type = 2
 emotion = 1
 required = true
 
-[sub_resource type="Resource" id="Resource_3tmev"]
-script = ExtResource("2_3n4am")
+[sub_resource type="Resource" id="Resource_cqnkl"]
+script = ExtResource("2_xd4r1")
+text = "你好，编剧岗一直在招。接受新人，有模板，日更跟得上就行。"
 
-[sub_resource type="Resource" id="Resource_04nrh"]
-script = ExtResource("2_3n4am")
+[sub_resource type="Resource" id="Resource_o55o0"]
+script = ExtResource("2_xd4r1")
+who = "me"
+text = "你好，我没写过短剧，想先了解一下是怎么个做法。"
+
+[sub_resource type="Resource" id="Resource_ujirq"]
+script = ExtResource("2_xd4r1")
+text = "三言两语说不完，加我微信吧，我把模板发你。"
+
+[sub_resource type="Resource" id="Resource_hpx5e"]
+script = ExtResource("3_m8ys4")
+
+[sub_resource type="Resource" id="Resource_bwilm"]
+script = ExtResource("3_m8ys4")
 tier = 1
 acting_required = 5
 match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_cqnkl"]
-script = ExtResource("2_3n4am")
+[sub_resource type="Resource" id="Resource_v0kqa"]
+script = ExtResource("3_m8ys4")
 tier = 2
 acting_required = 15
 match_line = 0.7
@@ -30,12 +44,12 @@ acting_gain = 5
 payout_ratio = 3.0
 
 [resource]
-script = ExtResource("3_xd4r1")
+script = ExtResource("4_3tmev")
 id = &"A"
 code = "A"
 display_name = "A 公司"
-conditions = Array[ExtResource("1_eagp2")]([SubResource("Resource_m8ys4")])
-roles = Array[ExtResource("2_3n4am")]([SubResource("Resource_3tmev"), SubResource("Resource_04nrh"), SubResource("Resource_cqnkl")])
+conditions = Array[ExtResource("1_3n4am")]([SubResource("Resource_04nrh")])
+roles = Array[ExtResource("3_m8ys4")]([SubResource("Resource_hpx5e"), SubResource("Resource_bwilm"), SubResource("Resource_v0kqa")])
 extra_payout = 40
 tagline = "流水线烂片小厂"
 industry = "广播／影视"
@@ -61,3 +75,5 @@ posting_note = "模板里的人名请替换干净，上个月有三部剧认了�
 hint = "A 厂什么都收。别全程一张臭脸就行 —— 他们自己也知道片子烂，不挑。"
 hr_name = "王先生"
 hr_title = "招聘负责人"
+hr_status = "刚刚活跃"
+opening_chat = Array[ExtResource("2_xd4r1")]([SubResource("Resource_cqnkl"), SubResource("Resource_o55o0"), SubResource("Resource_ujirq")])

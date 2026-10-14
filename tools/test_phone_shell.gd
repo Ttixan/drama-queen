@@ -1,5 +1,10 @@
 extends SceneTree
-## 手机壳验证 —— headless 跑，驱动真实控件
+## 主界面两屏验证 —— headless 跑，驱动真实控件
+##
+## 【改版后它测两张屏】桌子下面分成两屏：
+##   `calendar_screen`（日历）= 状态栏 + 今日安排 + 本周进度 + 结算浮层 + 重开一局
+##   `phone_screen`（手机）  = 左栏 App 列表 / 某个 App 的二级列表 + 右栏内容
+## 变量名沿用 `_app`（历史上只有一个手机壳），它是**日历屏**；手机屏是 `_phone`。
 ##
 ##   godot --headless --path <项目> --script res://tools/test_phone_shell.gd
 ##
@@ -10,23 +15,27 @@ extends SceneTree
 ##   1. 手机壳里**不许出现玩法数值**（+30 元必须来自 Economy，不是这里写死的）
 ##   2. 主场景换了之后，开新局 / 读档必须把打开的 App 与浮层一起清掉
 
-const SCENE := "res://scenes/main/phone_shell.tscn"
+const SCENE := "res://scenes/main/calendar_screen.tscn"
+const PHONE_SCENE := "res://scenes/main/phone_screen.tscn"
 
 var _failures: Array[String] = []
 var _checks := 0
-var _app
+var _app        ## 日历屏（今日安排 / 结算 / 结局 / 重开都在它身上）
+var _phone      ## 手机屏（左栏 App 列表 / 右栏内容）
 var _game
 
 
 func _initialize() -> void:
 	_app = load(SCENE).instantiate()
 	root.add_child(_app)
+	_phone = load(PHONE_SCENE).instantiate()
+	root.add_child(_phone)
 	process_frame.connect(_run_all, CONNECT_ONE_SHOT)
 
 
 func _run_all() -> void:
 	print("")
-	print("=== 手机壳验证 ===")
+	print("=== 主界面两屏验证（日历 + 手机）===")
 	print("")
 
 	_game = root.get_node_or_null("Game")
@@ -48,6 +57,7 @@ func _run_all() -> void:
 	_test_save_load()
 	_test_restart_button()
 	_test_week_event()
+	_test_desk_jump()
 
 	print("")
 	print("共 %d 项断言" % _checks)
@@ -77,12 +87,14 @@ func _card_state(key: String) -> String:
 
 # ============================================================
 func _test_desktop() -> void:
-	print("[1] 桌面：状态栏 + 今日安排 + Dock")
+	print("[1] 日历：状态栏 + 今日安排 ｜ 手机：左栏 App 列表")
 	_check("四张动作卡都在", _app._cards.size(), 4)
-	_check("Dock 四个 App", _app._dock_icons.get_child_count(), 4)
-	_check("开局没有打开的 App", _app._app == null, true)
-	_check("App 层是隐藏的", _app._app_layer.visible, false)
+	_check("手机左栏列着四个 App", _phone._app_list.get_child_count(), 4)
+	_check("开局没有打开的 App", _phone.current_app_path(), "")
 	_check("结算层是隐藏的", _app._report_layer.visible, false)
+	_check("日历上能看到属性（这是做决定的地方）",
+			_app._ps5_label.text.is_empty(), false)
+	_check("手机栏是窄的：只有天数 / 行动点 / 钱", _phone._money_label.text.is_empty(), false)
 
 	var bal := BalanceLibrary.data()
 	_check("状态栏·金钱 == 数值表的初始金钱", _app._money_label.text,
@@ -137,21 +149,28 @@ func _test_work_and_class() -> void:
 
 
 func _test_app_switch() -> void:
-	print("[3] App 切换")
-	_app._on_open_app("res://scenes/apps/boss.tscn")
-	_check("打开了 Boss直聘", _app._app != null, true)
-	_check("App 层显形", _app._app_layer.visible, true)
-	_check("打开 App 时 Dock 被禁用", (_app._dock_icons.get_child(0) as Button).disabled, true)
-	_check("子页面拿到了返回按钮", _app._app._back_button.visible, true)
-	# 再点别的图标不该叠第二层
-	_app._on_open_app("res://scenes/apps/wechat.tscn")
-	_check("同一时刻只开一个 App", _app._app_layer.get_child_count(), 1)
+	print("[3] 手机屏：App 切换与二级列表")
+	_phone.open_app("res://scenes/apps/boss.tscn")
+	_check("打开了 Boss直聘", _phone.current_app_path(), "res://scenes/apps/boss.tscn")
+	# App 自己的返回按钮在这层**不该露出来**：它写的是原来那位宿主的去向
+	# （Boss 上写着「返回微信」），而本屏自己有「← 桌面」+ 左栏 App 列表两层导航
+	_check("没有露出 App 自己的返回按钮", _phone._current._back_button.visible, false)
+	_check("空右侧的提示收起来了", _phone._empty_hint.visible, false)
+	# 再开一个：不该叠第二层，前一个要被换掉
+	_phone.open_app("res://scenes/apps/wechat.tscn")
+	_check("同一时刻只开一个 App", _phone.current_app_path(), "res://scenes/apps/wechat.tscn")
+	# 微信交出了自己的联系人列表 → 左栏从「App 列表」换成二级列表
+	_check("微信交出了二级列表", _phone._sidebar != null, true)
+	_check("左栏换成了二级列表", _phone._sidebar_host.visible, true)
+	_check("App 列表让位了", _phone._app_list.visible, false)
+	_check("顶上写明这是谁的列表", _phone._caption.text.contains("微信"), true)
+	_check("有回全列表的路", _phone._column_back.visible, true)
 
-	_app._app.cancelled.emit()
-	_check("返回后 App 关掉了", _app._app, null)
-	_check("App 层重新隐藏", _app._app_layer.visible, false)
-	_check("Dock 解禁", (_app._dock_icons.get_child(0) as Button).disabled, false)
-	print("   一次只开一个；返回后状态整体重画（投递会花掉行动点）")
+	_phone._current.cancelled.emit()
+	_check("返回后 App 关掉了", _phone.current_app_path(), "")
+	_check("左栏换回 App 列表", _phone._app_list.visible, true)
+	_check("二级列表被收掉了（它已经不归 App 管）", _phone._sidebar, null)
+	print("   一次只开一个；交得出二级列表的 App 会把左栏换掉")
 
 
 func _test_end_day() -> void:
@@ -254,10 +273,11 @@ func _test_full_run_to_ending() -> void:
 	_check("再来一局：周报清空", _game.state.reports.size(), 0)
 	# 开新局 / 读档必须把打开的 App 一起清掉，
 	# 否则打完一局再开新局，屏幕上还挂着上一局的聊天窗口
-	_app._on_open_app("res://scenes/apps/wechat.tscn")
-	_check("先打开一个 App", _app._app != null, true)
+	# （改版后 App 在手机屏里，所以这条改测手机屏）
+	_phone.open_app("res://scenes/apps/wechat.tscn")
+	_check("先打开一个 App", _phone.current_app_path() != "", true)
 	_game.new_game()
-	_check("开新局把 App 也清掉了", _app._app, null)
+	_check("开新局把 App 也清掉了", _phone.current_app_path(), "")
 	print("   三周跑满 → 平庸 → 再来一局，状态与界面一起归零")
 
 
@@ -433,6 +453,32 @@ func _test_week_event() -> void:
 	_check("处理完不再有待处理事件", _game.pending_event(), null)
 	_check("本周不会再来第二件", EventScheduler.pick(_game.state, 2), null)
 	print("   周初排事件、错过作废、一周只演一出，都挂在周循环上")
+
+
+## 桌子：跨屏跳转
+##
+## 【为什么要单独测】「去投递」那张卡在日历上，但微信住在手机屏里 ——
+## 这一跳跨了两个屏，只有桌子知道该怎么走。不测的话，坏起来的表现是
+## 「点了没反应」，而两屏各自的测试都是绿的。
+func _test_desk_jump() -> void:
+	print("[11] 桌子：跨屏跳转（日历「去投递」→ 手机的微信）")
+	var desk: Node = load("res://scenes/main/desk_screen.tscn").instantiate()
+	root.add_child(desk)
+	desk._on_activated(desk.get_node("Hotspots/HotspotCalendar"))
+	_check("先打开了日历", desk._open.name, "CalendarScreen")
+	# 日历自己**不该**开微信（App 归手机屏管），它只发请求
+	var requests: Array[String] = []
+	desk._open.open_app_requested.connect(func(p: String) -> void: requests.append(p))
+	desk._open._on_submit_pressed()
+	_check("日历把「去投递」发成了请求", requests, ["res://scenes/apps/wechat.tscn"] as Array[String])
+	# 桌子接住请求：关掉日历、开手机、再把微信打开
+	_check("桌子把玩家送进了手机屏", desk._open.name, "PhoneScreen")
+	_check("并且直接打开了微信", desk._open.current_app_path(), "res://scenes/apps/wechat.tscn")
+	# 手机上返回桌面要能回到桌子
+	desk._open.cancelled.emit()
+	_check("从手机返回后桌面空了", desk.has_open_screen(), false)
+	desk.queue_free()
+	print("   日历发请求 → 桌子切屏 → 手机开微信；返回能回桌面")
 
 
 func _snapshot_save() -> Dictionary:

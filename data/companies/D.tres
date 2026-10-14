@@ -1,33 +1,47 @@
 [gd_resource type="Resource" script_class="CompanyData" format=3]
 
-[ext_resource type="Script" path="res://scripts/data/audition_condition.gd" id="1_ou5t8"]
-[ext_resource type="Script" path="res://scripts/data/role_requirement.gd" id="2_0lt77"]
-[ext_resource type="Script" path="res://scripts/data/company_data.gd" id="3_aq84a"]
+[ext_resource type="Script" path="res://scripts/data/audition_condition.gd" id="1_0lt77"]
+[ext_resource type="Script" path="res://scripts/data/chat_line.gd" id="2_aq84a"]
+[ext_resource type="Script" path="res://scripts/data/role_requirement.gd" id="3_2n8ow"]
+[ext_resource type="Script" path="res://scripts/data/company_data.gd" id="4_f6nd1"]
 
-[sub_resource type="Resource" id="Resource_2n8ow"]
-script = ExtResource("1_ou5t8")
+[sub_resource type="Resource" id="Resource_711sn"]
+script = ExtResource("1_0lt77")
 type = 6
 weight = 2.0
 required = true
 
-[sub_resource type="Resource" id="Resource_f6nd1"]
-script = ExtResource("1_ou5t8")
+[sub_resource type="Resource" id="Resource_p6y5r"]
+script = ExtResource("1_0lt77")
 type = 5
 emotion = 2
 
-[sub_resource type="Resource" id="Resource_711sn"]
-script = ExtResource("2_0lt77")
+[sub_resource type="Resource" id="Resource_3bt7y"]
+script = ExtResource("2_aq84a")
+text = "我们不做流水线。想做作者电影、现实题材，再聊。"
 
-[sub_resource type="Resource" id="Resource_p6y5r"]
-script = ExtResource("2_0lt77")
+[sub_resource type="Resource" id="Resource_i578h"]
+script = ExtResource("2_aq84a")
+who = "me"
+text = "我想做的是能留下来的东西，不是快消。"
+
+[sub_resource type="Resource" id="Resource_nani4"]
+script = ExtResource("2_aq84a")
+text = "那加我微信，约个时间当面谈。"
+
+[sub_resource type="Resource" id="Resource_y3p7j"]
+script = ExtResource("3_2n8ow")
+
+[sub_resource type="Resource" id="Resource_31u35"]
+script = ExtResource("3_2n8ow")
 tier = 1
 acting_required = 5
 match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_3bt7y"]
-script = ExtResource("2_0lt77")
+[sub_resource type="Resource" id="Resource_qy2nu"]
+script = ExtResource("3_2n8ow")
 tier = 2
 acting_required = 15
 match_line = 0.7
@@ -35,14 +49,14 @@ acting_gain = 5
 payout_ratio = 3.0
 
 [resource]
-script = ExtResource("3_aq84a")
+script = ExtResource("4_f6nd1")
 id = &"D"
 code = "D"
 display_name = "D 公司"
 tier = 3
 acting_threshold = 15
-conditions = Array[ExtResource("1_ou5t8")]([SubResource("Resource_2n8ow"), SubResource("Resource_f6nd1")])
-roles = Array[ExtResource("2_0lt77")]([SubResource("Resource_711sn"), SubResource("Resource_p6y5r"), SubResource("Resource_3bt7y")])
+conditions = Array[ExtResource("1_0lt77")]([SubResource("Resource_711sn"), SubResource("Resource_p6y5r")])
+roles = Array[ExtResource("3_2n8ow")]([SubResource("Resource_y3p7j"), SubResource("Resource_31u35"), SubResource("Resource_qy2nu")])
 extra_payout = 96
 tagline = "高门槛文艺公司"
 industry = "广播／影视"
@@ -58,3 +72,5 @@ posting_text = "关于我们
 hint = "D 公司要「幻灭」。第一帧还亮着，最后一帧得暗下去 —— 一路滑下来，不是中间掉头。"
 hr_name = "徐女士"
 hr_title = "制片人"
+hr_status = "本周活跃"
+opening_chat = Array[ExtResource("2_aq84a")]([SubResource("Resource_3bt7y"), SubResource("Resource_i578h"), SubResource("Resource_nani4")])

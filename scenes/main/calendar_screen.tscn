@@ -1,9 +1,9 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://scripts/apps/phone_shell.gd" id="1_shell"]
+[ext_resource type="Script" path="res://scripts/apps/calendar_screen.gd" id="1_shell"]
 [ext_resource type="Theme" path="res://assets/ui/ui_theme.tres" id="2_theme"]
 
-[node name="PhoneShell" type="Control"]
+[node name="CalendarScreen" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -127,42 +127,6 @@ theme_override_constants/separation = 10
 custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
 text = "重开一局"
-
-[node name="Dock" type="PanelContainer" parent="Page"]
-custom_minimum_size = Vector2(0, 140)
-layout_mode = 2
-
-[node name="DockMargin" type="MarginContainer" parent="Page/Dock"]
-layout_mode = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 14
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 14
-
-[node name="DockRow" type="HBoxContainer" parent="Page/Dock/DockMargin"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="DockIcons" type="HBoxContainer" parent="Page/Dock/DockMargin/DockRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 16
-
-[node name="DockHint" type="Label" parent="Page/Dock/DockMargin/DockRow"]
-layout_mode = 2
-size_flags_vertical = 4
-text = "点图标打开 App"
-horizontal_alignment = 2
-
-[node name="AppLayer" type="Control" parent="."]
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
 
 [node name="ReportLayer" type="Control" parent="."]
 visible = false

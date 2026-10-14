@@ -1,0 +1,80 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/apps/desk_screen.gd" id="1_desk"]
+[ext_resource type="Texture2D" path="res://assets/ui/desk/desk_off.jpg" id="2_off"]
+[ext_resource type="Script" path="res://scripts/apps/hotspot.gd" id="3_hot"]
+[ext_resource type="Texture2D" path="res://assets/ui/desk/desk_calendar.jpg" id="4_cal"]
+[ext_resource type="Texture2D" path="res://assets/ui/desk/desk_phone.jpg" id="5_phone"]
+[ext_resource type="Texture2D" path="res://assets/ui/desk/desk_notebook.jpg" id="6_note"]
+[ext_resource type="PackedScene" path="res://scenes/main/phone_screen.tscn" id="7_shell"]
+[ext_resource type="PackedScene" path="res://scenes/main/calendar_screen.tscn" id="8_cal"]
+
+[node name="DeskScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_desk")
+off_texture = ExtResource("2_off")
+app_hotspot = NodePath("Hotspots/HotspotPhone")
+
+[node name="Bg" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_off")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Hotspots" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="HotspotCalendar" type="Control" parent="Hotspots"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 110.0
+offset_right = 540.0
+offset_bottom = 1020.0
+mouse_default_cursor_shape = 2
+script = ExtResource("3_hot")
+active_texture = ExtResource("4_cal")
+label = "日历"
+target_scene = ExtResource("8_cal")
+
+[node name="HotspotPhone" type="Control" parent="Hotspots"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 640.0
+offset_top = 395.0
+offset_right = 1095.0
+offset_bottom = 1060.0
+mouse_default_cursor_shape = 2
+script = ExtResource("3_hot")
+active_texture = ExtResource("5_phone")
+label = "手机"
+target_scene = ExtResource("7_shell")
+
+[node name="HotspotNotebook" type="Control" parent="Hotspots"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 1205.0
+offset_top = 255.0
+offset_right = 1800.0
+offset_bottom = 895.0
+mouse_default_cursor_shape = 2
+script = ExtResource("3_hot")
+active_texture = ExtResource("6_note")
+label = "抄录手册"

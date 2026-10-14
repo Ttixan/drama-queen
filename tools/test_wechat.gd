@@ -115,7 +115,9 @@ func _run_all() -> void:
 	_check("子页面盖上来时「去 Boss直聘」置灰", _app._go_boss_button.disabled, true)
 	var boss = _app._overlay
 	boss._select_company("A")   # 模拟玩家点开 A 的招聘页
-	_check("看过招聘页后 A 的 HR 解锁了", _game.is_hr_unlocked("A"), true)
+	boss._chat_step = 0.0       # 不放慢，一次放完
+	boss._open_chat()           # 再点 HR 说上两句 —— **解锁那一步在聊完之后**
+	_check("跟 HR 聊完后 A 的 HR 解锁了", _game.is_hr_unlocked("A"), true)
 	_check("Boss 里那一行也标成已联系", String(boss._row_labels["A"]["state"].text), "已联系")
 	_check("回车键之外的老路：不能再靠 DEV 开关白送", _game.state.unlocked_hr.size(), 1)
 
