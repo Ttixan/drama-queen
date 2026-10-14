@@ -35,7 +35,7 @@ signal cancelled
 @onready var _column_back: Button = get_node(P_COLUMN + "/ColumnHead/ColumnBack")
 @onready var _column_hint: Label = get_node(P_COLUMN + "/ColumnHint")
 @onready var _app_list: VBoxContainer = get_node(P_COLUMN + "/AppList")
-@onready var _sidebar_host: VBoxContainer = get_node(P_COLUMN + "/SidebarHost")
+@onready var _sidebar_host: Control = get_node(P_COLUMN + "/SidebarHost")
 @onready var _content: Control = get_node(P_CONTENT)
 
 var _day_label: Label
@@ -173,12 +173,14 @@ func _make_app_row(app: Dictionary) -> Button:
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name_label.text = String(app["name"])
 	UiPalette.text(name_label, 20, UiPalette.TEXT)
+	UiBits.one_line(name_label, 20, 220)
 	text_box.add_child(name_label)
 
 	var sub := Label.new()
 	sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	sub.text = hint
 	UiPalette.text(sub, 14, UiPalette.TEXT_DIM)
+	UiBits.one_line(sub, 14, 220)
 	text_box.add_child(sub)
 
 	b.add_theme_stylebox_override("normal",
@@ -210,9 +212,11 @@ func _build_empty_hint() -> void:
 ## **公开**是为了让桌子能直接用：日历上「去投递」那张卡会请求开微信，
 ## 而微信归本屏管，桌子只需要找到本屏、调这一下。
 func open_app(scene_path: String) -> void:
+	# 【点同一个 App = 什么都不做，不是「收起」】原来这里是 toggle：已经开着就关掉。
+	# 于是「按过「← 全部」之后再点这个 App」的第一次点击变成了关闭 ——
+	# 玩家看到的就是「点一次没进去，得点两次」。切 App 是点**另一个**图标的事。
 	if _current != null:
 		if _current_path == scene_path:
-			_close_app()
 			return
 		_close_app()
 	_current = load(scene_path).instantiate()
@@ -245,12 +249,12 @@ func _take_sidebar() -> void:
 	# 【必须 reparent 不能 add_child】它已经在原来那棵树上了（挂在 App 自己身上），
 	# `add_child` 会直接报「already has a parent」并把它留在原地。
 	_sidebar.reparent(_sidebar_host)
-	# 【必须由宿主把「铺满」说清楚】那个列表原来是躺在 App 的 **HBox** 里的 ——
-	# 横排容器的子节点在纵向上自动填满，所以它自己从来没设过 `size_flags_vertical`。
-	# 搬到这边的 **VBox** 之后，纵向就得自己声明要伸展，否则高度只有标题那几行，
-	# **整张列表看着就是空的**（真踩过：Boss 的公司列表一行都没显出来）。
-	_sidebar.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_sidebar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# 【铺满靠锚点，不靠 size_flags】`SidebarHost` 是个**普通 Control**（不是容器），
+	# 子节点铺满只能靠锚点。这么做的关键好处：**容器的尺寸不再被这个外来列表撑开** ——
+	# 左栏因此永远是一块定宽的「小手机」，不管换到哪个 App。
+	# （用布局容器的话，列表自己声明的宽度会把整列顶宽：Boss 的卡片曾把左栏从 470 撑到 777，
+	# 那多出来的部分又被右栏的 App 画在上面 —— 看着就是「右边把左边遮了」。）
+	_sidebar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if _current.has_method("sidebar_title"):
 		_caption.text = String(_current.sidebar_title())
 	else:

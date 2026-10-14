@@ -166,6 +166,12 @@ func _test_app_switch() -> void:
 	_check("顶上写明这是谁的列表", _phone._caption.text.contains("微信"), true)
 	_check("有回全列表的路", _phone._column_back.visible, true)
 
+	# 【再点同一个 App 不该变成「收起」】原来这里写的是 toggle：玩家按过「← 全部」
+	# 之后再点它，第一次点击被当成关闭 —— 看到的现象是「点一次没进去，得点两次」
+	var keep: String = _phone.current_app_path()
+	_phone.open_app(keep)
+	_check("再点同一个 App 仍然是它", _phone.current_app_path(), keep)
+
 	_phone._current.cancelled.emit()
 	_check("返回后 App 关掉了", _phone.current_app_path(), "")
 	_check("左栏换回 App 列表", _phone._app_list.visible, true)

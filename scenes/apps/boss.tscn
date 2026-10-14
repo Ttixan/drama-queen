@@ -47,7 +47,6 @@ layout_mode = 2
 theme_override_constants/separation = 16
 
 [node name="BrandRow" type="HBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
-custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 theme_override_constants/separation = 10
 
@@ -78,7 +77,6 @@ text = "进过招聘页，微信里才会加上这家公司的 HR"
 horizontal_alignment = 1
 
 [node name="TopRight" type="VBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
-custom_minimum_size = Vector2(520, 0)
 layout_mode = 2
 theme_override_constants/separation = 0
 
@@ -106,7 +104,6 @@ layout_mode = 2
 theme_override_constants/separation = 24
 
 [node name="ListPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
-custom_minimum_size = Vector2(440, 0)
 layout_mode = 2
 
 [node name="ListMargin" type="MarginContainer" parent="Page/BodyWrap/Body/ListPanel"]
@@ -215,7 +212,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="HrCard" type="Button" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
-custom_minimum_size = Vector2(0, 96)
+custom_minimum_size = Vector2(0, 110)
 layout_mode = 2
 
 [node name="HintPanel" type="PanelContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]

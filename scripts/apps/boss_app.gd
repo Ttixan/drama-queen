@@ -41,6 +41,24 @@ const META_FIELDS: Array[Array] = [
 	["scale", "规模"],
 ]
 
+## 【列表卡的文字上限】左栏是**定宽的「小手机」**，可用宽是这么算出来的：
+##     470（手机屏里的左栏） − 36（ColumnMargin） − 36（ListMargin） − 28（卡片内边距） ≈ 370
+## 这些上限就照它定，**加起来不得超过它**。写大了会顶宽整列 —— Boss 曾用 620/900，
+## 把左栏从 470 撑到 777，多出来的那截又被右栏的 App 画在上面，看着就是「右边把左边遮了」。
+const CARD_TITLE_W := 220.0
+const CARD_SALARY_W := 110.0
+const CARD_FACTS_W := 290.0
+const CARD_CHIP_W := 110.0
+const CARD_HR_W := 170.0
+const CARD_STATE_W := 80.0
+
+## 【顶栏那几行也要有上限】右栏可用宽约 1065，这几项**加起来**得装得下。
+## 它们一度把本 App 的最小宽度撑到 **1307** —— 于是整个 App 溢出自己的面板、
+## 盖到左栏上，右端还超出屏幕（「已联系 0/5」被切掉就是这个）。
+const TOP_TITLE_W := 260.0
+const TOP_SUB_W := 320.0
+const TOP_SIDE_W := 220.0
+
 ## 聊天逐条播放的间隔（秒）。**设成 0 = 一次放完** —— 「跳过」按钮与测试都走那条。
 const CHAT_STEP := 0.85
 ## 气泡最大宽度：超了就折行。小于它时按文字实际宽度收窄（短句子不该拉成一条长条）
@@ -85,11 +103,11 @@ const ME_MARK := "你"
 
 var _companies: Array[CompanyData] = []
 var _current: CompanyData
-var _rows: Dictionary = {}         ## code -> Button
+var _rows: Dictionary = {}         ## code -> 铺在卡片上的透明按钮（管点击）
+var _cards: Dictionary = {}        ## code -> 卡片本体（管高度与选中态）
 var _row_labels: Dictionary = {}   ## code -> {state}
 var _meta_labels: Dictionary = {}  ## 字段名 -> Label
 var _hr_labels: Dictionary = {}    ## HrCard 里的三个 Label
-var _syncing := false
 ## 聊天状态。`_chat_step` 设成 0 表示一次放完（「跳过」与测试用）
 var _chat_step := CHAT_STEP
 var _chat_lines: Array[ChatLine] = []
@@ -139,127 +157,205 @@ func sidebar_title() -> String:
 # 第一层：公司列表（缩略卡）
 # ============================================================
 func _build_company_list() -> void:
-	var group := ButtonGroup.new()
 	for co: CompanyData in _companies:
-		var row := _make_company_row(co)
-		row.button_group = group
-		row.toggled.connect(_on_company_toggled.bind(co.code))
-		_company_list.add_child(row)
-		_rows[co.code] = row
+		_company_list.add_child(_make_company_card(co))
 
 
-## 一张缩略卡。**排布照 Boss 的列表页，字段只用文案里真有的** ——
-## 没有「经验/学历」就不写，没有「城市」也不编一个。
-## 【为什么职位名摆在最上面】列表页一眼要能答「这家在招什么」，
-## 公司名反而是次要的（它还叫「A 公司」，见 data/companies/README.md 的待补）。
-func _make_company_row(co: CompanyData) -> Button:
-	var row := Button.new()
-	row.name = "Company_" + co.code
-	row.toggle_mode = true
-	row.focus_mode = Control.FOCUS_NONE
-	row.custom_minimum_size = Vector2(0, 152)
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+## 一张缩略卡。**照 Boss 列表页的样子**（提提给的参照图），四行：
+##
+##     短剧编剧／网文改编（可接受新人）              4—6K    ← 职位（大）
+##     A 公司　未融资　0—20 人                               ← 公司　融资　规模（一行灰字）
+##     (经验不限) (学历不限)                                  ← 两个小块
+##     ◉ 王先生 · 招聘负责人                          演技 0   ← HR：头像 + 名字·职位 / 活跃
+##        刚刚活跃                                    未联系
+##
+## 【为什么不是「把所有信息都缩略成子弹铺开」】那样一排一排等权的块，
+## 公司名 / 行业 / 标签 / HR 全挤在一起，信息过载，而且跟参照图长得不像。
+## 现在：**行业与标签不进列表**（详情页里还在），游戏自己那两项（演技门槛 / 联系状态）
+## 放到参照图右侧「城市／区」那一格 —— 位置一样，内容是玩家真要看的。
+## 字段只用文案里真有的：没有的数据不编，长文案一律单行省略（`UiBits.one_line`）。
+##
+## 【为什么不是「Button 里塞内容」】`Button` **不把子节点算进自己的最小高度** ——
+## 子节点只是被锚在按钮那个矩形里。内容一旦比按钮高（长职位名换行、子弹多绕一行），
+## 就直接画到卡片**外面**去，糊在下一张卡上（第一版就是这么坏的）。
+## 所以反过来：`PanelContainer`（按内容长）管高度，一块透明的 `Button` 铺在上面管点击。
+func _make_company_card(co: CompanyData) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.name = "Company_" + co.code
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_cards[co.code] = card
 
 	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side in ["left", "top", "right", "bottom"]:
+	for side in ["left", "right"]:
+		margin.add_theme_constant_override("margin_" + side, 14)
+	for side in ["top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 12)
-	row.add_child(margin)
+	card.add_child(margin)
 
 	var box := VBoxContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_theme_constant_override("separation", 6)
+	box.add_theme_constant_override("separation", 8)
 	margin.add_child(box)
 
-	# ① 职位 + 薪资
+	# ① 职位（大，左） + 薪资（右，绿）
 	var head := HBoxContainer.new()
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	head.add_theme_constant_override("separation", 10)
+	head.add_theme_constant_override("separation", 12)
 	box.add_child(head)
 
 	var title := Label.new()
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title.text = co.position_title
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiPalette.text(title, 19, UiPalette.TEXT)
+	UiPalette.text(title, 20, UiPalette.TEXT)
+	UiBits.one_line(title, 20, CARD_TITLE_W)
 	head.add_child(title)
+
+	var gap := Control.new()
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(gap)
 
 	var salary := Label.new()
 	salary.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	salary.text = co.salary
 	salary.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	salary.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	UiPalette.text(salary, 17, UiPalette.POSITIVE)
+	UiPalette.text(salary, 18, UiPalette.POSITIVE)
+	UiBits.one_line(salary, 18, CARD_SALARY_W)
 	head.add_child(salary)
 
-	# ② 代号 + 公司 + 行业／融资／规模
-	var meta := HBoxContainer.new()
-	meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	meta.add_theme_constant_override("separation", 8)
-	box.add_child(meta)
-
-	var chip := Panel.new()
-	chip.custom_minimum_size = Vector2(24, 24)
-	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_theme_stylebox_override("panel", UiPalette.rounded(
-			UiPalette.COMPANY_TIER_COLORS.get(co.tier, UiPalette.LINE), 6))
-	meta.add_child(chip)
-
-	var mark := Label.new()
-	mark.set_anchors_preset(Control.PRESET_FULL_RECT)
-	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	mark.text = co.code
-	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	UiPalette.text(mark, 14, UiPalette.INK)
-	chip.add_child(mark)
-
+	# ② 公司名　融资　规模 —— 一行灰字，不是块
 	var facts := Label.new()
 	facts.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	facts.text = _facts_line(co)
-	facts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	facts.text = _facts_of(co)
 	UiPalette.text(facts, 15, UiPalette.TEXT_DIM)
-	meta.add_child(facts)
+	UiBits.one_line(facts, 15, CARD_FACTS_W)
+	box.add_child(facts)
 
-	# ③ 标签
+	# ③ 经验 / 学历两个小块
 	var chips := HBoxContainer.new()
 	chips.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chips.add_theme_constant_override("separation", 6)
+	chips.add_theme_constant_override("separation", 8)
 	box.add_child(chips)
-	for t: String in co.tags:
-		chips.add_child(_tiny_chip(t))
+	for t: String in _experience_chips(co):
+		chips.add_child(UiBits.bullet(t, 14, UiPalette.TEXT, Color("33333d"), CARD_CHIP_W))
 
-	# ④ HR + 这一家的门槛／联系状态
+	# ④ HR 一块（头像 + 两行）+ 右侧游戏信息
 	var foot := HBoxContainer.new()
 	foot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	foot.add_theme_constant_override("separation", 10)
 	box.add_child(foot)
 
-	var hr := Label.new()
-	hr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hr.text = "%s · %s" % [co.hr_name, co.hr_title]
-	hr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiPalette.text(hr, 15, UiPalette.TEXT_DIM)
-	foot.add_child(hr)
+	foot.add_child(_hr_avatar(co))
+
+	var hr_box := VBoxContainer.new()
+	hr_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hr_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hr_box.add_theme_constant_override("separation", 2)
+	foot.add_child(hr_box)
+
+	var hr_name := Label.new()
+	hr_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hr_name.text = "%s · %s" % [co.hr_name, co.hr_title]
+	UiPalette.text(hr_name, 15, UiPalette.TEXT_DIM)
+	UiBits.one_line(hr_name, 15, CARD_HR_W)
+	hr_box.add_child(hr_name)
+
+	var hr_status := Label.new()
+	hr_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hr_status.text = co.hr_status
+	UiPalette.text(hr_status, 14, UiPalette.TEXT_DISABLED)
+	UiBits.one_line(hr_status, 14, CARD_HR_W)
+	hr_box.add_child(hr_status)
+
+	# 参照图这一格右侧是「城市／区」，我们没那个数据 —— 换成玩家真要看的两个数
+	var tail := VBoxContainer.new()
+	tail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tail.add_theme_constant_override("separation", 2)
+	foot.add_child(tail)
 
 	var acting := Label.new()
 	acting.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	acting.text = "演技 %d" % co.acting_threshold
 	acting.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	UiPalette.text(acting, 15, UiPalette.ACCENT)
-	foot.add_child(acting)
+	tail.add_child(acting)
 
 	var state := Label.new()
 	state.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	state.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	UiPalette.text(state, 15, UiPalette.TEXT_DIM)
-	foot.add_child(state)
-
+	UiBits.one_line(state, 15, CARD_STATE_W)
+	tail.add_child(state)
 	_row_labels[co.code] = {"state": state}
-	return row
+
+	# 点击层：透明按钮铺满整张卡。**它不参与高度**，所以卡片不会被它撑变形
+	var hit := Button.new()
+	hit.name = "Hit"
+	hit.flat = true
+	hit.focus_mode = Control.FOCUS_NONE
+	hit.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hit.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	hit.pressed.connect(_select_company.bind(co.code))
+	card.add_child(hit)
+	_rows[co.code] = hit
+	return card
+
+
+## 「公司名　融资　规模」——**行业不进列表**（参照图里没有它，详情页里有）
+func _facts_of(co: CompanyData) -> String:
+	var parts: Array[String] = [co.display_name]
+	for v: String in [co.funding, co.scale]:
+		if not v.is_empty():
+			parts.append(v)
+	return "　".join(parts)
+
+
+## 参照图里「3-5年」「本科」是两个小块；我们的文案把它们写成一格（`3—5 年｜本科`），
+## 按竖线拆开。拆不开就整段当一块 —— 不编第二个出来。
+func _experience_chips(co: CompanyData) -> Array[String]:
+	var out: Array[String] = []
+	for part: String in co.experience.split("｜"):
+		var t := part.strip_edges()
+		if not t.is_empty():
+			out.append(t)
+	return out
+
+
+## HR 的小头像（参照图里右下角还有个「在线」小绿点）
+func _hr_avatar(co: CompanyData) -> Control:
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2(42, 42)
+	holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var circle := Panel.new()
+	circle.custom_minimum_size = Vector2(34, 34)
+	circle.size = Vector2(34, 34)
+	circle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	circle.add_theme_stylebox_override("panel",
+			UiPalette.rounded(UiPalette.COMPANY_TIER_COLORS.get(co.tier, UiPalette.LINE), 17))
+	holder.add_child(circle)
+
+	var mark := Label.new()
+	mark.set_anchors_preset(Control.PRESET_FULL_RECT)
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mark.text = co.hr_name.substr(0, 1)
+	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	UiPalette.text(mark, 15, UiPalette.INK)
+	circle.add_child(mark)
+
+	var dot := Panel.new()
+	dot.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	dot.offset_left = -14
+	dot.offset_top = -20
+	dot.offset_right = -4
+	dot.offset_bottom = -10
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dot.add_theme_stylebox_override("panel", UiPalette.rounded(UiPalette.POSITIVE, 5))
+	holder.add_child(dot)
+	return holder
 
 
 ## 「公司 · 行业 · 融资 · 规模」，空的字段直接不出现
@@ -287,20 +383,9 @@ func _tiny_chip(text: String) -> PanelContainer:
 	return chip
 
 
-func _on_company_toggled(on: bool, code: String) -> void:
-	if _syncing or not on:
-		return
-	_select_company(code)
-
-
 func _select_company(code: String) -> void:
 	_close_chat()
 	_current = CompanyLibrary.by_code(code)
-	_syncing = true
-	for c: String in _rows:
-		(_rows[c] as Button).button_pressed = (c == code)
-	_syncing = false
-
 	_show_posting()
 	_refresh_list()
 	_refresh_top()
@@ -440,11 +525,17 @@ func _show_posting() -> void:
 	_job_experience.text = "要求　" + co.experience if not co.experience.is_empty() else ""
 	_build_tags(co.tags)
 
-	(_hr_labels["name"] as Label).text = co.hr_name
-	(_hr_labels["title"] as Label).text = co.hr_title
-	var status := co.hr_status
-	(_hr_labels["status"] as Label).text = status
-	(_hr_labels["status"] as Label).visible = not status.is_empty()
+	# HR 卡那三行也一律单行省略 —— 长头衔（「高级人才招聘专家」）不该把整张卡撑变形
+	var hr_name: Label = _hr_labels["name"]
+	var hr_title: Label = _hr_labels["title"]
+	var hr_status: Label = _hr_labels["status"]
+	hr_name.text = co.hr_name
+	UiBits.one_line(hr_name, 21, 320)
+	hr_title.text = co.hr_title
+	UiBits.one_line(hr_title, 15, 320)
+	hr_status.text = co.hr_status
+	hr_status.visible = not co.hr_status.is_empty()
+	UiBits.one_line(hr_status, 14, 380)
 
 	_hint_text.text = co.hint
 	_detail_text.text = co.posting_text
@@ -491,23 +582,31 @@ func _open_chat() -> void:
 	_chat_aborted = false
 	_clear_feed()
 	_chat_name.text = _current.hr_name
+	UiBits.one_line(_chat_name, 26, 300)
 	_chat_title.text = _current.hr_title
+	UiBits.one_line(_chat_title, 15, 300)
 	_chat_online.text = _current.hr_status
 	_chat_online.visible = not _current.hr_status.is_empty()
+	UiBits.one_line(_chat_online, 15, 360)
 	_push_card()
 	_post_panel.visible = false
 	_chat_panel.visible = true
 	_chat_to_wechat.visible = false
-	_chat_hint.text = "HR 正在输入…"
+
+	# 【第二次进来直接给结果】已解锁 = 这段对话他看过一遍了。再逐字演一次只是让人干等 ——
+	# 内容一字不少，只是不再有动画。「跳过」按钮也就不必再摆着。
+	var seen := Game.is_hr_unlocked(_current.code)
+	_chat_skip.visible = not seen
 
 	if _chat_lines.is_empty():
 		# 文案一句都没写（连占位都没有）—— 不能把玩家卡死在这里，直接给联系方式
 		_push_system("（这家还没写初次沟通的文案，先直接加上了）")
 		_finish_chat()
 		return
-	if _chat_step <= 0.0:
+	if seen or _chat_step <= 0.0:
 		skip_chat()
 	else:
+		_chat_hint.text = "HR 正在输入…"
 		_play_chat()
 
 
@@ -546,7 +645,10 @@ func _finish_chat() -> void:
 		return
 	_chat_done = true
 	var fresh := Game.unlock_hr(_current.code)
-	_push_system("已把 %s 加进微信联系人" % _current.hr_name)
+	if fresh:
+		_push_system("已把 %s 加进微信联系人" % _current.hr_name)
+	else:
+		_push_system("%s 已经在你的微信联系人里" % _current.hr_name)
 	_chat_hint.text = "去微信私聊就能投递 —— 发一段表情包就是投递" if fresh \
 			else "这位早就在你的微信联系人里了"
 	_chat_to_wechat.visible = true
@@ -572,8 +674,13 @@ func _bubble(line: ChatLine) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 
+	# 【顺序就是左右】对手那一侧先放头像、再放气泡（头像在最左）；
+	# 自己这一侧反过来（气泡在前、头像收到最右）。
+	# 第一版把头像**统一加在气泡后面**，结果两边的头像都贴在右边 —— HR 的头像跑到自己气泡右边了。
 	if mine:
 		row.add_child(_expander())
+	else:
+		row.add_child(_avatar_mark(_current.hr_name.substr(0, 1)))
 
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -599,8 +706,9 @@ func _bubble(line: ChatLine) -> Control:
 	margin.add_child(label)
 	row.add_child(panel)
 
-	row.add_child(_avatar_mark(ME_MARK if mine else _current.hr_name.substr(0, 1)))
-	if not mine:
+	if mine:
+		row.add_child(_avatar_mark(ME_MARK))
+	else:
 		row.add_child(_expander())
 	return row
 
@@ -729,6 +837,9 @@ func _refresh_top() -> void:
 	_channel_label.text = "你的演技 %d ｜ 这里只看不投" % Game.acting()
 	_list_hint.text = "五家都加上了 —— 去微信挑一家私聊" if n == _companies.size() \
 			else "点开一家 → 点 HR 聊两句 → 他会把你加到微信里"
+	# 【这句是整句话，让它折行，不用省略号】不设的话它的最小宽度就是整句的字宽，
+	# 会把左栏再顶宽 14px（左栏是定宽的「小手机」，多出来的部分会被裁掉）
+	_list_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 
 func _refresh_list() -> void:
@@ -736,15 +847,19 @@ func _refresh_list() -> void:
 		var unlocked := Game.is_hr_unlocked(co.code)
 		var state: Label = _row_labels[co.code]["state"]
 		state.text = "已联系" if unlocked else "未联系"
+		UiBits.one_line(state, 15, 90)
 		state.add_theme_color_override("font_color",
 				UiPalette.POSITIVE if unlocked else UiPalette.TEXT_DIM)
-		var row: Button = _rows[co.code]
-		row.add_theme_stylebox_override("normal",
-				UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 1, 14))
-		row.add_theme_stylebox_override("hover",
-				UiPalette.button(Color("35353f"), UiPalette.LINE, 2, 14))
-		row.add_theme_stylebox_override("pressed",
-				UiPalette.button(Color("3d3d26"), UiPalette.ACCENT, 3, 14, 3))
+		var card: PanelContainer = _cards[co.code]
+		var selected := _current != null and _current.code == co.code
+		card.add_theme_stylebox_override("panel", _card_style(selected))
+
+
+## 卡片的底：选中时描一圈亮边。悬停出的那点变化由铺在上面的透明按钮负责
+func _card_style(selected: bool) -> StyleBox:
+	if selected:
+		return UiPalette.panel(Color("3d3d26"), 14, 2, UiPalette.ACCENT)
+	return UiPalette.panel(UiPalette.PANEL_SOFT, 14, 1, UiPalette.LINE)
 
 
 func _on_hr_unlocked(_code: String) -> void:
@@ -754,10 +869,6 @@ func _on_hr_unlocked(_code: String) -> void:
 
 ## 状态被整个换掉（开新局 / 读档）：清掉选中态与聊天，回到空状态
 func _on_state_reset() -> void:
-	_syncing = true
-	for c: String in _rows:
-		(_rows[c] as Button).button_pressed = false
-	_syncing = false
 	_close_chat()
 	_clear_feed()
 	_show_empty_state()
@@ -782,7 +893,13 @@ func _apply_styles() -> void:
 	_node_panel(_chat_panel, UiPalette.PANEL, 20, 2, UiPalette.LINE)
 	_node_panel(_job_panel, UiPalette.PANEL_SOFT, 16, 2, UiPalette.LINE)
 	_node_panel(_hint_panel, Color("2a3326"), 16, 2, UiPalette.POSITIVE)
-	_node_panel(get_node(P_POST_BOX + "/PostFoot"), UiPalette.PANEL, 0, 2, UiPalette.LINE)
+	# 底部那条是**冻结行**（像 Excel 冻结窗格）：只留一条上边线，
+	# 读起来是「被钉住的一条栏」，而不是浮在正文上的遮罩。
+	var foot := StyleBoxFlat.new()
+	foot.bg_color = UiPalette.PANEL
+	foot.border_width_top = 3
+	foot.border_color = UiPalette.LINE
+	get_node(P_POST_BOX + "/PostFoot").add_theme_stylebox_override("panel", foot)
 
 	var chip := StyleBoxFlat.new()
 	chip.bg_color = UiPalette.ACCENT
@@ -794,6 +911,11 @@ func _apply_styles() -> void:
 	UiPalette.text(get_node(P_TOP + "/TopCenter/Subtitle"), 15, UiPalette.TEXT_DIM)
 	UiPalette.text(_status_label, 20, UiPalette.ACCENT)
 	UiPalette.text(_channel_label, 15, UiPalette.TEXT_DIM)
+	# 顶栏也一律单行省略 —— 它是「本 App 最小宽度」的最大贡献者
+	UiBits.one_line(get_node(P_TOP + "/TopCenter/Title"), 40, TOP_TITLE_W)
+	UiBits.one_line(get_node(P_TOP + "/TopCenter/Subtitle"), 15, TOP_SUB_W)
+	UiBits.one_line(_status_label, 20, TOP_SIDE_W)
+	UiBits.one_line(_channel_label, 15, TOP_SIDE_W)
 
 	UiPalette.text(get_node(P_LIST + "/ListCaption"), 22, UiPalette.TEXT)
 	UiPalette.text(_list_hint, 14, UiPalette.TEXT_DIM)
@@ -835,10 +957,12 @@ func _apply_styles() -> void:
 			_company_list.get_parent().get_v_scroll_bar(),
 			_detail_text.get_parent().get_parent().get_v_scroll_bar(),
 			_chat_scroll.get_v_scroll_bar()]:
-		bar.custom_minimum_size = Vector2(10, 0)
+		# 【为什么调亮】它一度是 LINE 色（跟背景几乎同色）—— 详情正文在折叠处被截断时，
+		# 看着就像「被下面那条盖住了」，其实只是没滚。让滚动条看得见。
+		bar.custom_minimum_size = Vector2(12, 0)
 		bar.add_theme_stylebox_override("scroll",
 				UiPalette.button(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 0, 0))
-		bar.add_theme_stylebox_override("grabber", UiPalette.rounded(UiPalette.LINE, 5))
+		bar.add_theme_stylebox_override("grabber", UiPalette.rounded(UiPalette.TEXT_DISABLED, 6))
 		bar.add_theme_stylebox_override("grabber_highlight", UiPalette.rounded(UiPalette.ACCENT, 5))
 
 

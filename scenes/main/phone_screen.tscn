@@ -103,8 +103,9 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="SidebarHost" type="VBoxContainer" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox"]
+[node name="SidebarHost" type="Control" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox"]
 visible = false
+clip_contents = true
 layout_mode = 2
 size_flags_vertical = 3
 
@@ -116,5 +117,6 @@ size_flags_horizontal = 3
 layout_mode = 2
 
 [node name="ContentHost" type="Control" parent="Page/BodyWrap/Body/ContentPanel/ContentMargin"]
+clip_contents = true
 layout_mode = 2
 mouse_filter = 2

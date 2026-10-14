@@ -106,6 +106,13 @@ func _run_all() -> void:
 	_check("发的就是 A", _unlock_events[0], "A")
 	# 职位卡 + 3 条对话 + 1 条系统提示（「已加进微信联系人」）
 	_check("对话都进了聊天列表", _app._chat_feed.get_child_count(), 5)
+	# 头像的左右（这一条只有截图才看得出来）：HR = 头像 → 气泡；玩家 = 气泡 → 头像
+	var hr_row: HBoxContainer = _app._chat_feed.get_child(1)
+	var me_row: HBoxContainer = _app._chat_feed.get_child(2)
+	_check("HR 那行第一块是头像（在最左）", hr_row.get_child(0) is Panel, true)
+	_check("HR 那行气泡在头像右边", hr_row.get_child(1) is PanelContainer, true)
+	_check("玩家那行气泡在前", me_row.get_child(1) is PanelContainer, true)
+	_check("玩家那行头像是最后一块（在最右）", me_row.get_child(2) is Panel, true)
 	_check("出现「去微信聊」", _app._chat_to_wechat.visible, true)
 	_check("解锁后锁状态转绿",
 			_app._lock_state.text.contains("刚加上联系人"), true)
@@ -114,7 +121,18 @@ func _run_all() -> void:
 	_check("退回详情", _app._post_panel.visible and not _app.chat_open(), true)
 
 	print("")
-	print("[5] 话没说完就退出去：不算数")
+	print("[5] 第二次进聊天：内容一模一样，但不再演")
+	_walk_hr_chat("A")            # A 已经解锁过 → 应当直接铺完
+	_check("第二次也是完整对话（职位卡 + 3 条 + 系统提示）",
+			_app._chat_feed.get_child_count(), 5)
+	_check("没有「跳过」可点（没什么可跳的）", _app._chat_skip.visible, false)
+	_check("系统提示换了说法",
+			(_app._chat_feed.get_child(4) as Label).text.contains("已经在你的微信联系人里"), true)
+	_check("且没有重复解锁（还是 1 次）", _unlock_events.count("A"), 1)
+	_app._close_chat()
+
+	print("")
+	print("[6] 话没说完就退出去：不算数")
 	_app._select_company("C")
 	_app._chat_step = 1.0          # 让它处在「正在播」的状态（测试不等它）
 	_app._open_chat()
@@ -124,7 +142,7 @@ func _run_all() -> void:
 	_app._chat_step = 0.0
 
 	print("")
-	print("[6] 同一家再看一遍：不重复解锁、不重复发信号")
+	print("[7] 同一家再看一遍：不重复解锁、不重复发信号")
 	_walk_hr_chat("B")
 	_app._select_company("A")
 	_check("A 只解锁过一次", _unlock_events.count("A"), 1)
@@ -133,7 +151,7 @@ func _run_all() -> void:
 	_check("顶栏计数", _app._status_label.text, "已联系 2 / 5 家")
 
 	print("")
-	print("[7] 五家全聊一遍")
+	print("[8] 五家全聊一遍")
 	for code: String in CODES:
 		_walk_hr_chat(code)
 	_check("五家都解锁了", _game.state.unlocked_hr.size(), 5)
@@ -147,7 +165,7 @@ func _run_all() -> void:
 	_check("五行的状态都是已联系", states, ["已联系", "已联系", "已联系", "已联系", "已联系"])
 
 	print("")
-	print("[8] 解锁状态进存档")
+	print("[9] 解锁状态进存档")
 	var path := "user://test_boss_save.json"
 	_check("存档成功", _game.save_to(path), OK)
 	_game.new_game()
@@ -157,7 +175,7 @@ func _run_all() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 	print("")
-	print("[9] 与手机屏的接口：左栏公司列表 + 「去微信聊」")
+	print("[10] 与手机屏的接口：左栏公司列表 + 「去微信聊」")
 	_check("交得出公司列表（手机屏的左栏）", _app.take_sidebar().name, "ListPanel")
 	_check("左栏标题", _app.sidebar_title(), "Boss直聘 · 公司")
 	var req: Array[String] = []
