@@ -114,7 +114,7 @@ func _build_app_list() -> void:
 		var row := _make_app_row(app)
 		_app_list.add_child(row)
 		_app_rows[String(app["scene"])] = row
-	_column_back.pressed.connect(_show_app_list)
+	_column_back.pressed.connect(_back_to_app_list)
 
 
 ## 一行 App。**悬浮就把它的作用写进下面那行小字** —— 这是这版改版点名要的：
@@ -288,6 +288,16 @@ func _show_app_list() -> void:
 	_column_back.visible = false
 	_column_hint.visible = true
 	_column_hint.text = DEFAULT_HINT
+
+
+## 左栏顶上那个「← 全部」：回 App 列表 = **离开当前 App**。
+##
+## 【为什么不只把左栏换回来】只换左栏的话，右栏还停在 App 里刚才那一层
+## （Boss 聊到一半、聊天盖着详情）—— 左边回到列表、右边还是聊天，两边对不上（真踩过）。
+## 「回主界面」本来就是离开这个 App：关掉它，右栏回到空态。
+## 关掉的同时也会把左栏换回列表（`_close_app` 里做了），所以这里只要这一个动作。
+func _back_to_app_list() -> void:
+	_close_app()
 
 
 ## 现在开着哪个 App（测试与桌子用）

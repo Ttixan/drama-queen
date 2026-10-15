@@ -176,6 +176,17 @@ func _test_app_switch() -> void:
 	_check("返回后 App 关掉了", _phone.current_app_path(), "")
 	_check("左栏换回 App 列表", _phone._app_list.visible, true)
 	_check("二级列表被收掉了（它已经不归 App 管）", _phone._sidebar, null)
+
+	# 【「← 全部」= 离开当前 App】只换左栏的话，右栏还停在聊天那一层 —— 两边对不上（真踩过）
+	_phone.open_app("res://scenes/apps/boss.tscn")
+	_phone._current._select_company("A")
+	_phone._current._open_chat()
+	_check("Boss 聊天开着", _phone._current.chat_open(), true)
+	var unlocked_before: int = _game.state.unlocked_hr.size()
+	_phone._column_back.pressed.emit()
+	_check("「← 全部」把 App 一起关了", _phone.current_app_path(), "")
+	_check("右栏回到空态", _phone._empty_hint.visible, true)
+	_check("话没说完就退了：不算解锁", _game.state.unlocked_hr.size(), unlocked_before)
 	print("   一次只开一个；交得出二级列表的 App 会把左栏换掉")
 
 
