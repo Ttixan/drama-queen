@@ -31,3 +31,10 @@ static func by_scene(scene_path: String) -> Dictionary:
 		if String(app["scene"]) == scene_path:
 			return app
 	return {}
+
+
+## 这个 App 的品牌色。手机屏拿它给**周围那圈框**上色（开着微信就是绿的）——
+## 切进去之后里外一个色，才像同一台手机。找不到就退回通用的强调色。
+static func color_of(scene_path: String) -> Color:
+	var app := by_scene(scene_path)
+	return app.get("color", UiPalette.ACCENT)

@@ -154,18 +154,17 @@ func _is_event_chat() -> bool:
 	return _event_speaker != &""
 
 
-## 会话列表的顺序：**这周还没回的排最前**，其余按遇到的先后倒序。
-func _speakers_in_order() -> Array[StringName]:
-	var out: Array[StringName] = []
+## 此刻「找上门的人」是谁 —— **只有本周正等着回话的那一个**。
+##
+## 【为什么回过的也不留着】回过了 / 整周没理会的，那个人已经走了：留在名单里，
+## 玩家会以为还能找他说话（提提点名：没加上的 HR、事件里的人都别占着名单）。
+## 事情本身没丢 —— `Game.state.event_history` 记着全过程，电子报与结局都读它；
+## 已经开着的那条会话也不会因为名单刷新就消失（名字由 `_speaker_name` 从履历里兜出来）。
+func _pending_speaker() -> StringName:
 	var ev := Game.pending_event()
 	if ev != null and not ev.speaker.is_empty():
-		out.append(ev.speaker)
-	var history: Array[Dictionary] = Game.state.event_history
-	for i in range(history.size() - 1, -1, -1):
-		var sp := StringName(history[i].get("speaker", ""))
-		if not sp.is_empty() and not out.has(sp):
-			out.append(sp)
-	return out
+		return ev.speaker
+	return &""
 
 
 ## 说话人的显示名。事件本里才有 —— 找不到就退回代号，别在界面上留空
@@ -183,16 +182,12 @@ func _speaker_name(speaker: StringName) -> String:
 	return String(speaker)
 
 
-## 这个人此刻的状态：等你回话 / 已回过 / 没理会
+## 这个人此刻的状态。名单上只会有「正等着回话」的那一个，所以这里恒为「等你回话」——
+## 行上那一格总得有字。（回过没回过不再往名单上写：回完那人就撤了，见 `_pending_speaker`）
 func _speaker_state(speaker: StringName) -> String:
 	var ev := Game.pending_event()
 	if ev != null and ev.speaker == speaker:
 		return "等你回话"
-	var history: Array[Dictionary] = Game.state.event_history
-	for i in range(history.size() - 1, -1, -1):
-		if StringName(history[i].get("speaker", "")) != speaker:
-			continue
-		return "没理会" if int(history[i].get("choice", -1)) < 0 else "已回过"
 	return ""
 
 
@@ -210,7 +205,8 @@ func _refresh_event_contacts() -> void:
 	_event_rows.clear()
 
 	_syncing = true
-	for sp: StringName in _speakers_in_order():
+	var sp := _pending_speaker()
+	if sp != &"":
 		var row := _make_event_row(sp)
 		row.button_group = _contact_group
 		row.toggled.connect(_on_event_toggled.bind(sp))
@@ -219,12 +215,13 @@ func _refresh_event_contacts() -> void:
 		_event_rows[sp] = row
 	_syncing = false
 
-	# 开局第一天一个人都没有，这时候两行标题也别挂着
+	# 一个人都没有的时候，那两行标题也别挂着
 	var any_events := not _event_rows.is_empty()
 	_event_caption.visible = any_events
 	_event_box.visible = any_events
-	if not any_events:
-		_event_speaker = &""
+	# 【故意不在这里清 `_event_speaker`】刚回完话，那个人就从名单上撤了，
+	# 但**他这条会话还开着** —— 清了会把玩家从刚回完的对话里弹出去。
+	# 该清的地方是开新局 / 读档（`_on_state_reset`）与切回 HR（`_select_company`）。
 
 
 func _on_event_toggled(on: bool, speaker: StringName) -> void:
@@ -452,9 +449,9 @@ func _build_role_buttons() -> void:
 		b.add_theme_stylebox_override("normal",
 				UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 12, 0, 8))
 		b.add_theme_stylebox_override("hover",
-				UiPalette.button(Color("35353f"), UiPalette.ACCENT, 2, 12, 0, 8))
+				UiPalette.button(Color("35353f"), UiPalette.WECHAT, 2, 12, 0, 8))
 		b.add_theme_stylebox_override("pressed",
-				UiPalette.button(UiPalette.ACCENT, UiPalette.ACCENT, 2, 12, 3, 8))
+				UiPalette.button(UiPalette.WECHAT, UiPalette.WECHAT, 2, 12, 3, 8))
 		b.add_theme_stylebox_override("disabled",
 				UiPalette.button(Color("1c1c22"), UiPalette.LINE, 1, 12, 0, 8))
 		b.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
@@ -530,29 +527,34 @@ func _refresh_top() -> void:
 func _refresh_contacts() -> void:
 	# 事件那一段随周换人，每次都重建（最多四五条，代价可忽略）
 	_refresh_event_contacts()
+	var locked := 0
 	for co: CompanyData in _companies:
 		var unlocked := Game.is_hr_unlocked(co.code)
+		if not unlocked:
+			locked += 1
 		var labels: Dictionary = _row_labels[co.code]
-		var state: Label = labels["state"]
-		var name_label: Label = labels["name"]
-		state.text = "已私聊" if unlocked else "未解锁"
-		state.add_theme_color_override("font_color",
-				UiPalette.POSITIVE if unlocked else UiPalette.TEXT_DIM)
-		name_label.add_theme_color_override("font_color",
-				UiPalette.TEXT if unlocked else UiPalette.TEXT_DIM)
+		(labels["state"] as Label).text = "已私聊"
+		(labels["name"] as Label).add_theme_color_override("font_color", UiPalette.TEXT)
 		var row: Button = _rows[co.code]
+		# 【没加上的不摆出来】五家灰着一排占满名单，玩家会以为「这些人已经在我微信里了」——
+		# 名单上只该有**真的加上了的**（提提点名）。去哪儿加人写在下面那行提示里。
+		row.visible = unlocked
 		row.add_theme_stylebox_override("normal",
-				UiPalette.button(UiPalette.PANEL_SOFT if unlocked else Color("1c1c22"),
-						UiPalette.LINE, 1, 14))
+				UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 1, 14))
 		row.add_theme_stylebox_override("hover",
 				UiPalette.button(Color("35353f"), UiPalette.LINE, 2, 14))
 		row.add_theme_stylebox_override("pressed",
-				UiPalette.button(Color("3d3d26"), UiPalette.ACCENT, 3, 14, 3))
-	var locked := 0
-	for co: CompanyData in _companies:
-		if not Game.is_hr_unlocked(co.code):
-			locked += 1
-	_contacts_hint.text = "灰色的还没解锁 —— 先在简历拿来逛过那家公司的招聘页" if locked > 0 else "五家都聊上了"
+				UiPalette.button(UiPalette.WECHAT.darkened(0.6), UiPalette.WECHAT, 3, 14, 3))
+
+	# 【措辞跟着改】灰行已经不显示了，再说「灰色的还没解锁」就指不到东西
+	var added := _companies.size() - locked
+	_hr_caption.visible = added > 0
+	if locked <= 0:
+		_contacts_hint.text = "五家都聊上了"
+	elif added == 0:
+		_contacts_hint.text = "还没加上 HR —— 去「简历拿来」逛一家公司的招聘页"
+	else:
+		_contacts_hint.text = "还有 %d 家没加上 —— 去「简历拿来」逛他们的招聘页" % locked
 
 
 func _refresh_header() -> void:
@@ -626,7 +628,7 @@ func _refresh_hr_composer() -> void:
 		_attach_detail.text = _pending.summarize()
 	_attach_card.add_theme_stylebox_override("panel",
 			UiPalette.panel(UiPalette.PANEL_SOFT, 14, 2,
-					UiPalette.ACCENT if _pending != null else UiPalette.LINE))
+					UiPalette.WECHAT if _pending != null else UiPalette.LINE))
 
 	var reason := _block_reason()
 	_send_button.disabled = reason != ""
@@ -684,7 +686,9 @@ func _build_event_composer() -> void:
 
 	_event_status = Label.new()
 	_event_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiPalette.text(_event_status, 16, UiPalette.ACCENT)
+	# 【事件那一段有它自己的色】用它的青（`EVENT`），不是 App 的品牌绿 ——
+	# 找上门的人不是「微信自己」，和 HR 那一套分开看
+	UiPalette.text(_event_status, 16, UiPalette.EVENT)
 	box.add_child(_event_status)
 
 
@@ -869,7 +873,7 @@ func _add_bubble(text: String, mine: bool, border: Color) -> void:
 
 	card.add_theme_stylebox_override("panel", UiPalette.panel(
 			UiPalette.CHAT_SELF if mine else UiPalette.PANEL, 16, 2,
-			border if border.a > 0.0 else (UiPalette.ACCENT if mine else UiPalette.LINE)))
+			border if border.a > 0.0 else (UiPalette.WECHAT if mine else UiPalette.LINE)))
 
 	if mine:
 		row.add_child(spacer)
@@ -1092,7 +1096,7 @@ func _apply_styles() -> void:
 	UiPalette.text(get_node(P_TOP + "/BrandRow/BrandText"), 26, UiPalette.WECHAT)
 	UiPalette.text(_title, 40, UiPalette.TEXT)
 	UiPalette.text(_subtitle, 15, UiPalette.TEXT_DIM)
-	UiPalette.text(_status_label, 20, UiPalette.ACCENT)
+	UiPalette.text(_status_label, 20, UiPalette.WECHAT)
 	UiPalette.text(_channel_label, 15, UiPalette.TEXT_DIM)
 
 	UiPalette.text(get_node(P_CONTACTS + "/ContactsCaption"), 22, UiPalette.TEXT)
@@ -1103,17 +1107,17 @@ func _apply_styles() -> void:
 
 	UiPalette.text(_peer_name, 24, UiPalette.TEXT)
 	UiPalette.text(_peer_meta, 15, UiPalette.TEXT_DIM)
-	UiPalette.text(_requirement_label, 16, UiPalette.ACCENT)
+	UiPalette.text(_requirement_label, 16, UiPalette.WECHAT)
 
 	UiPalette.text(get_node(P_COMPOSER + "/RoleRow/RoleCaption"), 16, UiPalette.TEXT_DIM)
 	UiPalette.text(_attach_title, 20, UiPalette.TEXT)
 	UiPalette.text(_attach_detail, 15, UiPalette.TEXT_DIM)
-	UiPalette.text(_status_line, 16, UiPalette.ACCENT)
+	UiPalette.text(_status_line, 16, UiPalette.WECHAT)
 
 	_style_action(_back_button, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.LINE, 20)
-	_style_action(_go_boss_button, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.ACCENT, 18)
+	_style_action(_go_boss_button, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.WECHAT, 18)
 	_style_action(_open_recorder_button, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.LINE, 20)
-	_style_action(_send_button, UiPalette.ACCENT, UiPalette.INK, UiPalette.ACCENT, 24)
+	_style_action(_send_button, UiPalette.WECHAT, UiPalette.INK, UiPalette.WECHAT, 24)
 	_send_button.add_theme_stylebox_override("disabled",
 			UiPalette.button(Color("2a2a30"), UiPalette.LINE, 1, 14))
 	_send_button.add_theme_color_override("font_disabled_color", Color("5a5a63"))
@@ -1126,7 +1130,7 @@ func _apply_styles() -> void:
 		bar.add_theme_stylebox_override("scroll",
 				UiPalette.button(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 0, 0))
 		bar.add_theme_stylebox_override("grabber", UiPalette.rounded(UiPalette.LINE, 5))
-		bar.add_theme_stylebox_override("grabber_highlight", UiPalette.rounded(UiPalette.ACCENT, 5))
+		bar.add_theme_stylebox_override("grabber_highlight", UiPalette.rounded(UiPalette.WECHAT, 5))
 
 
 func _node_panel(node: Node, bg: Color, radius: int, border: int,

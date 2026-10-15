@@ -36,7 +36,10 @@ const TEXT_DISABLED := Color("9a948a")
 const ACCENT := Color("ffd447")   ## 选中 / 强调
 const POSITIVE := Color("4caf6e")
 const DANGER := Color("e5484d")
-const WECHAT := Color("4caf6e")   ## 微信的品牌色，用一个偏冷的绿把它和「成功」区分开
+## 微信的品牌色。**目前与「成功绿」`POSITIVE` 同值** —— 从图标、顶栏、按钮到选中的档位
+## 全用这一个色（原注释说「偏冷，和成功区分开」，对不上实际值，改准了）。
+## 哪天想把两者分开（比如换成微信真正的 `#07C160`），改这一处即可，别在别处硬写绿。
+const WECHAT := Color("4caf6e")
 const WEIBO := Color("ff7a45")    ## 微博的品牌色（橙红）——《有瓜有戏》是它的内容
 ## 「简历拿来」（Boss直聘 的戏仿名）的品牌色 —— 青。
 ## 【它和全局 ACCENT 不是一回事】ACCENT 是「选中 / 强调」的通用黄；

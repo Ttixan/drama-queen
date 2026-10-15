@@ -52,6 +52,10 @@ func _run_all() -> void:
 	_check("联系人行数", _app._rows.size(), 5)
 	_check("开局零解锁", _game.state.unlocked_hr.size(), 0)
 	_check("开局不选中任何联系人（避免「能点但发不出去」）", _app._current, null)
+	# 【名单上只放真的加上了的人】开局五家全锁 —— 五行都该藏着，
+	# 并留一句告诉玩家去哪儿加人（提提点名：没加上的 HR 不该占着名单）
+	_check("没解锁的 HR 一行都不显出来", _visible_rows(), 0)
+	_check("提示写清了去哪儿加人", _app._contacts_hint.text.contains("简历拿来"), true)
 
 	print("")
 	print("[2] 核心层校验（未解锁 / 未拼完 / 行动点）")
@@ -71,6 +75,7 @@ func _run_all() -> void:
 	_game.unlock_hr("A")
 	_check("解锁后可以私聊", _game.is_hr_unlocked("A"), true)
 	_check("重复解锁返回 false", _game.unlock_hr("A"), false)
+	_check("加上之后名单上就多了这一位", _visible_rows(), 1)
 
 	var bad: Dictionary = _game.submit_audition(Clip.new(), a, extra)
 	_check("空表情包投不出去", bad["rejected"], true)
@@ -256,7 +261,8 @@ func _run_all() -> void:
 	_check("聊天记录里出现了对方的回话", _chat_has(String(ev.options[free].reply)), true)
 	_check("免费选项没花钱", _game.money(), money_before)
 	_check("行动点没被扣", _game.ap_left(), ap_before)
-	_check("这条会话的状态变成「已回过」", _app._speaker_state(ev.speaker), "已回过")
+	_check("回完话那人就撤出名单（事情办完，人走了）", _app._event_rows.has(ev.speaker), false)
+	_check("但这条会话还开着，回完还能回头看", _app._is_event_chat(), true)
 	_check("本周不会再来第二件", _game.pending_event(), null)
 	_check("处理完事件那排按钮收起来了", _app._event_buttons[paid].visible, false)
 
@@ -269,6 +275,15 @@ func _run_all() -> void:
 	print("   自动打开 → 门槛预演 → 二选一 → 切回 HR，全程走通")
 
 	_finish()
+
+
+## 名单上真正露出来的 HR 行有几条（没加上的那些是 `visible = false`）
+func _visible_rows() -> int:
+	var n := 0
+	for code: String in _app._rows:
+		if (_app._rows[code] as Button).visible:
+			n += 1
+	return n
 
 
 # ============================================================

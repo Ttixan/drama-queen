@@ -55,8 +55,10 @@ var _empty_hint: Label
 
 
 func _ready() -> void:
-	_apply_styles()
+	# 【HUD 先建、样式后刷】`_apply_styles()` 要给「← 桌面」那个按钮上色，
+	# 而那个按钮是 `_build_hud()` 造出来的 —— 反过来就跑在 null 上。
 	_build_hud()
+	_apply_styles()
 	_build_app_list()
 	_build_empty_hint()
 	_show_app_list()
@@ -77,13 +79,6 @@ func _build_hud() -> void:
 	_back_button.visible = false
 	_back_button.pressed.connect(func() -> void: cancelled.emit())
 	_hud_left.add_child(_back_button)
-	UiPalette.text(_back_button, 20, UiPalette.TEXT)
-	_back_button.add_theme_stylebox_override("normal",
-			UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 12, 0, 12))
-	_back_button.add_theme_stylebox_override("hover",
-			UiPalette.button(UiPalette.PANEL_SOFT.lightened(0.1), UiPalette.ACCENT, 3, 12, 0, 12))
-	_back_button.add_theme_stylebox_override("pressed",
-			UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.ACCENT, 3, 12, 0, 12))
 
 	_day_label = _chip(_hud_left, 24, UiPalette.TEXT)
 	_ap_label = _chip(_hud_left, 22, UiPalette.POSITIVE)
@@ -235,6 +230,8 @@ func open_app(scene_path: String) -> void:
 	# 再放一个说不清回哪儿的按钮，只会让玩家点错。
 	_empty_hint.visible = false
 	_take_sidebar()
+	# 周围那圈（状态栏下边线 / 左右两块面板的描边 / 左栏标题）跟着这个 App 换色
+	_apply_styles()
 
 
 ## 问 App 要它的二级列表，接到左栏来。
@@ -246,6 +243,11 @@ func _take_sidebar() -> void:
 	if not (side is Control):
 		return
 	_sidebar = side as Control
+	# 【先把它自己声明的宽度清掉】这些 App 原先都是**各自整屏打开**的，面板上写着自己的宽度
+	# （微信的联系人面板写着 `custom_minimum_size = (460, 0)`）。搬到本屏之后，
+	# **宽度该由左栏说了算** —— 留着 460 就比 430 的宿主宽出 30px，
+	# 那 30px 被隔壁的内容面板盖住，看着就是「左边的手机框显示不全」（提提报的）。
+	_sidebar.custom_minimum_size = Vector2.ZERO
 	# 【必须 reparent 不能 add_child】它已经在原来那棵树上了（挂在 App 自己身上），
 	# `add_child` 会直接报「already has a parent」并把它留在原地。
 	_sidebar.reparent(_sidebar_host)
@@ -279,6 +281,8 @@ func _close_app() -> void:
 	_current_path = ""
 	_empty_hint.visible = true
 	_show_app_list()
+	# 没 App 了 —— 周围那圈退回通用强调色
+	_apply_styles()
 
 
 func _show_app_list() -> void:
@@ -345,22 +349,48 @@ func _on_state_reset() -> void:
 # ============================================================
 # 样式
 # ============================================================
+## 这一屏现在该用哪个强调色：**开着哪个 App 就用那个 App 的品牌色**（微信 = 绿），
+## 没开 App 时退回通用的强调色。
+## 【为什么周围那圈要跟着换】以前一律用通用的黄 —— 切进微信，里面的图标、气泡都是绿的，
+## 外面的框却是黄的，看着不像同一台手机（提提点名）。
+func _accent() -> Color:
+	if _current_path.is_empty():
+		return UiPalette.ACCENT
+	return AppCatalog.color_of(_current_path)
+
+
 func _apply_styles() -> void:
 	get_node("Bg").color = UiPalette.BG
+	var accent := _accent()
 
 	# 状态栏只留一条亮色下边线 —— 和录像机 / 日历同一个手法
 	var bar := StyleBoxFlat.new()
 	bar.bg_color = UiPalette.PANEL
 	bar.border_width_bottom = 3
-	bar.border_color = UiPalette.ACCENT
+	bar.border_color = accent
 	get_node("Page/HudBar").add_theme_stylebox_override("panel", bar)
 
+	# 左栏 = 那台手机，右栏 = 它的屏幕：描边都跟着当前 App 的颜色
 	get_node("Page/BodyWrap/Body/AppColumn").add_theme_stylebox_override("panel",
-			UiPalette.panel(UiPalette.PANEL, 20, 2, UiPalette.LINE))
+			UiPalette.panel(UiPalette.PANEL, 20, 2, accent))
 	get_node("Page/BodyWrap/Body/ContentPanel").add_theme_stylebox_override("panel",
-			UiPalette.panel(UiPalette.PANEL, 20, 2, UiPalette.LINE))
+			UiPalette.panel(UiPalette.PANEL, 20, 2, accent))
 
-	UiPalette.text(_caption, 26, UiPalette.TEXT)
+	# 【兜住以后任何一次越界】外来列表要是还比宿主大，宁可就地裁掉，
+	# 也不许它画到隔壁面板上去 —— 那看着正像「右边的把左边的遮了」
+	_sidebar_host.clip_contents = true
+
+	# 「← 桌面」是这一屏自己那一层的返回，但它在浮起来的时候也在这台手机里 ——
+	# 一样跟着当前 App 的颜色走
+	UiPalette.text(_back_button, 20, UiPalette.TEXT)
+	_back_button.add_theme_stylebox_override("normal",
+			UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 12, 0, 12))
+	_back_button.add_theme_stylebox_override("hover",
+			UiPalette.button(UiPalette.PANEL_SOFT.lightened(0.1), accent, 3, 12, 0, 12))
+	_back_button.add_theme_stylebox_override("pressed",
+			UiPalette.button(UiPalette.PANEL_SOFT, accent, 3, 12, 0, 12))
+
+	UiPalette.text(_caption, 26, accent)
 	UiPalette.text(_column_hint, 15, UiPalette.TEXT_DIM)
 
 	_column_back.focus_mode = Control.FOCUS_NONE
@@ -368,4 +398,4 @@ func _apply_styles() -> void:
 	_column_back.add_theme_stylebox_override("normal",
 			UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 10, 0, 10))
 	_column_back.add_theme_stylebox_override("hover",
-			UiPalette.button(UiPalette.PANEL_SOFT.lightened(0.1), UiPalette.ACCENT, 2, 10, 0, 10))
+			UiPalette.button(UiPalette.PANEL_SOFT.lightened(0.1), accent, 2, 10, 0, 10))

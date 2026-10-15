@@ -165,6 +165,13 @@ func _test_app_switch() -> void:
 	_check("App 列表让位了", _phone._app_list.visible, false)
 	_check("顶上写明这是谁的列表", _phone._caption.text.contains("微信"), true)
 	_check("有回全列表的路", _phone._column_back.visible, true)
+	# 【左栏那个框的大小不该跟着 App 变】微信的联系人面板自带 `custom_minimum_size = 460`
+	# （它当年是整屏 App，自己说了算），搬过来必须让位给左栏 —— 否则比宿主宽，
+	# 多出来的部分被隔壁面板盖住，看着就是「左边的手机框被遮了」（提提报的）
+	_check("外来列表自带的最小宽度被清掉了", _phone._sidebar.custom_minimum_size, Vector2.ZERO)
+	_check("宿主会裁掉以后任何越界", _phone._sidebar_host.clip_contents, true)
+	# 切进哪个 App，周围那圈（状态栏下边线 / 两块面板的描边 / 左栏标题）就用它的品牌色
+	_check("开着微信用微信绿", _phone._accent(), UiPalette.WECHAT)
 
 	# 【再点同一个 App 不该变成「收起」】原来这里写的是 toggle：玩家按过「← 全部」
 	# 之后再点它，第一次点击被当成关闭 —— 看到的现象是「点一次没进去，得点两次」
@@ -176,9 +183,11 @@ func _test_app_switch() -> void:
 	_check("返回后 App 关掉了", _phone.current_app_path(), "")
 	_check("左栏换回 App 列表", _phone._app_list.visible, true)
 	_check("二级列表被收掉了（它已经不归 App 管）", _phone._sidebar, null)
+	_check("没开 App 时退回通用强调色", _phone._accent(), UiPalette.ACCENT)
 
 	# 【「← 全部」= 离开当前 App】只换左栏的话，右栏还停在聊天那一层 —— 两边对不上（真踩过）
 	_phone.open_app("res://scenes/apps/boss.tscn")
+	_check("开着简历拿来用它自己的青", _phone._accent(), UiPalette.BOSS)
 	_phone._current._select_company("A")
 	_phone._current._first_msg_delay = 0.0
 	_phone._current._open_chat()
