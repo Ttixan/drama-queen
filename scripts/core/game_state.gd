@@ -57,6 +57,14 @@ var history: Array[Dictionary] = []
 ## 而且决定了「哪家公司现在能投」—— 是玩法状态，不是显示状态。
 var unlocked_hr: Array[String] = []
 
+## 玩家在 Boss直聘 的「初次沟通」里挑过的句子：`"A#0" -> 1`（A 家第 0 组选项里的第 1 句）。
+## 【为什么要存】第二次进同一家时那段对话**不再逐字演、直接铺完** —— 那时必须把他
+## **当初挑的那句**铺出来，否则他会看见一句自己没说过的话。
+## 【为什么键里要带组号】md 里连着几行 `选` 就是一组，格式允许一家写好几组；
+## 只按公司存一个序号，第二组就会串到第一组的答案上。
+## 与 `unlocked_hr` 一样是**进度**：读档回来再点开那家，看到的还是他选过的。
+var hr_choice: Dictionary = {}
+
 ## ---- 周初事件 ----
 ## 【为什么种子要进存档】事件是抽签选出来的，读档重抽会让「这周那出戏」变成另一出。
 ## 与定角抽签同一个道理（决策：抽一次，之后谁都读同一份）：
@@ -96,6 +104,18 @@ func unlock_hr(code: String) -> bool:
 
 func is_hr_unlocked(code: String) -> bool:
 	return unlocked_hr.has(code)
+
+
+## 记下玩家在第 `run` 组选项里挑的是第几句（都从 0 起）
+func set_hr_choice(code: String, run: int, index: int) -> void:
+	if code.is_empty():
+		return
+	hr_choice["%s#%d" % [code, run]] = index
+
+
+## 他当初挑的是第几句？**没挑过返回 -1** —— 调用方自己决定退回第一句
+func hr_choice_of(code: String, run: int) -> int:
+	return int(hr_choice.get("%s#%d" % [code, run], -1))
 
 
 func week() -> int:
@@ -222,7 +242,7 @@ func to_save_dict() -> Dictionary:
 		"work_this_week": work_this_week, "class_this_week": class_this_week,
 		"ps5_paid": ps5_paid,
 		"black_fame_seen": black_fame_seen, "extra_star_seen": extra_star_seen,
-		"unlocked_hr": unlocked_hr,
+		"unlocked_hr": unlocked_hr, "hr_choice": hr_choice,
 		"reports": reports,
 		"history": history,
 		# 【pending_event 存成空串而不是 null】JSON 里 StringName 落不住，
@@ -254,6 +274,7 @@ func from_save_dict(d: Dictionary) -> void:
 	black_fame_seen = bool(d.get("black_fame_seen", false))
 	extra_star_seen = bool(d.get("extra_star_seen", false))
 	unlocked_hr.assign(d.get("unlocked_hr", []))
+	hr_choice = d.get("hr_choice", {})
 	reports.assign(d.get("reports", []))
 	history.assign(d.get("history", []))
 	event_seed = int(d.get("event_seed", 0))

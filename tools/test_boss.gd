@@ -110,8 +110,8 @@ func _run_all() -> void:
 	_check("选项撤掉了", _app._choices, null)
 	_check("挑中的那句成了我发的消息", _text_of_feed(2),
 			CompanyLibrary.by_code("A").opening_chat[1].display_text())
-	_app._chat_step = 0.0
-	_app.skip_chat()
+	_check("记下他挑的是第几句（0 起）", _game.hr_choice_of("A", 0), 0)
+	_app.skip_chat()          # 把剩下的（HR 的统一回复）放完
 	_check("HR 回的是同一句（挑哪句无关）", _text_of_feed(3),
 			CompanyLibrary.by_code("A").opening_chat[4].display_text())
 	_check("话说完就解锁了", _game.is_hr_unlocked("A"), true)
@@ -146,13 +146,15 @@ func _run_all() -> void:
 	print("")
 	print("[6] 话没说完就退出去：不算数")
 	_app._select_company("C")
-	_app._chat_step = 1.0          # 让它处在「正在播」的状态（测试不等它）
+	# 【这一节必须关掉快进】要的就是「正等着玩家挑」的中间状态 ——
+	# 快进会一路放完并直接解锁，那就测不到「退出去不算数」了。
+	_app._fast_forward = false
 	_app._first_msg_delay = 0.0
 	_app._open_chat()
-	_app._close_chat()             # 第一条刚出来就退
+	_check("退出前正等玩家挑（说明确实停在中间）", _app._choices != null, true)
+	_app._close_chat()             # 选项刚摆出来就退
 	_check("C 仍然没解锁", _game.is_hr_unlocked("C"), false)
 	_check("也没发过解锁事件", _unlock_events.count("C"), 0)
-	_app._chat_step = 0.0
 
 	print("")
 	print("[7] 同一家再看一遍：不重复解锁、不重复发信号")
@@ -185,6 +187,7 @@ func _run_all() -> void:
 	_check("重开后清空", _game.state.unlocked_hr.size(), 0)
 	_check("读档成功", _game.load_from(path), true)
 	_check("解锁状态还原", _game.state.unlocked_hr.size(), 5)
+	_check("他挑过的那句也还原（不然再点开会换一句）", _game.hr_choice_of("A", 0), 0)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 	print("")
@@ -195,6 +198,58 @@ func _run_all() -> void:
 	_app.open_app_requested.connect(func(p: String) -> void: req.append(p))
 	_app._chat_to_wechat.pressed.emit()
 	_check("「去微信聊」请上层打开微信", req, ["res://scenes/apps/wechat.tscn"] as Array[String])
+
+	print("")
+	print("[11] 第二次进同一家之后，别人家的三选一还在（提提报的）")
+	# 玩家自然就会走到的路径：跟 A 聊完拿到联系方式 → 再点 A 的 HR 看一遍
+	# → **从这一步起**，后面每一家的选项都不见了，第一句选项还被当成玩家自己说的话发出去。
+	# 【根因】「第二次进同一家」走 `skip_chat()`，它把 `_chat_step` 压成 0；
+	# 而那个值从来没在进聊天时复位，于是一路漏到别人家 —— 界面上不报错，只是「选项没了」。
+	# 【为什么这条非写不可】当时 131 项断言全绿：每一节都在第一家之后就换了话题，
+	# 没人回头看第二家。
+	_game.new_game()
+	_app._fast_forward = false
+	_app._first_msg_delay = 0.0
+	_app._select_company("A")
+	_app._open_chat()
+	_check("第一家：选项在（改之前也是好的）", _app._choices != null, true)
+	_app.skip_chat()               # 把这家放完 → 解锁（原来那个「跳过 ▸▸」按钮做的事）
+	_app._close_chat()
+	_app._select_company("A")
+	_app._open_chat()              # 第二次进：直接铺完 —— **这一步就会把 `_chat_step` 压成 0**
+	_check("第二次进：不再演，直接铺完", _app._choices, null)
+	_check("内容一模一样（职位卡 + 3 条 + 系统提示）", _app._chat_feed.get_child_count(), 5)
+	_app._close_chat()
+	_app._select_company("B")
+	_app._open_chat()
+	_check("第二家：选项也在", _app._choices != null, true)
+	_check("还是三个", _app._choices.get_child_count(), 3)
+	_check("没替玩家先说话（职位卡 + 开场白 + 选项）",
+			_app._chat_feed.get_child_count(), 3)
+	_app._close_chat()
+	print("   快进只作用于这一次；下一家照常轮到玩家挑")
+
+	print("")
+	print("[12] 第二次进同一家：铺出来的还是**他挑的那句**（提提报的）")
+	# 复现路径：在 C 家挑了**第二句** → 退出去 → 再进来（这一层不演、直接铺完）
+	# → 原先永远铺第一句，玩家会看见一句自己没说过的话。
+	_game.new_game()
+	_app._fast_forward = false
+	_app._first_msg_delay = 0.0
+	var c_lines := CompanyLibrary.by_code("C").opening_chat
+	_app._select_company("C")
+	_app._open_chat()
+	(_app._choices.get_child(1) as Button).pressed.emit()   # 挑第二句
+	_check("记下挑的是第 2 句", _game.hr_choice_of("C", 0), 1)
+	_check("送出去的也是第 2 句", _text_of_feed(2), c_lines[2].display_text())
+	_app.skip_chat()
+	_app._close_chat()
+	_app._select_company("C")
+	_app._open_chat()          # 第二次进：直接铺完
+	_check("铺出来的还是他挑的那句", _text_of_feed(2), c_lines[2].display_text())
+	_check("不再永远退回第一句", _text_of_feed(2) == c_lines[1].display_text(), false)
+	_app._close_chat()
+	print("   挑过哪句进了进度；第二次进照他挑的铺")
 
 	_finish()
 
@@ -210,11 +265,12 @@ func _text_of_feed(i: int) -> String:
 
 
 ## 走完「点开一家 → 点 HR → 聊完」这条链路。
-## 【测试里把 `_chat_step` 设成 0】那就是「跳过」按钮走的那条路：一次放完，不必等计时器 ——
+## 【测试里开 `_fast_forward`】它走的就是「跳过」那条路：一次放完，不必等计时器 ——
 ## 否则断言得跟着 0.85 秒的节奏写，又慢又脆。
+## 【为什么不再直接设 `_chat_step`】那个值现在每次进聊天都会被复位 —— 正是下面 [11] 教的。
 func _walk_hr_chat(code: String) -> void:
 	_app._select_company(code)
-	_app._chat_step = 0.0
+	_app._fast_forward = true
 	_app._open_chat()
 
 

@@ -62,10 +62,10 @@ const TOP_TITLE_W := 260.0
 const TOP_SUB_W := 320.0
 const TOP_SIDE_W := 220.0
 
-## 聊天逐条播放的间隔（秒）。**设成 0 = 一次放完** —— 「跳过」按钮与测试都走那条。
+## 聊天逐条播放的间隔（秒）。**设成 0 = 一次放完** —— 「跳过」按钮走那条。
 const CHAT_STEP := 0.85
 ## 点「沟通」之后、第一句出现前的沉默（秒）—— 对方不可能秒回，这一拍就是「正在输入」。
-## 【测试与跳过路径设成 0】那样 `_open_chat` 全程同步，断言才写得稳。
+## 【测试会把它设成 0】那样 `_open_chat` 一路同步，断言才写得稳。
 const FIRST_MSG_DELAY := 1.0
 ## 气泡最大宽度：超了就折行。小于它时按文字实际宽度收窄（短句子不该拉成一条长条）
 const MAX_BUBBLE_W := 560.0
@@ -110,8 +110,15 @@ var _cards: Dictionary = {}        ## code -> 卡片本体（管高度与选中�
 var _row_labels: Dictionary = {}   ## code -> {state}
 var _meta_labels: Dictionary = {}  ## 字段名 -> Label
 var _hr_labels: Dictionary = {}    ## HrCard 里的三个 Label
-## 聊天状态。`_chat_step` 设成 0 表示一次放完（「跳过」与测试用）
+## 这一次聊天的播放间隔。`skip_chat()` 会把它压成 0 —— **「第二次进同一家」走的就是它**，
+## 而每进一次聊天都由 `_open_chat` 复位。
+## 【为什么复位不是可选项】它是跨公司留下来的成员变量。漏到下一家的话，
+## 那一家的三选一会被**静默地替玩家挑掉第一个**：界面上不报错，只是「选项不见了」。
 var _chat_step := CHAT_STEP
+## 测试专用的快进：置 true 之后每次进聊天都一次放完，不必等计时器。游戏里没人动它。
+var _fast_forward := false
+## 第几次进聊天，**只用来打断上一次留下的协程**（见 `_open_chat` 与 `_play_chat` 里的「认票」）
+var _chat_token := 0
 var _chat_lines: Array[ChatLine] = []
 var _chat_index := 0
 var _chat_done := false
@@ -121,6 +128,9 @@ var _chat_aborted := false
 var _first_msg_delay := FIRST_MSG_DELAY
 ## 当前摆在界面上的那组选项（玩家点完就撤掉）
 var _choices: Node
+## 这是本次聊天里的第几组选项（0 起）。**用它当键**去问「玩家当初挑的是第几句」——
+## 一家可以写好几组选项（连着几行 `选` 就是一组），只按公司存一个序号会串组。
+var _choice_round := 0
 
 
 func _ready() -> void:
@@ -225,7 +235,7 @@ func _make_company_card(co: CompanyData) -> PanelContainer:
 	salary.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	salary.text = co.salary
 	salary.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	UiPalette.text(salary, 18, UiPalette.POSITIVE)
+	UiPalette.text(salary, 18, UiPalette.BOSS)
 	UiBits.one_line(salary, 18, CARD_SALARY_W)
 	head.add_child(salary)
 
@@ -283,7 +293,7 @@ func _make_company_card(co: CompanyData) -> PanelContainer:
 	acting.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	acting.text = "演技 %d" % co.acting_threshold
 	acting.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	UiPalette.text(acting, 15, UiPalette.ACCENT)
+	UiPalette.text(acting, 15, UiPalette.BOSS)
 	tail.add_child(acting)
 
 	var state := Label.new()
@@ -358,7 +368,7 @@ func _hr_avatar(co: CompanyData) -> Control:
 	dot.offset_right = -4
 	dot.offset_bottom = -10
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dot.add_theme_stylebox_override("panel", UiPalette.rounded(UiPalette.POSITIVE, 5))
+	dot.add_theme_stylebox_override("panel", UiPalette.rounded(UiPalette.BOSS, 5))
 	holder.add_child(dot)
 	return holder
 
@@ -481,7 +491,7 @@ func _build_hr_card() -> void:
 
 	var status_label := Label.new()
 	status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	UiPalette.text(status_label, 14, UiPalette.POSITIVE)
+	UiPalette.text(status_label, 14, UiPalette.BOSS)
 	texts.add_child(status_label)
 
 	var arrow := Label.new()
@@ -567,7 +577,7 @@ func _set_lock_state(fresh: bool) -> void:
 	var co := _current
 	if fresh:
 		_lock_state.text = "✓ 刚加上联系人：%s · %s —— 去微信私聊就能投递" % [co.hr_name, co.hr_title]
-		_lock_state.add_theme_color_override("font_color", UiPalette.POSITIVE)
+		_lock_state.add_theme_color_override("font_color", UiPalette.BOSS)
 	elif Game.is_hr_unlocked(co.code):
 		_lock_state.text = "已在微信联系人里：%s · %s" % [co.hr_name, co.hr_title]
 		_lock_state.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
@@ -586,6 +596,13 @@ func _open_chat() -> void:
 	_chat_index = 0
 	_chat_done = false
 	_chat_aborted = false
+	_choice_round = 0
+	# 【每次进聊天都复位播放间隔】它是「这一次」的设置，不是全局开关 ——
+	# `skip_chat()` 压下去的那个 0 必须留在这一次里（漏出去下一家就没有三选一了）。
+	_chat_step = 0.0 if _fast_forward else CHAT_STEP
+	# 给这一趟发一张票：下面那个 await 期间玩家可能已经换了一家，醒来先认票。
+	_chat_token += 1
+	var token := _chat_token
 	_clear_feed()
 	_chat_name.text = _current.hr_name
 	UiBits.one_line(_chat_name, 26, 300)
@@ -615,7 +632,9 @@ func _open_chat() -> void:
 	# 期间职位卡已经摆出来了，玩家有事可看。第二次进来走 skip，不等。
 	if _first_msg_delay > 0.0:
 		await get_tree().create_timer(_first_msg_delay).timeout
-		if _chat_aborted or _current == null:
+		# 【认票】这 1 秒里玩家可能已经点了别家 —— 那就别再接着播「上一家」了。
+		# 不认票的话，两家的协程会同时往同一个聊天框里推字（同样的句子出现两遍）。
+		if token != _chat_token or _chat_aborted or _current == null:
 			return
 		if _chat_step <= 0.0:
 			skip_chat()
@@ -623,13 +642,20 @@ func _open_chat() -> void:
 	_play_chat()
 
 
-## 把剩下的话一次放完 —— 「跳过」走这条，**测试也走这条**（不必等计时器）。
-## 碰到选项就**替玩家挑第一个**：跳过的人本来就不想挑。
+## 把剩下的话一次放完。**这条现在不是「玩家的按钮」了** —— 那个可见的「跳过 ▸▸」被删了，
+## 只剩三个调用点，都是「不必再演一遍」的场合：
+##   1. **第二次进同一家**（`_open_chat` 里的 `seen`）—— 内容他看过一遍了，再逐字演一次只是干等
+##   2. 测试（`_fast_forward`）—— 一次放完，不必等计时器
+##   3. 快进中玩家点了某个选项 —— 剩下的照旧一次放完
+## 碰到选项就**替玩家挑第一个**：走到这条路上的人本来就不想挑。
+## ⚠️ 它会把自己这次用的 0 写进 `_chat_step` —— 那个值是「这一次」的，靠 `_open_chat` 复位。
 func skip_chat() -> void:
 	_chat_step = 0.0
 	while _chat_index < _chat_lines.size():
 		if _chat_lines[_chat_index].is_choice():
-			_send_choice(_chat_lines[_chat_index].display_text())
+			# 【照着他当初挑的那句铺】第二次进同一家走的就是这里（见 `_remembered_choice`）
+			var run := _choice_run_at(_chat_index)
+			_send_choice(run[_remembered_choice(run)].display_text())
 			continue
 		_push_line(_chat_lines[_chat_index])
 		_chat_index += 1
@@ -638,6 +664,7 @@ func skip_chat() -> void:
 
 
 func _play_chat() -> void:
+	var token := _chat_token
 	while _chat_index < _chat_lines.size() and _chat_step > 0.0:
 		if _chat_lines[_chat_index].is_choice():
 			# 【到「该你说话」就停下】选项立刻摆出来，然后等玩家点 ——
@@ -653,6 +680,9 @@ func _play_chat() -> void:
 			_show_choices(_choice_run_at(_chat_index))
 			return
 		await get_tree().create_timer(_chat_step).timeout
+		# 【认票】等这 0.85 秒时玩家可能已经关了聊天或换了一家 —— 那就别再往下推
+		if token != _chat_token or _chat_aborted:
+			return
 	_finish_chat()
 
 
@@ -714,7 +744,7 @@ func _bubble_of(text: String, mine: bool) -> Control:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	var bg := Color("2f5f4a") if mine else UiPalette.PANEL_SOFT
+	var bg := UiPalette.BOSS_CHAT_SELF if mine else UiPalette.PANEL_SOFT
 	panel.add_theme_stylebox_override("panel", UiPalette.panel(bg, 14))
 
 	var margin := MarginContainer.new()
@@ -730,7 +760,7 @@ func _bubble_of(text: String, mine: bool) -> Control:
 	# 【为什么要把宽度算出来】autowrap 打开时 Label 的最小宽度会塌成几个字，
 	# 短句子就会被压成一条竖条。按文字实际宽度给个下限，才既收窄又折行。
 	label.custom_minimum_size = Vector2(_bubble_width(text), 0)
-	UiPalette.text(label, BUBBLE_FONT, UiPalette.TEXT if not mine else Color("eaf7ef"))
+	UiPalette.text(label, BUBBLE_FONT, UiPalette.TEXT if not mine else UiPalette.BOSS_CHAT_TEXT)
 	margin.add_child(label)
 	row.add_child(panel)
 
@@ -760,7 +790,8 @@ func _show_choices(run: Array[ChatLine]) -> void:
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", 8)
-	for line: ChatLine in run:
+	for i in run.size():
+		var line := run[i]
 		var b := Button.new()
 		b.text = line.display_text()
 		b.focus_mode = Control.FOCUS_NONE
@@ -773,34 +804,54 @@ func _show_choices(run: Array[ChatLine]) -> void:
 		b.add_theme_stylebox_override("normal",
 				UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 12, 0, 14))
 		b.add_theme_stylebox_override("hover",
-				UiPalette.button(Color("3a3a46"), UiPalette.ACCENT, 2, 12, 0, 14))
+				UiPalette.button(Color("3a3a46"), UiPalette.BOSS, 2, 12, 0, 14))
 		b.add_theme_stylebox_override("pressed",
-				UiPalette.button(Color("3d3d26"), UiPalette.ACCENT, 3, 12, 0, 14))
-		b.pressed.connect(_on_choice_pressed.bind(line.display_text()))
+				UiPalette.button(Color("3d3d26"), UiPalette.BOSS, 3, 12, 0, 14))
+		b.pressed.connect(_on_choice_pressed.bind(i))
 		box.add_child(b)
 	_chat_feed.add_child(box)
 	_choices = box
 	_scroll_chat()
 
 
-func _on_choice_pressed(text: String) -> void:
-	_send_choice(text)
+## 玩家点了第 `index` 句。**先把这一句记下来**（第二次进同一家要照它铺，见 `GameState.hr_choice`），
+## 再当成他自己说的话送出去。
+func _on_choice_pressed(index: int) -> void:
+	var run := _choice_run_at(_chat_index)
+	if run.is_empty():
+		return
+	var pick := clampi(index, 0, run.size() - 1)
+	if _current != null:
+		Game.set_hr_choice(_current.code, _choice_round, pick)
+	_send_choice(run[pick].display_text())
 	if _chat_step <= 0.0:
 		skip_chat()
 	else:
 		_play_chat()
 
 
-## 把这句话当成玩家发的送出去，并跳过整组选项。
-## 【跳过与测试也走这条】只是它们不问玩家，直接挑第一句
+## 把这一句当成玩家发的送出去，并消化掉整组选项。
+## 【`skip_chat()` 也走这条】只是拾起哪一句由调用方定：玩家点的那句、还是**他当初挑过的那句**。
 func _send_choice(text: String) -> void:
 	if _choices != null:
 		_chat_feed.remove_child(_choices)
 		_choices.queue_free()
 		_choices = null
+	# 一组消化掉了 —— 往后再遇到选项就是第 `_choice_round` 组（问「他挑过哪句」按它当键）
+	_choice_round += 1
 	_chat_feed.add_child(_bubble_of(text, true))
 	_chat_index += _choice_run_at(_chat_index).size()
 	_scroll_chat()
+
+
+## 这一组选项，玩家**当初挑的是第几句**？没挑过（或存档来自更早的版本）才退回第一句。
+## 【为什么必须照着他挑的铺】第二次进同一家不再逐字演、直接铺完 ——
+## 不照的话，他会看见一句自己没说过的话。
+func _remembered_choice(run: Array[ChatLine]) -> int:
+	if _current == null or run.is_empty():
+		return 0
+	var pick := Game.hr_choice_of(_current.code, _choice_round)
+	return pick if pick >= 0 and pick < run.size() else 0
 
 
 func _bubble_width(text: String) -> float:
@@ -872,7 +923,7 @@ func _push_card() -> void:
 	var salary := Label.new()
 	salary.text = co.salary
 	salary.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	UiPalette.text(salary, 18, UiPalette.POSITIVE)
+	UiPalette.text(salary, 18, UiPalette.BOSS)
 	head.add_child(salary)
 
 	var facts := Label.new()
@@ -939,7 +990,7 @@ func _refresh_list() -> void:
 		state.text = "已联系" if unlocked else "未联系"
 		UiBits.one_line(state, 15, 90)
 		state.add_theme_color_override("font_color",
-				UiPalette.POSITIVE if unlocked else UiPalette.TEXT_DIM)
+				UiPalette.BOSS if unlocked else UiPalette.TEXT_DIM)
 		var card: PanelContainer = _cards[co.code]
 		var selected := _current != null and _current.code == co.code
 		card.add_theme_stylebox_override("panel", _card_style(selected))
@@ -948,7 +999,7 @@ func _refresh_list() -> void:
 ## 卡片的底：选中时描一圈亮边。悬停出的那点变化由铺在上面的透明按钮负责
 func _card_style(selected: bool) -> StyleBox:
 	if selected:
-		return UiPalette.panel(Color("3d3d26"), 14, 2, UiPalette.ACCENT)
+		return UiPalette.panel(Color("3d3d26"), 14, 2, UiPalette.BOSS)
 	return UiPalette.panel(UiPalette.PANEL_SOFT, 14, 1, UiPalette.LINE)
 
 
@@ -975,7 +1026,7 @@ func _apply_styles() -> void:
 	var top_sb := StyleBoxFlat.new()
 	top_sb.bg_color = UiPalette.PANEL
 	top_sb.border_width_bottom = 3
-	top_sb.border_color = UiPalette.ACCENT
+	top_sb.border_color = UiPalette.BOSS
 	# 【顶上两个角要圆】App 住在手机屏右栏那块圆角面板里（圆角 20），
 	# 顶栏自己是直角 —— 两个尖角会从圆角底图外面露出来。
 	top_sb.corner_radius_top_left = 20
@@ -995,14 +1046,14 @@ func _apply_styles() -> void:
 	get_node(P_POST_BOX + "/PostFoot").add_theme_stylebox_override("panel", foot)
 
 	var chip := StyleBoxFlat.new()
-	chip.bg_color = UiPalette.ACCENT
+	chip.bg_color = UiPalette.BOSS
 	chip.set_corner_radius_all(12)
 	get_node(P_TOP + "/BrandRow/BrandChip").add_theme_stylebox_override("panel", chip)
 
-	UiPalette.text(get_node(P_TOP + "/BrandRow/BrandText"), 26, UiPalette.ACCENT)
+	UiPalette.text(get_node(P_TOP + "/BrandRow/BrandText"), 26, UiPalette.BOSS)
 	UiPalette.text(get_node(P_TOP + "/TopCenter/Title"), 40, UiPalette.TEXT)
 	UiPalette.text(get_node(P_TOP + "/TopCenter/Subtitle"), 15, UiPalette.TEXT_DIM)
-	UiPalette.text(_status_label, 20, UiPalette.ACCENT)
+	UiPalette.text(_status_label, 20, UiPalette.BOSS)
 	UiPalette.text(_channel_label, 15, UiPalette.TEXT_DIM)
 	# 顶栏也一律单行省略 —— 它是「本 App 最小宽度」的最大贡献者
 	UiBits.one_line(get_node(P_TOP + "/TopCenter/Title"), 40, TOP_TITLE_W)
@@ -1017,16 +1068,16 @@ func _apply_styles() -> void:
 	UiPalette.text(_company_tagline, 32, UiPalette.TEXT)
 	UiPalette.text(_lock_state, 16, UiPalette.TEXT_DIM)
 	UiPalette.text(_job_title, 26, UiPalette.TEXT)
-	UiPalette.text(_job_salary, 22, UiPalette.POSITIVE)
+	UiPalette.text(_job_salary, 22, UiPalette.BOSS)
 	UiPalette.text(_job_experience, 16, UiPalette.TEXT_DIM)
 	UiPalette.text(_detail_caption, 18, UiPalette.TEXT_DIM)
 	UiPalette.text(_detail_text, 17, UiPalette.TEXT)
 	UiPalette.text(_note_label, 15, UiPalette.TEXT_DIM)
 	UiPalette.text(_foot_hint, 15, UiPalette.TEXT_DIM)
 
-	_style_action(_back_button, UiPalette.ACCENT, UiPalette.INK, UiPalette.ACCENT, 22)
-	_style_action(_contact_button, UiPalette.ACCENT, UiPalette.INK, UiPalette.ACCENT, 22)
-	_style_action(_chat_to_wechat, UiPalette.ACCENT, UiPalette.INK, UiPalette.ACCENT, 20)
+	_style_action(_back_button, UiPalette.BOSS, UiPalette.INK, UiPalette.BOSS, 22)
+	_style_action(_contact_button, UiPalette.BOSS, UiPalette.INK, UiPalette.BOSS, 22)
+	_style_action(_chat_to_wechat, UiPalette.BOSS, UiPalette.INK, UiPalette.BOSS, 20)
 	_style_action(_chat_back, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.LINE, 18)
 
 	# HR 卡：平时低调，鼠标上来才亮 —— 它是「下一步」，但不该跟职位抢眼
@@ -1034,13 +1085,13 @@ func _apply_styles() -> void:
 	_hr_card.add_theme_stylebox_override("normal",
 			UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 16))
 	_hr_card.add_theme_stylebox_override("hover",
-			UiPalette.button(Color("35353f"), UiPalette.ACCENT, 2, 16))
+			UiPalette.button(Color("35353f"), UiPalette.BOSS, 2, 16))
 	_hr_card.add_theme_stylebox_override("pressed",
-			UiPalette.button(Color("3d3d26"), UiPalette.ACCENT, 3, 16, 3))
+			UiPalette.button(Color("3d3d26"), UiPalette.BOSS, 3, 16, 3))
 
 	UiPalette.text(_chat_name, 26, UiPalette.TEXT)
 	UiPalette.text(_chat_title, 15, UiPalette.TEXT_DIM)
-	UiPalette.text(_chat_online, 15, UiPalette.POSITIVE)
+	UiPalette.text(_chat_online, 15, UiPalette.BOSS)
 
 	for bar: VScrollBar in [
 			_company_list.get_parent().get_v_scroll_bar(),
@@ -1052,7 +1103,7 @@ func _apply_styles() -> void:
 		bar.add_theme_stylebox_override("scroll",
 				UiPalette.button(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 0, 0))
 		bar.add_theme_stylebox_override("grabber", UiPalette.rounded(UiPalette.TEXT_DISABLED, 6))
-		bar.add_theme_stylebox_override("grabber_highlight", UiPalette.rounded(UiPalette.ACCENT, 5))
+		bar.add_theme_stylebox_override("grabber_highlight", UiPalette.rounded(UiPalette.BOSS, 5))
 
 
 func _node_panel(node: Node, bg: Color, radius: int, border: int,

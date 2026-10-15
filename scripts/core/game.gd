@@ -169,6 +169,15 @@ func is_hr_unlocked(code: String) -> bool:
 	return state.is_hr_unlocked(code)
 
 
+## 玩家在「初次沟通」里挑的那句（第 `run` 组选项的第几句）。见 `GameState.hr_choice`
+func set_hr_choice(code: String, run: int, index: int) -> void:
+	state.set_hr_choice(code, run, index)
+
+
+func hr_choice_of(code: String, run: int) -> int:
+	return state.hr_choice_of(code, run)
+
+
 # ============================================================
 # 投递
 # ============================================================
