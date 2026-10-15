@@ -22,17 +22,27 @@ text = "你好，剪辑岗双休、五险一金，先看作品。"
 
 [sub_resource type="Resource" id="Resource_v02v6"]
 script = ExtResource("2_ffk1a")
-who = "me"
-text = "你好，我有独立成片，可以发你看看。"
+who = "choice"
+text = "我有独立成片，可以发你看看。"
 
 [sub_resource type="Resource" id="Resource_p05tr"]
 script = ExtResource("2_ffk1a")
-text = "好，加我微信发我，我们微信上聊。"
+who = "choice"
+text = "PR、AE 我都熟。"
 
 [sub_resource type="Resource" id="Resource_foet6"]
-script = ExtResource("3_jud2a")
+script = ExtResource("2_ffk1a")
+who = "choice"
+text = "先看作品再谈也行。"
 
 [sub_resource type="Resource" id="Resource_u46oc"]
+script = ExtResource("2_ffk1a")
+text = "好，加我微信发我，我们微信上聊。"
+
+[sub_resource type="Resource" id="Resource_b6fd2"]
+script = ExtResource("3_jud2a")
+
+[sub_resource type="Resource" id="Resource_aqyr6"]
 script = ExtResource("3_jud2a")
 tier = 1
 acting_required = 5
@@ -40,7 +50,7 @@ match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_b6fd2"]
+[sub_resource type="Resource" id="Resource_qn5k2"]
 script = ExtResource("3_jud2a")
 tier = 2
 acting_required = 15
@@ -56,7 +66,7 @@ display_name = "C 公司"
 tier = 2
 acting_threshold = 8
 conditions = Array[ExtResource("1_gtl06")]([SubResource("Resource_d55ta"), SubResource("Resource_k0jyu")])
-roles = Array[ExtResource("3_jud2a")]([SubResource("Resource_foet6"), SubResource("Resource_u46oc"), SubResource("Resource_b6fd2")])
+roles = Array[ExtResource("3_jud2a")]([SubResource("Resource_b6fd2"), SubResource("Resource_aqyr6"), SubResource("Resource_qn5k2")])
 extra_payout = 80
 tagline = "正规公司，简短招聘"
 industry = "广播／影视"
@@ -73,4 +83,4 @@ hint = "C 公司嘴上说「纯真」。重点在纯 —— 掺一点别的情�
 hr_name = "陈女士"
 hr_title = "人事"
 hr_status = "今日活跃"
-opening_chat = Array[ExtResource("2_ffk1a")]([SubResource("Resource_fmbot"), SubResource("Resource_v02v6"), SubResource("Resource_p05tr")])
+opening_chat = Array[ExtResource("2_ffk1a")]([SubResource("Resource_fmbot"), SubResource("Resource_v02v6"), SubResource("Resource_p05tr"), SubResource("Resource_foet6"), SubResource("Resource_u46oc")])

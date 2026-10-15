@@ -81,8 +81,6 @@ const ME_MARK := "你"
 @onready var _job_experience: Label = get_node(P_CONTENT + "/JobPanel/JobMargin/JobBox/JobExperience")
 @onready var _tag_row: HBoxContainer = get_node(P_CONTENT + "/JobPanel/JobMargin/JobBox/TagRow")
 @onready var _hr_card: Button = get_node(P_CONTENT + "/HrCard")
-@onready var _hint_panel: PanelContainer = get_node(P_CONTENT + "/HintPanel")
-@onready var _hint_text: Label = get_node(P_CONTENT + "/HintPanel/HintMargin/HintBox/HintText")
 @onready var _detail_caption: Label = get_node(P_CONTENT + "/DetailCaption")
 @onready var _detail_text: Label = get_node(P_CONTENT + "/DetailText")
 @onready var _note_label: Label = get_node(P_CONTENT + "/NoteLabel")
@@ -96,8 +94,6 @@ const ME_MARK := "你"
 @onready var _chat_online: Label = get_node(P_CHAT_BOX + "/ChatHead/ChatOnline")
 @onready var _chat_scroll: ScrollContainer = get_node(P_CHAT_BOX + "/ChatScroll")
 @onready var _chat_feed: VBoxContainer = get_node(P_CHAT_BOX + "/ChatScroll/ChatFeed")
-@onready var _chat_hint: Label = get_node(P_CHAT_BOX + "/ChatFoot/ChatHint")
-@onready var _chat_skip: Button = get_node(P_CHAT_BOX + "/ChatFoot/ChatSkip")
 @onready var _chat_to_wechat: Button = get_node(P_CHAT_BOX + "/ChatFoot/ChatToWechat")
 @onready var _back_button: Button = get_node("Page/BackButton")
 
@@ -115,6 +111,8 @@ var _chat_index := 0
 var _chat_done := false
 ## 玩家中途退了：**不再解锁** —— 得把话说完（或点跳过）才拿得到联系方式
 var _chat_aborted := false
+## 当前摆在界面上的那组选项（玩家点完就撤掉）
+var _choices: Node
 
 
 func _ready() -> void:
@@ -130,7 +128,6 @@ func _ready() -> void:
 	_hr_card.pressed.connect(_open_chat)
 	_contact_button.pressed.connect(_open_chat)
 	_chat_back.pressed.connect(_close_chat)
-	_chat_skip.pressed.connect(skip_chat)
 	_chat_to_wechat.pressed.connect(func() -> void: open_app_requested.emit(WECHAT_SCENE))
 
 	# 【不自动打开第一家】自动打开等于白送一个 HR —— 「说上话才拿到联系方式」得是真动作
@@ -497,7 +494,6 @@ func _show_empty_state() -> void:
 	_meta_row.visible = false
 	_job_panel.visible = false
 	_hr_card.visible = false
-	_hint_panel.visible = false
 	_detail_caption.visible = false
 	_detail_text.visible = false
 	_note_label.visible = false
@@ -512,7 +508,6 @@ func _show_posting() -> void:
 	_meta_row.visible = true
 	_job_panel.visible = true
 	_hr_card.visible = true
-	_hint_panel.visible = true
 	_detail_caption.visible = true
 	_detail_text.visible = true
 
@@ -537,7 +532,6 @@ func _show_posting() -> void:
 	hr_status.visible = not co.hr_status.is_empty()
 	UiBits.one_line(hr_status, 14, 380)
 
-	_hint_text.text = co.hint
 	_detail_text.text = co.posting_text
 	_note_label.text = "注：" + co.posting_note if not co.posting_note.is_empty() else ""
 	_note_label.visible = not co.posting_note.is_empty()
@@ -594,9 +588,8 @@ func _open_chat() -> void:
 	_chat_to_wechat.visible = false
 
 	# 【第二次进来直接给结果】已解锁 = 这段对话他看过一遍了。再逐字演一次只是让人干等 ——
-	# 内容一字不少，只是不再有动画。「跳过」按钮也就不必再摆着。
+	# 内容一字不少，只是不再有动画。
 	var seen := Game.is_hr_unlocked(_current.code)
-	_chat_skip.visible = not seen
 
 	if _chat_lines.is_empty():
 		# 文案一句都没写（连占位都没有）—— 不能把玩家卡死在这里，直接给联系方式
@@ -606,14 +599,17 @@ func _open_chat() -> void:
 	if seen or _chat_step <= 0.0:
 		skip_chat()
 	else:
-		_chat_hint.text = "HR 正在输入…"
 		_play_chat()
 
 
-## 把剩下的话一次放完 —— 「跳过」走这条，**测试也走这条**（不必等计时器）
+## 把剩下的话一次放完 —— 「跳过」走这条，**测试也走这条**（不必等计时器）。
+## 碰到选项就**替玩家挑第一个**：跳过的人本来就不想挑。
 func skip_chat() -> void:
 	_chat_step = 0.0
 	while _chat_index < _chat_lines.size():
+		if _chat_lines[_chat_index].is_choice():
+			_send_choice(_chat_lines[_chat_index].display_text())
+			continue
 		_push_line(_chat_lines[_chat_index])
 		_chat_index += 1
 	_finish_chat()
@@ -622,9 +618,19 @@ func skip_chat() -> void:
 
 func _play_chat() -> void:
 	while _chat_index < _chat_lines.size() and _chat_step > 0.0:
+		if _chat_lines[_chat_index].is_choice():
+			# 【到「该你说话」就停下】选项立刻摆出来，然后等玩家点 ——
+			# 这几条不是「播放」，是回合切换，不该按计时器往下滚。
+			_show_choices(_choice_run_at(_chat_index))
+			return
 		_push_line(_chat_lines[_chat_index])
 		_chat_index += 1
 		_scroll_chat()
+		# 【推完立刻看下一条是不是选项】是就马上摆出来，不再等一个间隔 ——
+		# 否则玩家要盯着屏幕干等 0.85 秒，才知道轮到自己说话了。
+		if _chat_index < _chat_lines.size() and _chat_lines[_chat_index].is_choice():
+			_show_choices(_choice_run_at(_chat_index))
+			return
 		await get_tree().create_timer(_chat_step).timeout
 	_finish_chat()
 
@@ -649,8 +655,6 @@ func _finish_chat() -> void:
 		_push_system("已把 %s 加进微信联系人" % _current.hr_name)
 	else:
 		_push_system("%s 已经在你的微信联系人里" % _current.hr_name)
-	_chat_hint.text = "去微信私聊就能投递 —— 发一段表情包就是投递" if fresh \
-			else "这位早就在你的微信联系人里了"
 	_chat_to_wechat.visible = true
 	_set_lock_state(fresh)
 	_refresh_list()
@@ -670,7 +674,11 @@ func _push_line(line: ChatLine) -> void:
 
 ## 一个气泡。`me` = 右边（带「你」的头像），HR = 左边
 func _bubble(line: ChatLine) -> Control:
-	var mine := line.is_mine()
+	return _bubble_of(line.display_text(), line.is_mine())
+
+
+## 一个气泡。`mine` = 右边（带「你」的头像），否则左边（HR 的头像）
+func _bubble_of(text: String, mine: bool) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 
@@ -696,7 +704,6 @@ func _bubble(line: ChatLine) -> Control:
 	panel.add_child(margin)
 
 	var label := Label.new()
-	var text := line.display_text()
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	# 【为什么要把宽度算出来】autowrap 打开时 Label 的最小宽度会塌成几个字，
@@ -711,6 +718,68 @@ func _bubble(line: ChatLine) -> Control:
 	else:
 		row.add_child(_expander())
 	return row
+
+
+# ============================================================
+# 「该你说话了」—— 一组选项
+# ============================================================
+## 从 `from` 开始，连着几条都是选项？**连着写自然成一组**，md 里不用编号
+func _choice_run_at(from: int) -> Array[ChatLine]:
+	var out: Array[ChatLine] = []
+	var i := from
+	while i < _chat_lines.size() and _chat_lines[i].is_choice():
+		out.append(_chat_lines[i])
+		i += 1
+	return out
+
+
+## 把这一组选项竖着摆出来，然后**停下等玩家点** —— 这一段不是「播放」，是回合切换。
+## 三句只是说法不同，HR 的回复三个人共用（见 `data/companies/README.md`）。
+func _show_choices(run: Array[ChatLine]) -> void:
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 8)
+	for line: ChatLine in run:
+		var b := Button.new()
+		b.text = line.display_text()
+		b.focus_mode = Control.FOCUS_NONE
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		b.custom_minimum_size = Vector2(0, 52)
+		b.add_theme_font_size_override("font_size", 17)
+		b.add_theme_color_override("font_color", UiPalette.TEXT)
+		b.add_theme_color_override("font_hover_color", UiPalette.TEXT)
+		b.add_theme_stylebox_override("normal",
+				UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 12, 0, 14))
+		b.add_theme_stylebox_override("hover",
+				UiPalette.button(Color("3a3a46"), UiPalette.ACCENT, 2, 12, 0, 14))
+		b.add_theme_stylebox_override("pressed",
+				UiPalette.button(Color("3d3d26"), UiPalette.ACCENT, 3, 12, 0, 14))
+		b.pressed.connect(_on_choice_pressed.bind(line.display_text()))
+		box.add_child(b)
+	_chat_feed.add_child(box)
+	_choices = box
+	_scroll_chat()
+
+
+func _on_choice_pressed(text: String) -> void:
+	_send_choice(text)
+	if _chat_step <= 0.0:
+		skip_chat()
+	else:
+		_play_chat()
+
+
+## 把这句话当成玩家发的送出去，并跳过整组选项。
+## 【跳过与测试也走这条】只是它们不问玩家，直接挑第一句
+func _send_choice(text: String) -> void:
+	if _choices != null:
+		_chat_feed.remove_child(_choices)
+		_choices.queue_free()
+		_choices = null
+	_chat_feed.add_child(_bubble_of(text, true))
+	_chat_index += _choice_run_at(_chat_index).size()
+	_scroll_chat()
 
 
 func _bubble_width(text: String) -> float:
@@ -892,7 +961,6 @@ func _apply_styles() -> void:
 	_node_panel(_post_panel, UiPalette.PANEL, 20, 2, UiPalette.LINE)
 	_node_panel(_chat_panel, UiPalette.PANEL, 20, 2, UiPalette.LINE)
 	_node_panel(_job_panel, UiPalette.PANEL_SOFT, 16, 2, UiPalette.LINE)
-	_node_panel(_hint_panel, Color("2a3326"), 16, 2, UiPalette.POSITIVE)
 	# 底部那条是**冻结行**（像 Excel 冻结窗格）：只留一条上边线，
 	# 读起来是「被钉住的一条栏」，而不是浮在正文上的遮罩。
 	var foot := StyleBoxFlat.new()
@@ -926,8 +994,6 @@ func _apply_styles() -> void:
 	UiPalette.text(_job_title, 26, UiPalette.TEXT)
 	UiPalette.text(_job_salary, 22, UiPalette.POSITIVE)
 	UiPalette.text(_job_experience, 16, UiPalette.TEXT_DIM)
-	UiPalette.text(get_node(P_CONTENT + "/HintPanel/HintMargin/HintBox/HintCaption"), 14, UiPalette.POSITIVE)
-	UiPalette.text(_hint_text, 18, UiPalette.TEXT)
 	UiPalette.text(_detail_caption, 18, UiPalette.TEXT_DIM)
 	UiPalette.text(_detail_text, 17, UiPalette.TEXT)
 	UiPalette.text(_note_label, 15, UiPalette.TEXT_DIM)
@@ -937,7 +1003,6 @@ func _apply_styles() -> void:
 	_style_action(_contact_button, UiPalette.ACCENT, UiPalette.INK, UiPalette.ACCENT, 22)
 	_style_action(_chat_to_wechat, UiPalette.ACCENT, UiPalette.INK, UiPalette.ACCENT, 20)
 	_style_action(_chat_back, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.LINE, 18)
-	_style_action(_chat_skip, UiPalette.PANEL_SOFT, UiPalette.TEXT_DIM, UiPalette.LINE, 18)
 
 	# HR 卡：平时低调，鼠标上来才亮 —— 它是「下一步」，但不该跟职位抢眼
 	_hr_card.focus_mode = Control.FOCUS_NONE
@@ -951,7 +1016,6 @@ func _apply_styles() -> void:
 	UiPalette.text(_chat_name, 26, UiPalette.TEXT)
 	UiPalette.text(_chat_title, 15, UiPalette.TEXT_DIM)
 	UiPalette.text(_chat_online, 15, UiPalette.POSITIVE)
-	UiPalette.text(_chat_hint, 15, UiPalette.TEXT_DIM)
 
 	for bar: VScrollBar in [
 			_company_list.get_parent().get_v_scroll_bar(),

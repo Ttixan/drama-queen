@@ -17,17 +17,27 @@ text = "你好，编剧岗一直在招。接受新人，有模板，日更跟得
 
 [sub_resource type="Resource" id="Resource_o55o0"]
 script = ExtResource("2_xd4r1")
-who = "me"
-text = "你好，我没写过短剧，想先了解一下是怎么个做法。"
+who = "choice"
+text = "我没写过短剧，但想试试。"
 
 [sub_resource type="Resource" id="Resource_ujirq"]
 script = ExtResource("2_xd4r1")
-text = "三言两语说不完，加我微信吧，我把模板发你。"
+who = "choice"
+text = "我写过网文，不知道合不合适。"
 
 [sub_resource type="Resource" id="Resource_hpx5e"]
-script = ExtResource("3_m8ys4")
+script = ExtResource("2_xd4r1")
+who = "choice"
+text = "日更的节奏我能跟上。"
 
 [sub_resource type="Resource" id="Resource_bwilm"]
+script = ExtResource("2_xd4r1")
+text = "三言两语说不完，加我微信吧，我把模板发你。"
+
+[sub_resource type="Resource" id="Resource_v0kqa"]
+script = ExtResource("3_m8ys4")
+
+[sub_resource type="Resource" id="Resource_7afj1"]
 script = ExtResource("3_m8ys4")
 tier = 1
 acting_required = 5
@@ -35,7 +45,7 @@ match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_v0kqa"]
+[sub_resource type="Resource" id="Resource_sgog3"]
 script = ExtResource("3_m8ys4")
 tier = 2
 acting_required = 15
@@ -49,7 +59,7 @@ id = &"A"
 code = "A"
 display_name = "A 公司"
 conditions = Array[ExtResource("1_3n4am")]([SubResource("Resource_04nrh")])
-roles = Array[ExtResource("3_m8ys4")]([SubResource("Resource_hpx5e"), SubResource("Resource_bwilm"), SubResource("Resource_v0kqa")])
+roles = Array[ExtResource("3_m8ys4")]([SubResource("Resource_v0kqa"), SubResource("Resource_7afj1"), SubResource("Resource_sgog3")])
 extra_payout = 40
 tagline = "流水线烂片小厂"
 industry = "广播／影视"
@@ -76,4 +86,4 @@ hint = "A 厂什么都收。别全程一张臭脸就行 —— 他们自己也�
 hr_name = "王先生"
 hr_title = "招聘负责人"
 hr_status = "刚刚活跃"
-opening_chat = Array[ExtResource("2_xd4r1")]([SubResource("Resource_cqnkl"), SubResource("Resource_o55o0"), SubResource("Resource_ujirq")])
+opening_chat = Array[ExtResource("2_xd4r1")]([SubResource("Resource_cqnkl"), SubResource("Resource_o55o0"), SubResource("Resource_ujirq"), SubResource("Resource_hpx5e"), SubResource("Resource_bwilm")])

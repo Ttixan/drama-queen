@@ -23,17 +23,27 @@ text = "小白也行，师傅一对一带，想学就回我一句。"
 
 [sub_resource type="Resource" id="Resource_kc6n1"]
 script = ExtResource("2_74mkt")
-who = "me"
-text = "我没什么经验，但是真的想学。"
+who = "choice"
+text = "我没什么基础，但肯学。"
 
 [sub_resource type="Resource" id="Resource_esc84"]
 script = ExtResource("2_74mkt")
-text = "行，加我微信，我把带教的安排发你。"
+who = "choice"
+text = "我拍过一点东西，不算系统。"
 
 [sub_resource type="Resource" id="Resource_nnghs"]
-script = ExtResource("3_s2fnj")
+script = ExtResource("2_74mkt")
+who = "choice"
+text = "师傅让做什么我就做什么。"
 
 [sub_resource type="Resource" id="Resource_tiysw"]
+script = ExtResource("2_74mkt")
+text = "行，加我微信，我把带教的安排发你。"
+
+[sub_resource type="Resource" id="Resource_4ohv7"]
+script = ExtResource("3_s2fnj")
+
+[sub_resource type="Resource" id="Resource_o7pjj"]
 script = ExtResource("3_s2fnj")
 tier = 1
 acting_required = 5
@@ -41,7 +51,7 @@ match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_4ohv7"]
+[sub_resource type="Resource" id="Resource_3mp8e"]
 script = ExtResource("3_s2fnj")
 tier = 2
 acting_required = 15
@@ -57,7 +67,7 @@ display_name = "B 公司"
 tier = 1
 acting_threshold = 3
 conditions = Array[ExtResource("1_bgd73")]([SubResource("Resource_13sw3"), SubResource("Resource_cdox5")])
-roles = Array[ExtResource("3_s2fnj")]([SubResource("Resource_nnghs"), SubResource("Resource_tiysw"), SubResource("Resource_4ohv7")])
+roles = Array[ExtResource("3_s2fnj")]([SubResource("Resource_4ohv7"), SubResource("Resource_o7pjj"), SubResource("Resource_3mp8e")])
 extra_payout = 64
 tagline = "小公司 HR 与学徒制"
 industry = "广播／影视"
@@ -86,4 +96,4 @@ hint = "B 公司要个讨喜的新人。笑一个就行 —— 但别笑里带�
 hr_name = "李女士"
 hr_title = "人事兼行政"
 hr_status = "今日回复 10+ 次｜回复率高"
-opening_chat = Array[ExtResource("2_74mkt")]([SubResource("Resource_gw00q"), SubResource("Resource_kc6n1"), SubResource("Resource_esc84")])
+opening_chat = Array[ExtResource("2_74mkt")]([SubResource("Resource_gw00q"), SubResource("Resource_kc6n1"), SubResource("Resource_esc84"), SubResource("Resource_nnghs"), SubResource("Resource_tiysw")])

@@ -22,17 +22,27 @@ text = "我们不做流水线。想做作者电影、现实题材，再聊。"
 
 [sub_resource type="Resource" id="Resource_i578h"]
 script = ExtResource("2_aq84a")
-who = "me"
-text = "我想做的是能留下来的东西，不是快消。"
+who = "choice"
+text = "我想做的是能留下来的东西。"
 
 [sub_resource type="Resource" id="Resource_nani4"]
 script = ExtResource("2_aq84a")
-text = "那加我微信，约个时间当面谈。"
+who = "choice"
+text = "现实题材我一直想碰。"
 
 [sub_resource type="Resource" id="Resource_y3p7j"]
-script = ExtResource("3_2n8ow")
+script = ExtResource("2_aq84a")
+who = "choice"
+text = "不做快消，这点我们一样。"
 
 [sub_resource type="Resource" id="Resource_31u35"]
+script = ExtResource("2_aq84a")
+text = "那加我微信，约个时间当面谈。"
+
+[sub_resource type="Resource" id="Resource_qy2nu"]
+script = ExtResource("3_2n8ow")
+
+[sub_resource type="Resource" id="Resource_e0wum"]
 script = ExtResource("3_2n8ow")
 tier = 1
 acting_required = 5
@@ -40,7 +50,7 @@ match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_qy2nu"]
+[sub_resource type="Resource" id="Resource_on0mf"]
 script = ExtResource("3_2n8ow")
 tier = 2
 acting_required = 15
@@ -56,7 +66,7 @@ display_name = "D 公司"
 tier = 3
 acting_threshold = 15
 conditions = Array[ExtResource("1_0lt77")]([SubResource("Resource_711sn"), SubResource("Resource_p6y5r")])
-roles = Array[ExtResource("3_2n8ow")]([SubResource("Resource_y3p7j"), SubResource("Resource_31u35"), SubResource("Resource_qy2nu")])
+roles = Array[ExtResource("3_2n8ow")]([SubResource("Resource_qy2nu"), SubResource("Resource_e0wum"), SubResource("Resource_on0mf")])
 extra_payout = 96
 tagline = "高门槛文艺公司"
 industry = "广播／影视"
@@ -73,4 +83,4 @@ hint = "D 公司要「幻灭」。第一帧还亮着，最后一帧得暗下去 
 hr_name = "徐女士"
 hr_title = "制片人"
 hr_status = "本周活跃"
-opening_chat = Array[ExtResource("2_aq84a")]([SubResource("Resource_3bt7y"), SubResource("Resource_i578h"), SubResource("Resource_nani4")])
+opening_chat = Array[ExtResource("2_aq84a")]([SubResource("Resource_3bt7y"), SubResource("Resource_i578h"), SubResource("Resource_nani4"), SubResource("Resource_y3p7j"), SubResource("Resource_31u35")])

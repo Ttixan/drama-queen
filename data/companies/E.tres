@@ -28,17 +28,27 @@ text = "您好，集团直招。弹性工作制、双月一休，能接受吗？
 
 [sub_resource type="Resource" id="Resource_122y7"]
 script = ExtResource("2_j0x8g")
-who = "me"
-text = "我看了工作安排那条：每日 18—23 小时。想先问清楚。"
+who = "choice"
+text = "我想先问清楚工作安排。"
 
 [sub_resource type="Resource" id="Resource_rcxd1"]
 script = ExtResource("2_j0x8g")
-text = "细节加微信说，我把完整的工作安排发您。"
+who = "choice"
+text = "18—23 小时那条，想确认一下。"
 
 [sub_resource type="Resource" id="Resource_ma7f5"]
-script = ExtResource("3_ux0ye")
+script = ExtResource("2_j0x8g")
+who = "choice"
+text = "双月一休具体怎么执行？"
 
 [sub_resource type="Resource" id="Resource_e4j7v"]
+script = ExtResource("2_j0x8g")
+text = "细节加微信说，我把完整的工作安排发您。"
+
+[sub_resource type="Resource" id="Resource_o6qdy"]
+script = ExtResource("3_ux0ye")
+
+[sub_resource type="Resource" id="Resource_7iqpk"]
 script = ExtResource("3_ux0ye")
 tier = 1
 acting_required = 5
@@ -46,7 +56,7 @@ match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_o6qdy"]
+[sub_resource type="Resource" id="Resource_1jdqm"]
 script = ExtResource("3_ux0ye")
 tier = 2
 acting_required = 15
@@ -62,7 +72,7 @@ display_name = "E 公司"
 tier = 4
 acting_threshold = 20
 conditions = Array[ExtResource("1_1q5vd")]([SubResource("Resource_dk8u0"), SubResource("Resource_ya4v8"), SubResource("Resource_ubwe2")])
-roles = Array[ExtResource("3_ux0ye")]([SubResource("Resource_ma7f5"), SubResource("Resource_e4j7v"), SubResource("Resource_o6qdy")])
+roles = Array[ExtResource("3_ux0ye")]([SubResource("Resource_o6qdy"), SubResource("Resource_7iqpk"), SubResource("Resource_1jdqm")])
 extra_payout = 120
 tagline = "上市大厂与夸张的压榨制度"
 industry = "广播／影视"
@@ -100,4 +110,4 @@ hint = "E 厂要「反转」。中间那下得掉头 —— D 家那种慢慢滑
 hr_name = "赵女士"
 hr_title = "高级人才招聘专家"
 hr_status = "刚刚活跃｜今日回复 100+ 次"
-opening_chat = Array[ExtResource("2_j0x8g")]([SubResource("Resource_l0sje"), SubResource("Resource_122y7"), SubResource("Resource_rcxd1")])
+opening_chat = Array[ExtResource("2_j0x8g")]([SubResource("Resource_l0sje"), SubResource("Resource_122y7"), SubResource("Resource_rcxd1"), SubResource("Resource_ma7f5"), SubResource("Resource_e4j7v")])

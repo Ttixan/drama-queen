@@ -229,7 +229,7 @@ func _hr_status(text: String) -> String:
 ## 比直接报错更难发现。所以只认那三个词。
 func _is_chat_who(label: String) -> bool:
 	var t := label.strip_edges()
-	return t == "HR" or t == "hr" or t == "我" or t == "玩家" or t == "系统"
+	return t == "HR" or t == "hr" or t == "我" or t == "玩家" or t == "系统" or t == "选"
 
 
 ## md 里写「HR / 我 / 系统」，程序里用 "hr" / "me" / "system"
@@ -239,6 +239,8 @@ func _who_of(label: String) -> String:
 			return "hr"
 		"我", "玩家":
 			return "me"
+		"选":
+			return "choice"
 		_:
 			return "system"
 

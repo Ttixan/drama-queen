@@ -215,29 +215,6 @@ theme_override_constants/separation = 8
 custom_minimum_size = Vector2(0, 110)
 layout_mode = 2
 
-[node name="HintPanel" type="PanelContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
-layout_mode = 2
-
-[node name="HintMargin" type="MarginContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/HintPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 14
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 14
-
-[node name="HintBox" type="VBoxContainer" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/HintPanel/HintMargin"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="HintCaption" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/HintPanel/HintMargin/HintBox"]
-layout_mode = 2
-text = "这家的口味"
-
-[node name="HintText" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent/HintPanel/HintMargin/HintBox"]
-layout_mode = 2
-text = "—"
-autowrap_mode = 3
-
 [node name="DetailCaption" type="Label" parent="Page/BodyWrap/Body/PostPanel/PostMargin/PostBox/PostScroll/PostContent"]
 layout_mode = 2
 text = "职位详情"
@@ -285,6 +262,10 @@ size_flags_horizontal = 3
 
 [node name="ChatMargin" type="MarginContainer" parent="Page/BodyWrap/Body/ChatPanel"]
 layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
 
 [node name="ChatBox" type="VBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin"]
 layout_mode = 2
@@ -327,16 +308,7 @@ theme_override_constants/separation = 10
 [node name="ChatFoot" type="HBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox"]
 layout_mode = 2
 theme_override_constants/separation = 14
-
-[node name="ChatHint" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatFoot"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-
-[node name="ChatSkip" type="Button" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatFoot"]
-custom_minimum_size = Vector2(150, 56)
-layout_mode = 2
-text = "跳过 ▸▸"
+alignment = 2
 
 [node name="ChatToWechat" type="Button" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatFoot"]
 visible = false

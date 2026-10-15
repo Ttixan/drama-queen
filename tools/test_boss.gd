@@ -64,7 +64,6 @@ func _run_all() -> void:
 	_check("没有选中公司", _app._current, null)
 	_check("招聘页处于空状态", _app._company_name.text, "还没选公司")
 	_check("职位置卡隐藏", _app._job_panel.visible, false)
-	_check("线索卡隐藏", _app._hint_panel.visible, false)
 	_check("联系人行数", _app._rows.size(), 5)
 
 	print("")
@@ -78,8 +77,9 @@ func _run_all() -> void:
 	_check("职位渲染出来", _app._job_title.text, CompanyLibrary.by_code("A").position_title)
 	_check("详情渲染出来",
 			_app._detail_text.text, CompanyLibrary.by_code("A").posting_text)
-	_check("线索渲染出来", _app._hint_text.text, CompanyLibrary.by_code("A").hint)
-	_check("卡片都显示出来了", _app._job_panel.visible and _app._hint_panel.visible, true)
+	# 线索**还在数据里**，只是界面上不再显示（绿框已删）—— 别把内容一起丢了
+	_check("线索数据没丢（只是不显示了）", CompanyLibrary.by_code("A").hint.is_empty(), false)
+	_check("职位卡显示出来了", _app._job_panel.visible, true)
 	_check("标签芯片数", _app._tag_row.get_child_count(),
 			CompanyLibrary.by_code("A").tags.size())
 	_check("HR 卡显示出来了", _app._hr_card.visible, true)
@@ -92,15 +92,27 @@ func _run_all() -> void:
 	_check("顶栏计数还是 0", _app._status_label.text, "已联系 0 / 5 家")
 
 	print("")
-	print("[4] 点 HR 进聊天：逐句放完才拿到联系方式")
-	_check("A 有初次沟通的对话", CompanyLibrary.by_code("A").opening_chat.size(), 3)
+	print("[4] 点 HR 进聊天：先听开场，再自己挑一句回过去")
+	_check("A 的对话共 5 条（开场 + 三个选项 + 统一回复）",
+			CompanyLibrary.by_code("A").opening_chat.size(), 5)
 	_app._open_chat()
 	_check("聊天层盖住了详情", _app.chat_open(), true)
 	_check("详情层收起来了", _app._post_panel.visible, false)
 	_check("聊天头上是这位 HR", _app._chat_name.text, CompanyLibrary.by_code("A").hr_name)
-	_check("先摆了一张职位卡 + 第一条", _app._chat_feed.get_child_count(), 2)
-	_check("还没放完时不解锁", _game.is_hr_unlocked("A"), false)
+	# 职位卡 + 开场白 + **刚摆出来的选项** —— 选项是紧跟着开场白出现的，不等计时器
+	_check("职位卡 + 开场白 + 选项", _app._chat_feed.get_child_count(), 3)
+	_check("开场白之后立刻轮到你（不用干等）", _app._choices != null, true)
+	_check("选项竖着三个", _app._choices.get_child_count(), 3)
+	_check("还没挑/还没放完时不解锁", _game.is_hr_unlocked("A"), false)
+	# 挑第一个（点哪个都行，HR 后面回的是同一句）
+	(_app._choices.get_child(0) as Button).pressed.emit()
+	_check("选项撤掉了", _app._choices, null)
+	_check("挑中的那句成了我发的消息", _text_of_feed(2),
+			CompanyLibrary.by_code("A").opening_chat[1].display_text())
+	_app._chat_step = 0.0
 	_app.skip_chat()
+	_check("HR 回的是同一句（挑哪句无关）", _text_of_feed(3),
+			CompanyLibrary.by_code("A").opening_chat[4].display_text())
 	_check("话说完就解锁了", _game.is_hr_unlocked("A"), true)
 	_check("只发了 1 次 hr_unlocked", _unlock_events.size(), 1)
 	_check("发的就是 A", _unlock_events[0], "A")
@@ -125,7 +137,6 @@ func _run_all() -> void:
 	_walk_hr_chat("A")            # A 已经解锁过 → 应当直接铺完
 	_check("第二次也是完整对话（职位卡 + 3 条 + 系统提示）",
 			_app._chat_feed.get_child_count(), 5)
-	_check("没有「跳过」可点（没什么可跳的）", _app._chat_skip.visible, false)
 	_check("系统提示换了说法",
 			(_app._chat_feed.get_child(4) as Label).text.contains("已经在你的微信联系人里"), true)
 	_check("且没有重复解锁（还是 1 次）", _unlock_events.count("A"), 1)
@@ -184,6 +195,16 @@ func _run_all() -> void:
 	_check("「去微信聊」请上层打开微信", req, ["res://scenes/apps/wechat.tscn"] as Array[String])
 
 	_finish()
+
+
+## 取聊天列表里第 i 个孩子的文字（气泡、系统提示都能取）
+func _text_of_feed(i: int) -> String:
+	var node: Node = _app._chat_feed.get_child(i)
+	if node is Label:
+		return (node as Label).text
+	# 气泡那一行是 [空档/头像, 面板, 头像/空档]，面板里是 [边距, 文字]
+	var panel: Node = node.get_child(1)
+	return (panel.get_child(0).get_child(0) as Label).text
 
 
 ## 走完「点开一家 → 点 HR → 聊完」这条链路。
