@@ -61,6 +61,9 @@ const TOP_SIDE_W := 220.0
 
 ## 聊天逐条播放的间隔（秒）。**设成 0 = 一次放完** —— 「跳过」按钮与测试都走那条。
 const CHAT_STEP := 0.85
+## 点「沟通」之后、第一句出现前的沉默（秒）—— 对方不可能秒回，这一拍就是「正在输入」。
+## 【测试与跳过路径设成 0】那样 `_open_chat` 全程同步，断言才写得稳。
+const FIRST_MSG_DELAY := 1.0
 ## 气泡最大宽度：超了就折行。小于它时按文字实际宽度收窄（短句子不该拉成一条长条）
 const MAX_BUBBLE_W := 560.0
 const BUBBLE_FONT := 17
@@ -111,6 +114,8 @@ var _chat_index := 0
 var _chat_done := false
 ## 玩家中途退了：**不再解锁** —— 得把话说完（或点跳过）才拿得到联系方式
 var _chat_aborted := false
+## 实际生效的首句时延（测试会把它设成 0，让整条链路同步跑）
+var _first_msg_delay := FIRST_MSG_DELAY
 ## 当前摆在界面上的那组选项（玩家点完就撤掉）
 var _choices: Node
 
@@ -536,6 +541,9 @@ func _show_posting() -> void:
 	_note_label.text = "注：" + co.posting_note if not co.posting_note.is_empty() else ""
 	_note_label.visible = not co.posting_note.is_empty()
 	_foot_hint.text = "点 HR 聊两句，聊完微信里就有他了"
+	# 【第一次是「立刻沟通」，之后才是「继续沟通」】照 Boss 本尊的叫法 ——
+	# 第一次是发起，之后就都算续聊
+	_contact_button.text = "立刻沟通" if not Game.is_hr_unlocked(co.code) else "继续沟通"
 	_contact_button.disabled = false
 	_set_lock_state(false)
 
@@ -598,8 +606,17 @@ func _open_chat() -> void:
 		return
 	if seen or _chat_step <= 0.0:
 		skip_chat()
-	else:
-		_play_chat()
+		return
+	# 【点下去先等一拍】对方不可能秒回 —— 这一秒的沉默就是「正在输入」，
+	# 期间职位卡已经摆出来了，玩家有事可看。第二次进来走 skip，不等。
+	if _first_msg_delay > 0.0:
+		await get_tree().create_timer(_first_msg_delay).timeout
+		if _chat_aborted or _current == null:
+			return
+		if _chat_step <= 0.0:
+			skip_chat()
+			return
+	_play_chat()
 
 
 ## 把剩下的话一次放完 —— 「跳过」走这条，**测试也走这条**（不必等计时器）。
@@ -955,6 +972,10 @@ func _apply_styles() -> void:
 	top_sb.bg_color = UiPalette.PANEL
 	top_sb.border_width_bottom = 3
 	top_sb.border_color = UiPalette.ACCENT
+	# 【顶上两个角要圆】App 住在手机屏右栏那块圆角面板里（圆角 20），
+	# 顶栏自己是直角 —— 两个尖角会从圆角底图外面露出来。
+	top_sb.corner_radius_top_left = 20
+	top_sb.corner_radius_top_right = 20
 	get_node("Page/TopBar").add_theme_stylebox_override("panel", top_sb)
 
 	_node_panel(get_node("Page/BodyWrap/Body/ListPanel"), UiPalette.PANEL, 20, 2, UiPalette.LINE)

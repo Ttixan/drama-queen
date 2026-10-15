@@ -1073,6 +1073,9 @@ func _apply_styles() -> void:
 	var top_sb := StyleBoxFlat.new()
 	top_sb.bg_color = UiPalette.PANEL
 	top_sb.border_width_bottom = 3
+	# 【顶上两个角要圆】右栏底图是圆角 20，顶栏直角会从圆角外露出尖角
+	top_sb.corner_radius_top_left = 20
+	top_sb.corner_radius_top_right = 20
 	top_sb.border_color = UiPalette.WECHAT
 	get_node("Page/TopBar").add_theme_stylebox_override("panel", top_sb)
 

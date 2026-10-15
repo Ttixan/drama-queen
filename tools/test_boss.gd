@@ -95,6 +95,7 @@ func _run_all() -> void:
 	print("[4] 点 HR 进聊天：先听开场，再自己挑一句回过去")
 	_check("A 的对话共 5 条（开场 + 三个选项 + 统一回复）",
 			CompanyLibrary.by_code("A").opening_chat.size(), 5)
+	_app._first_msg_delay = 0.0     # 时延关掉，整条链路同步跑，断言才写得稳
 	_app._open_chat()
 	_check("聊天层盖住了详情", _app.chat_open(), true)
 	_check("详情层收起来了", _app._post_panel.visible, false)
@@ -146,6 +147,7 @@ func _run_all() -> void:
 	print("[6] 话没说完就退出去：不算数")
 	_app._select_company("C")
 	_app._chat_step = 1.0          # 让它处在「正在播」的状态（测试不等它）
+	_app._first_msg_delay = 0.0
 	_app._open_chat()
 	_app._close_chat()             # 第一条刚出来就退
 	_check("C 仍然没解锁", _game.is_hr_unlocked("C"), false)

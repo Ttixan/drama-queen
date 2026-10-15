@@ -180,6 +180,7 @@ func _test_app_switch() -> void:
 	# 【「← 全部」= 离开当前 App】只换左栏的话，右栏还停在聊天那一层 —— 两边对不上（真踩过）
 	_phone.open_app("res://scenes/apps/boss.tscn")
 	_phone._current._select_company("A")
+	_phone._current._first_msg_delay = 0.0
 	_phone._current._open_chat()
 	_check("Boss 聊天开着", _phone._current.chat_open(), true)
 	var unlocked_before: int = _game.state.unlocked_hr.size()

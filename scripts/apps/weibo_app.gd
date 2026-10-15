@@ -125,6 +125,9 @@ func _apply_styles() -> void:
 	var bar := StyleBoxFlat.new()
 	bar.bg_color = UiPalette.PANEL
 	bar.border_width_bottom = 3
+	# 【顶上两个角要圆】右栏底图是圆角 20，顶栏直角会从圆角外露出尖角
+	bar.corner_radius_top_left = 20
+	bar.corner_radius_top_right = 20
 	bar.border_color = UiPalette.WEIBO
 	get_node("Page/TopBar").add_theme_stylebox_override("panel", bar)
 
