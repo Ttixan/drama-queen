@@ -72,7 +72,7 @@ func _run_all() -> void:
 	_check("选中了 A", _app._current.code, "A")
 	_check("看招聘页不解锁", _game.is_hr_unlocked("A"), false)
 	_check("一条解锁事件都没发", _unlock_events.size(), 0)
-	_check("公司名渲染出来", _app._company_name.text, "A 公司")
+	_check("公司名渲染出来", _app._company_name.text, "小登传媒")
 	_check("定位渲染出来", _app._company_tagline.text, _md_tagline("A"))
 	_check("职位渲染出来", _app._job_title.text, CompanyLibrary.by_code("A").position_title)
 	_check("详情渲染出来",
@@ -190,7 +190,7 @@ func _run_all() -> void:
 	print("")
 	print("[10] 与手机屏的接口：左栏公司列表 + 「去微信聊」")
 	_check("交得出公司列表（手机屏的左栏）", _app.take_sidebar().name, "ListPanel")
-	_check("左栏标题", _app.sidebar_title(), "Boss直聘 · 公司")
+	_check("左栏标题", _app.sidebar_title(), "简历拿来 · 公司")
 	var req: Array[String] = []
 	_app.open_app_requested.connect(func(p: String) -> void: req.append(p))
 	_app._chat_to_wechat.pressed.emit()

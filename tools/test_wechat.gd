@@ -64,7 +64,7 @@ func _run_all() -> void:
 
 	var locked: Dictionary = _game.submit_audition(flat, a, extra)
 	_check("未解锁的 HR 投不出去", locked["rejected"], true)
-	_check("未解锁的原因说清楚了", "Boss直聘" in locked["fail_reasons"][0], true)
+	_check("未解锁的原因说清楚了", "简历拿来" in locked["fail_reasons"][0], true)
 	_check("被拦下不扣行动点", _game.state.ap_left_today, GameState.AP_PER_DAY)
 	_check("被拦下不记履历", _game.state.history.size(), 0)
 

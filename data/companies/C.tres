@@ -62,7 +62,7 @@ payout_ratio = 3.0
 script = ExtResource("4_w6wuu")
 id = &"C"
 code = "C"
-display_name = "C 公司"
+display_name = "好日子传媒"
 tier = 2
 acting_threshold = 8
 conditions = Array[ExtResource("1_gtl06")]([SubResource("Resource_d55ta"), SubResource("Resource_k0jyu")])
@@ -79,7 +79,7 @@ tags = Array[String](["视频剪辑", "PR", "AE", "商业短片"])
 posting_text = "岗位职责
 1. 负责商业短片及短剧的剪辑、调色、字幕与音效制作。
 2. 配合编导完成成片修改，整理归档项目素材。"
-hint = "C 公司嘴上说「纯真」。重点在纯 —— 掺一点别的情绪就不算数了。"
+hint = "好日子传媒嘴上说「纯真」。重点在纯 —— 掺一点别的情绪就不算数了。"
 hr_name = "陈女士"
 hr_title = "人事"
 hr_status = "今日活跃"

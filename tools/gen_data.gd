@@ -326,39 +326,39 @@ func _role(tier: int, need: int, line: float, gain: int, ratio: float) -> RoleRe
 func _company_specs() -> Array[Dictionary]:
 	return [
 		{
-			"code": "A", "display_name": "A 公司", "tier": CompanyData.Tier.A_LOW,
+			"code": "A", "display_name": "小登传媒", "tier": CompanyData.Tier.A_LOW,
 			"threshold": 0, "extra_payout": 40,
 			"conditions": _conds([
 				# L0 教学关：只要求「情绪别打架」。玩家在 A 学到的第一课是「一致」。
 				_cond(AuditionCondition.Type.NO_EMOTION, Emotion.Kind.ANGER, 0.0, 1.0, 0, true),
 			]),
-			"hint": "A 厂什么都收。别全程一张臭脸就行 —— 他们自己也知道片子烂，不挑。",
+			"hint": "小登传媒什么都收。别全程一张臭脸就行 —— 他们自己也知道片子烂，不挑。",
 			"hr_name": "王先生", "hr_title": "招聘负责人",
 		},
 		{
-			"code": "B", "display_name": "B 公司", "tier": CompanyData.Tier.B_SMALL,
+			"code": "B", "display_name": "剧是本影视", "tier": CompanyData.Tier.B_SMALL,
 			"threshold": 3, "extra_payout": 64,
 			"conditions": _conds([
 				# L1 单情绪命中：教「情绪是能被识别的」
 				_cond(AuditionCondition.Type.HAS_EMOTION, Emotion.Kind.JOY, 1.0, 2.0, 0, true),
 				_cond(AuditionCondition.Type.NO_EMOTION, Emotion.Kind.ANGER, 0.0, 1.0),
 			]),
-			"hint": "B 公司要个讨喜的新人。笑一个就行 —— 但别笑里带火气。",
+			"hint": "剧是本影视要个讨喜的新人。笑一个就行 —— 但别笑里带火气。",
 			"hr_name": "李女士", "hr_title": "人事兼行政",
 		},
 		{
-			"code": "C", "display_name": "C 公司", "tier": CompanyData.Tier.C_COMMERCIAL,
+			"code": "C", "display_name": "好日子传媒", "tier": CompanyData.Tier.C_COMMERCIAL,
 			"threshold": 8, "extra_payout": 80,
 			"conditions": _conds([
 				# L2 情绪纯度：教「克制」。注意是纯，不是多。
 				_cond(AuditionCondition.Type.DOMINANT_EMOTION, Emotion.Kind.JOY, 0.0, 2.0, 0, true),
 				_cond(AuditionCondition.Type.PURITY_MIN, Emotion.Kind.JOY, 0.55, 1.0),
 			]),
-			"hint": "C 公司嘴上说「纯真」。重点在**纯** —— 掺一点别的情绪就不算数了。",
+			"hint": "好日子传媒嘴上说「纯真」。重点在**纯** —— 掺一点别的情绪就不算数了。",
 			"hr_name": "陈女士", "hr_title": "人事",
 		},
 		{
-			"code": "D", "display_name": "D 公司", "tier": CompanyData.Tier.D_ARTHOUSE,
+			"code": "D", "display_name": "未完成电影工作室", "tier": CompanyData.Tier.D_ARTHOUSE,
 			"threshold": 15, "extra_payout": 96,
 			"conditions": _conds([
 				# L3 曲线形态：教「表演弧线」。要的是滑落，不是掉头。
@@ -366,11 +366,11 @@ func _company_specs() -> Array[Dictionary]:
 						AuditionCondition.Trend.DECREASING, true),
 				_cond(AuditionCondition.Type.LAST_FRAME_EMOTION, Emotion.Kind.SORROW, 0.0, 1.0),
 			]),
-			"hint": "D 公司要「幻灭」。第一帧还亮着，最后一帧得暗下去 —— 一路滑下来，不是中间掉头。",
+			"hint": "未完成电影工作室要「幻灭」。第一帧还亮着，最后一帧得暗下去 —— 一路滑下来，不是中间掉头。",
 			"hr_name": "徐女士", "hr_title": "制片人",
 		},
 		{
-			"code": "E", "display_name": "E 公司", "tier": CompanyData.Tier.E_MAJOR,
+			"code": "E", "display_name": "百象影业", "tier": CompanyData.Tier.E_MAJOR,
 			# 【门槛为什么是 20，而不是文档里写的 25】Day 2 数值模拟器实测推翻了那个数：
 			# 演技的增量在**周末结算**时才兑现（决策 1.5），所以每一周**之内**演技是冻结的。
 			# 玩家在任何一个可投递时刻能有的演技上限是 **21**（7 → 18 → 21，见 1.11 第 10 条）。
@@ -384,7 +384,7 @@ func _company_specs() -> Array[Dictionary]:
 				_cond(AuditionCondition.Type.PURITY_MIN, Emotion.Kind.JOY, 0.55, 1.0),
 				_cond(AuditionCondition.Type.NO_EMOTION, Emotion.Kind.ANGER, 0.0, 1.0),
 			]),
-			"hint": "E 厂要「反转」。中间那下得**掉头** —— D 家那种慢慢滑下来的，他们看不上。",
+			"hint": "百象影业要「反转」。中间那下得**掉头** —— 未完成电影工作室那种慢慢滑下来的，他们看不上。",
 			"hr_name": "赵女士", "hr_title": "高级人才招聘专家",
 		},
 	]

@@ -552,7 +552,7 @@ func _refresh_contacts() -> void:
 	for co: CompanyData in _companies:
 		if not Game.is_hr_unlocked(co.code):
 			locked += 1
-	_contacts_hint.text = "灰色的还没解锁 —— 先在 Boss直聘 逛过那家公司的招聘页" if locked > 0 else "五家都聊上了"
+	_contacts_hint.text = "灰色的还没解锁 —— 先在简历拿来逛过那家公司的招聘页" if locked > 0 else "五家都聊上了"
 
 
 func _refresh_header() -> void:
@@ -579,7 +579,7 @@ func _block_reason() -> String:
 	if _current == null:
 		return "先在左边挑一个联系人"
 	if not Game.is_hr_unlocked(_current.code):
-		return "还没加上 %s 的 HR —— 点下面「去 Boss直聘」看它的招聘页" % _current.code
+		return "还没加上 %s 的 HR —— 点下面「简历拿来」看它的招聘页" % _current.code
 	if _pending == null:
 		return "还没有表情包 —— 点「去录像机」拼一段 3 帧的"
 	if _role == null:
@@ -759,12 +759,12 @@ func _rebuild_chat() -> void:
 		_rebuild_event_chat()
 		return
 	if _current == null:
-		_add_note("还没有联系人 —— 点下面「去 Boss直聘」看一家公司的招聘页，就能加上它的 HR")
+		_add_note("还没有联系人 —— 点下面「简历拿来」看一家公司的招聘页，就能加上它的 HR")
 		return
 
 	var unlocked := Game.is_hr_unlocked(_current.code)
 	if not unlocked:
-		_add_note("你还没在 Boss直聘 上看过 %s 的招聘页，微信里加不上这位 HR" % _current.code)
+		_add_note("你还没在简历拿来看过 %s 的招聘页，微信里加不上这位 HR" % _current.code)
 		return
 
 	# 口味线索：隐藏公式下的学习通道。**正本在 Boss直聘 的招聘页上**

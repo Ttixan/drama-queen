@@ -57,7 +57,7 @@ payout_ratio = 3.0
 script = ExtResource("4_3tmev")
 id = &"A"
 code = "A"
-display_name = "A 公司"
+display_name = "小登传媒"
 conditions = Array[ExtResource("1_3n4am")]([SubResource("Resource_04nrh")])
 roles = Array[ExtResource("3_m8ys4")]([SubResource("Resource_v0kqa"), SubResource("Resource_7afj1"), SubResource("Resource_sgog3")])
 extra_payout = 40
@@ -82,7 +82,7 @@ posting_text = "公司长期招聘短剧编剧，有没有经验都可以，会�
 薪资：底薪＋过稿提成，多写多得。
 上班时间：9:00 上班，21—23 点下班，不需要倒班。"
 posting_note = "模板里的人名请替换干净，上个月有三部剧认了同一个爹。"
-hint = "A 厂什么都收。别全程一张臭脸就行 —— 他们自己也知道片子烂，不挑。"
+hint = "小登传媒什么都收。别全程一张臭脸就行 —— 他们自己也知道片子烂，不挑。"
 hr_name = "王先生"
 hr_title = "招聘负责人"
 hr_status = "刚刚活跃"

@@ -40,7 +40,7 @@ static func submit(state: GameState, clip: Clip, company: CompanyData,
 	# 【为什么在核心层也拦一道】决策 12 是玩法规则，不是界面规则 ——
 	# 只写在界面里的话，界面漏判一次就等于规则失效。
 	if not state.is_hr_unlocked(company.code):
-		return rejected("还没加上 %s 的 HR（先去 Boss直聘 逛一圈）" % company.code)
+		return rejected("还没加上 %s 的 HR（先去简历拿来逛一圈）" % company.code)
 	if state.submissions_this_week >= GameState.MAX_SUBMIT_PER_WEEK:
 		return rejected("本周投递次数已用完（上限 %d）" % GameState.MAX_SUBMIT_PER_WEEK)
 	if not state.spend_ap(company.ap_cost):

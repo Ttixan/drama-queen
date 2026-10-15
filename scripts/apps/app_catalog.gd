@@ -8,10 +8,13 @@ extends RefCounted
 ## `mark` 是图标里的那个字。**必须显式写死**：按名字取首字会让「微信」和「微博」
 ## 都显示「微」，两个图标长得一模一样。
 ##
+## 【对外名 vs 内部名】界面上它叫**「简历拿来」**（Boss直聘 的戏仿名），
+## 而代码与文件仍沿用 `boss` 这套内部名 —— 少一层无谓的改动，两边靠这条注释对上。
+##
 ## `hint` 是**悬浮时显示的作用** —— 手机屏左栏拿它当说明文字，
 ## 所以它得是一句人话（「私聊 HR 就是投递」），不是标签。
 const APPS: Array[Dictionary] = [
-	{"name": "Boss直聘", "mark": "聘", "scene": "res://scenes/apps/boss.tscn",
+	{"name": "简历拿来", "mark": "简", "scene": "res://scenes/apps/boss.tscn",
 		"color": UiPalette.BOSS, "hint": "看公司 · 解锁 HR"},
 	{"name": "录像机", "mark": "录", "scene": "res://scenes/minigame/recorder.tscn",
 		"color": UiPalette.ACCENT, "hint": "拼 3 帧表情包"},

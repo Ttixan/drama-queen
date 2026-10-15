@@ -68,7 +68,7 @@ payout_ratio = 3.0
 script = ExtResource("4_r4b8a")
 id = &"E"
 code = "E"
-display_name = "E 公司"
+display_name = "百象影业"
 tier = 4
 acting_threshold = 20
 conditions = Array[ExtResource("1_1q5vd")]([SubResource("Resource_dk8u0"), SubResource("Resource_ya4v8"), SubResource("Resource_ubwe2")])
@@ -106,7 +106,7 @@ posting_text = "千亿级内容生态，千万级项目资源。加入核心业�
 生日当天可提前一小时下班，经直属负责人审批后执行。
 集团已有超过一万名同事选择与我们共同成长。
 期待同样不甘平凡的你。"
-hint = "E 厂要「反转」。中间那下得掉头 —— D 家那种慢慢滑下来的，他们看不上。"
+hint = "百象影业要「反转」。中间那下得掉头 —— 未完成电影工作室那种慢慢滑下来的，他们看不上。"
 hr_name = "赵女士"
 hr_title = "高级人才招聘专家"
 hr_status = "刚刚活跃｜今日回复 100+ 次"

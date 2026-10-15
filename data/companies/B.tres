@@ -63,7 +63,7 @@ payout_ratio = 3.0
 script = ExtResource("4_6htcd")
 id = &"B"
 code = "B"
-display_name = "B 公司"
+display_name = "剧是本影视"
 tier = 1
 acting_threshold = 3
 conditions = Array[ExtResource("1_bgd73")]([SubResource("Resource_13sw3"), SubResource("Resource_cdox5")])
@@ -92,7 +92,7 @@ posting_text = "招满即停！！老板愿意亲自带这一批，想进影视�
 下午茶、生日会、不定期旅游。
 工作时间 9:00—18:00，周末大小休，拍摄时配合项目。
 能接受再沟通。上来就问工资多少、几点下班的，我不知道怎么带你。"
-hint = "B 公司要个讨喜的新人。笑一个就行 —— 但别笑里带火气。"
+hint = "剧是本影视要个讨喜的新人。笑一个就行 —— 但别笑里带火气。"
 hr_name = "李女士"
 hr_title = "人事兼行政"
 hr_status = "今日回复 10+ 次｜回复率高"
