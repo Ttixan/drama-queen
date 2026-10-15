@@ -110,6 +110,7 @@ layout_mode = 2
 size_flags_vertical = 3
 
 [node name="ContentPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
+clip_children = 2
 layout_mode = 2
 size_flags_horizontal = 3
 

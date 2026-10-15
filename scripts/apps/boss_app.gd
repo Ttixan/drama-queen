@@ -503,6 +503,7 @@ func _show_empty_state() -> void:
 	_detail_text.visible = false
 	_note_label.visible = false
 	_foot_hint.text = "左边挑一家公司"
+	_contact_button.text = "立刻沟通"
 	_contact_button.disabled = true
 
 
