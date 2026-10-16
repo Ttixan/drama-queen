@@ -18,8 +18,16 @@ const P_COMPOSER := P_CHAT + "/Composer/ComposerMargin/ComposerBox"
 
 const RECORDER_SCENE := "res://scenes/minigame/recorder.tscn"
 const BOSS_SCENE := "res://scenes/apps/boss.tscn"
-const BUBBLE_WIDTH := 720
+## 气泡最宽到这里，超了就折行。**短消息按文字实际宽度收窄** ——
+## 真微信里「好」就是一个贴着边的窄条，全都拉成一样宽看着像公告栏，不像聊天
+const BUBBLE_MAX_W := 720.0
+const BUBBLE_FONT := 18
 const CONTACT_AVATAR := 54
+## 气泡旁的头像。比名单上的小一号 —— 它是「谁在说话」的标记，不是可点的行
+const CHAT_AVATAR := 40.0
+## 自己那一侧的头像字。**与「简历拿来」里的自己用同一个标记**：
+## 同一台手机上的同一个人，名片该长得一样
+const ME_MARK := "你"
 
 ## 被手机壳当成一个 App 打开时才需要返回。独立运行时它是主场景，没有"上一步"。
 signal cancelled
@@ -169,12 +177,12 @@ func _is_event_chat() -> bool:
 	return _event_speaker != &""
 
 
-## 此刻「找上门的人」是谁 —— **只有本周正等着回话的那一个**。
+## **本周正等着回话**的那个人（没有就空）。
 ##
-## 【为什么回过的也不留着】回过了 / 整周没理会的，那个人已经走了：留在名单里，
-## 玩家会以为还能找他说话（提提点名：没加上的 HR、事件里的人都别占着名单）。
-## 事情本身没丢 —— `Game.state.event_history` 记着全过程，电子报与结局都读它；
-## 已经开着的那条会话也不会因为名单刷新就消失（名字由 `_speaker_name` 从履历里兜出来）。
+## 【它不再等于「名单上有谁」】名单现在把出现过的都留着（见 `_event_speakers`），
+## 这个函数回答的是另一个问题：谁那儿还有事没办。名单上那一格「等你回话」、
+## 以及底下那排二选一按钮都看它。
+## 事情本身另有记录 —— `Game.state.event_history` 存着全过程，电子报与结局都读它。
 func _pending_speaker() -> StringName:
 	var ev := Game.pending_event()
 	if ev != null and not ev.speaker.is_empty():
@@ -197,12 +205,35 @@ func _speaker_name(speaker: StringName) -> String:
 	return String(speaker)
 
 
-## 这个人此刻的状态。名单上只会有「正等着回话」的那一个，所以这里恒为「等你回话」——
-## 行上那一格总得有字。（回过没回过不再往名单上写：回完那人就撤了，见 `_pending_speaker`）
+## 名单上有哪些人：**出现过的都留着**，包括已经回过的。
+##
+## 【为什么改】原来只留「正等着回话的那一个」—— 回完话那人就从名单上消失，
+## 玩家想回头看那天的对话就找不到了（提提点名）。名单是「你和谁聊过」的记录，
+## 不是待办清单：待办从「等你回话」那一格的字上看。
+## 正等着的那位排在最前 —— 他才是今天要处理的事。
+func _event_speakers() -> Array[StringName]:
+	var out: Array[StringName] = []
+	var sp := _pending_speaker()
+	if sp != &"":
+		out.append(sp)
+	for h: Dictionary in Game.state.event_history:
+		var who := StringName(h.get("speaker", ""))
+		if who != &"" and not out.has(who):
+			out.append(who)
+	return out
+
+
+## 这个人在名单上的状态字（行上那一格总得有字）
 func _speaker_state(speaker: StringName) -> String:
-	var ev := Game.pending_event()
-	if ev != null and ev.speaker == speaker:
+	if speaker == _pending_speaker():
 		return "等你回话"
+	# 回过的写结果：多数是「已回过」，整周没理会的写「没理会」。
+	# 【为什么倒着找】同一个人可能被找上门不止一次，要看的是**最近**那一次
+	for i in range(Game.state.event_history.size() - 1, -1, -1):
+		var h: Dictionary = Game.state.event_history[i]
+		if StringName(h.get("speaker", "")) != speaker:
+			continue
+		return "没理会" if int(h.get("choice", -1)) < 0 else "已回过"
 	return ""
 
 
@@ -220,8 +251,7 @@ func _refresh_event_contacts() -> void:
 	_event_rows.clear()
 
 	_syncing = true
-	var sp := _pending_speaker()
-	if sp != &"":
+	for sp: StringName in _event_speakers():
 		var row := _make_event_row(sp)
 		row.button_group = _contact_group
 		row.toggled.connect(_on_event_toggled.bind(sp))
@@ -234,9 +264,9 @@ func _refresh_event_contacts() -> void:
 	var any_events := not _event_rows.is_empty()
 	_event_caption.visible = any_events
 	_event_box.visible = any_events
-	# 【故意不在这里清 `_event_speaker`】刚回完话，那个人就从名单上撤了，
-	# 但**他这条会话还开着** —— 清了会把玩家从刚回完的对话里弹出去。
-	# 该清的地方是开新局 / 读档（`_on_state_reset`）与切回 HR（`_select_company`）。
+	# 【故意不在这里清 `_event_speaker`】刚回完话那一刻，玩家正看着那条会话 ——
+	# 清了会把他从刚回完的对话里弹出去。该清的地方是开新局 / 读档（`_on_state_reset`）
+	# 与切回 HR（`_select_company`）。
 
 
 func _on_event_toggled(on: bool, speaker: StringName) -> void:
@@ -788,6 +818,13 @@ func _rebuild_chat() -> void:
 		_add_note("你还没在简历拿来看过 %s 的招聘页，微信里加不上这位 HR" % _current.code)
 		return
 
+	# 【加上了就先互相报名字】「简历拿来」那一步是「跟 HR 说上话才拿到联系方式」，
+	# 所以微信里这段记录该从「我是谁」开始，而不是一上来只有系统提示。
+	# 这两句是**从既有数据拼的**（公司名与 HR 名在 `CompanyData`，主角名读内容池），
+	# 所以不用往存档里多存一份 —— 每次重建都对得上。
+	_add_bubble("我是%s的%s" % [_current.display_name, _current.hr_name], false)
+	_add_bubble("我是%s" % _player_name(), true)
+
 	# 口味线索：隐藏公式下的学习通道。**正本在 Boss直聘 的招聘页上**
 	# （进过那页才解锁了这家 HR，所以这里不会提前泄底）；
 	# 这里复述一条是**便利**，不是新增信息 —— 拼表情包时不用来回切 App。
@@ -803,6 +840,17 @@ func _rebuild_chat() -> void:
 		_add_note("还没有投过 %s —— 拼好表情包就能发第一条" % _current.display_name)
 
 
+## 主角的名字。**单一来源是内容池**（`data/casting_pool.tres` 的 `player_name`）——
+## 邮件里的【玩家名】、电子报直呼其名、这里微信里的自我介绍，读的都是它。
+## 【为什么不自己造一个占位】同一个名字要在三处显示，各存一份必然对不上；
+## 而且「开一局自己取名字」是**往后要加的功能**（见 `进度.md` 待办），
+## 到那天要改的是「名字从哪儿来」这一件事，不是三个界面。
+func _player_name() -> String:
+	var pool := MailLibrary.casting_pool()
+	var who := pool.player_name if pool != null else ""
+	return who if not who.strip_edges().is_empty() else "我"
+
+
 ## 把履历里的一条投递还原成「玩家气泡 + HR 回信」
 func _add_entry_bubbles(entry: Dictionary) -> void:
 	var labels: Array = entry.get("labels", [])
@@ -810,15 +858,13 @@ func _add_entry_bubbles(entry: Dictionary) -> void:
 		entry.get("play_title", "?"),
 		RoleRequirement.TIER_NAMES.get(int(entry.get("role_tier", 0)), "?"),
 		" → ".join(labels) if not labels.is_empty() else "—",
-	], true, Color(0, 0, 0, 0))
+	], true)
 
 	var mail: Dictionary = entry.get("mail", {})
 	if mail.is_empty():
 		_add_note("（这封回信是早期版本投的，没存下来）")
 		return
-	var passed: bool = entry.get("passed", false)
-	_add_bubble(String(mail.get("text", "")), false,
-			UiPalette.POSITIVE if passed else UiPalette.DANGER)
+	_add_bubble(String(mail.get("text", "")), false)
 
 
 ## 事件会话的聊天记录。
@@ -839,7 +885,7 @@ func _rebuild_event_chat() -> void:
 	# 这周还没回的那条，把话摆在这儿等着
 	var ev := Game.pending_event()
 	if ev != null and ev.speaker == _event_speaker:
-		_add_bubble(ev.intro, false, UiPalette.EVENT)
+		_add_bubble(ev.intro, false)
 		_add_note("（在下面回一句）")
 		return
 
@@ -855,26 +901,43 @@ func _add_event_entry(h: Dictionary) -> void:
 		# 明说一句，而不是留一段空白让玩家以为界面坏了
 		_add_note("（这条事件的内容已经改过，读不出来了）")
 		return
-	_add_bubble(ev.intro, false, UiPalette.EVENT)
+	_add_bubble(ev.intro, false)
 	var choice := int(h.get("choice", -1))
 	if choice < 0:
 		_add_note("（这周没理会）")
 		return
 	if choice >= ev.options.size():
 		return
-	_add_bubble(String(ev.options[choice].label), true, Color(0, 0, 0, 0))
-	_add_bubble(String(ev.options[choice].reply), false, UiPalette.POSITIVE)
+	_add_bubble(String(ev.options[choice].label), true)
+	_add_bubble(String(ev.options[choice].reply), false)
 
 
-func _add_bubble(text: String, mine: bool, border: Color) -> void:
+## 一条气泡：**对方在左（灰底）、自己在右（微信绿底）**，两边各带头像。
+##
+## 【为什么不再按内容上色】原来这条会按「回信成没成」（绿/红）和「哪条会话」（事件的青）
+## 换描边色 —— 同一个聊天里于是并着四五种颜色，提提点名的就是这个。
+## 现在两种颜色管到底：别人的话一律灰、自己的话一律绿（真微信也是这么分的），
+## 成败与是非从信里的字看，不靠颜色猜。
+func _add_bubble(text: String, mine: bool) -> void:
 	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+
+	# 【一行的顺序就是左右】对方那侧：[头像][气泡][撑开的空控件] → 贴在左边；
+	# 自己这侧：[撑开的空控件][气泡][头像] → **顶到右边**，头像贴着屏幕边。
+	# 【两个坑都踩过】(1) 把头像统一挂在气泡后面 → 对方的头像跑到自己气泡右边；
+	# (2) 把撑开的那个控件一律挂在行尾 → 自己的气泡被推到左边，
+	# 看着就是「右边没靠边」（提提 10-16 拿真微信的截图点出来的）。
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
+	if mine:
+		row.add_child(spacer)
+	else:
+		row.add_child(_bubble_avatar(false))
+
 	var card := PanelContainer.new()
-	# 固定宽度而不是自适应：气泡宽度随文字长短抖动会显得很毛躁，
-	# 而且固定宽度才能保证左右对齐看起来是「一列」
-	card.custom_minimum_size = Vector2(BUBBLE_WIDTH, 0)
+	card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 	var margin := MarginContainer.new()
 	for side in ["left", "top", "right", "bottom"]:
@@ -884,21 +947,75 @@ func _add_bubble(text: String, mine: bool, border: Color) -> void:
 	var label := Label.new()
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", 18)
-	label.add_theme_color_override("font_color", UiPalette.TEXT)
+	label.add_theme_font_size_override("font_size", BUBBLE_FONT)
+	# 【为什么要自己算宽度】autowrap 打开之后，Label 的最小宽度会塌成几个字，
+	# 短句子会被压成一条竖条。按文字实际宽度给个下限，才能既收窄又折行
+	# （「简历拿来」那条气泡同一个道理）。
+	label.custom_minimum_size = Vector2(_bubble_width(text), 0)
+	# 压在品牌绿上的字要用深色（`INK`）：绿底白字发虚，这也是真微信的做法
+	label.add_theme_color_override("font_color",
+			UiPalette.INK if mine else UiPalette.TEXT)
 	margin.add_child(label)
 
-	card.add_theme_stylebox_override("panel", UiPalette.panel(
-			UiPalette.CHAT_SELF if mine else UiPalette.PANEL, 16, 2,
-			border if border.a > 0.0 else (UiPalette.WECHAT if mine else UiPalette.LINE)))
+	var bg := UiPalette.WECHAT if mine else UiPalette.PANEL_SOFT
+	card.add_theme_stylebox_override("panel", UiPalette.panel(bg, 16, 2,
+			UiPalette.WECHAT.lightened(0.18) if mine else UiPalette.LINE))
 
+	# 【气泡本身一定要进来】上面那一支只放了头像，货在这儿 ——
+	# 漏了它就是「左边只有个头像、话不见了」（这一版踩过）。
+	row.add_child(card)
 	if mine:
-		row.add_child(spacer)
-		row.add_child(card)
+		row.add_child(_bubble_avatar(true))
 	else:
-		row.add_child(card)
 		row.add_child(spacer)
 	_chat_log.add_child(row)
+
+
+## 气泡宽度：按文字实际宽度算（超了 `BUBBLE_MAX_W` 就在那儿折行）。
+##
+## 【为什么按行取最大】正文里有换行（投递回执、回信正文都是多行的），
+## 直接量整串会把所有行当成一行加起来，于是每条都顶到最宽 —— 短消息就又变成通栏了。
+func _bubble_width(text: String) -> float:
+	var font := ThemeDB.fallback_font
+	var w := 0.0
+	for line: String in text.split("\n"):
+		w = maxf(w, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, BUBBLE_FONT).x)
+	return minf(BUBBLE_MAX_W, w + 6.0)
+
+
+## 气泡旁的头像。和左栏联系人用同一套「色块 + 字」的道理：
+## - 对方的：这家的**档位色 + 代号**（和名单上那个头像同一个记号，一眼对得上是哪家）
+## - 自己的：**品牌绿 + 「你」**
+## - 事件会话里的对方：事件专用的青 + 名字首字（和名单上那排同一个记号）
+func _bubble_avatar(mine: bool) -> Panel:
+	var avatar := Panel.new()
+	avatar.custom_minimum_size = Vector2(CHAT_AVATAR, CHAT_AVATAR)
+	# 头像贴着气泡顶端，不跟着气泡一起被拉高（长邮件会拉得很长）
+	avatar.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var bg := UiPalette.WECHAT
+	var mark := ME_MARK
+	if not mine:
+		if _current != null:
+			bg = TIER_COLORS.get(_current.tier, UiPalette.LINE)
+			mark = _current.code
+		else:
+			bg = UiPalette.EVENT
+			mark = _speaker_name(_event_speaker).substr(0, 1)
+	# 圆角方块（不是圆形）：左栏名单里那个头像是同一套形状，只是大一号
+	avatar.add_theme_stylebox_override("panel", UiPalette.rounded(bg, 10))
+
+	var label := Label.new()
+	label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.text = mark
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_color_override("font_color", UiPalette.INK)
+	avatar.add_child(label)
+	return avatar
 
 
 ## 系统提示（居中、暗色、小字）—— 不装成任何人说的话
@@ -939,11 +1056,10 @@ func _on_send() -> void:
 		res.get("casting", {}).get("剧名", "?"),
 		RoleRequirement.TIER_NAMES.get(int(res.get("role_tier", 0)), "?"),
 		" → ".join(labels),
-	], true, Color(0, 0, 0, 0))
+	], true)
 
 	var mail: Dictionary = res.get("mail", {})
-	_add_bubble(String(mail.get("text", "")), false,
-			UiPalette.POSITIVE if res.get("passed", false) else UiPalette.DANGER)
+	_add_bubble(String(mail.get("text", "")), false)
 
 	# 表情包一次性消耗（决策 1.6）：投出去就没了，下次必须重新拼
 	_pending = null

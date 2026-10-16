@@ -32,8 +32,12 @@ var _jumps: Array[String] = []
 ## 手机屏切 App 时会把上一个 App 销毁、回来时重建 —— 这里照做一遍。
 ## 【为什么要重建】「去录像机」是**整屏切走**，微信那一刻不在了；屏幕里那个附件
 ## 只能从状态里取回来。这条测试因此天然守住「切走再回来，东西还在不在」。
+## 【为什么是 queue_free 而不是 free】`free()` 是当场销毁 —— 本 App 里挂在
+## `await get_tree().process_frame` 上的那一句（`_scroll_chat_to_bottom`）会带着
+## 一个已经没了的实例恢复，引擎报 "Resumed function after await, but class instance is gone"。
+## 真正的宿主（`phone_screen._close_app`）用的也是 `queue_free`，这里照它来。
 func _rebuild_app() -> void:
-	_app.free()
+	_app.queue_free()
 	_app = load(SCENE).instantiate()
 	root.add_child(_app)
 	_app.open_app_requested.connect(_on_jump)
@@ -67,6 +71,10 @@ func _run_all() -> void:
 		return
 
 	print("[1] 开局：五家 HR 全锁（还没逛过 Boss直聘）")
+	# 【为什么先真的开一局】`Game._ready()` 会试着读 `user://save.json`（决策 1.1），
+	# 而那正是真机上那份存档的目录 —— 本机可能躺着上一局（你自己玩的，或别的链写的）。
+	# 「开局」这几条要有意义，就得真的从开局起，不能拿环境里的状态当开局。
+	_game.new_game()
 	_check("公司数", CompanyLibrary.count(), 5)
 	_check("联系人行数", _app._rows.size(), 5)
 	_check("开局零解锁", _game.state.unlocked_hr.size(), 0)
@@ -153,7 +161,7 @@ func _run_all() -> void:
 	_check("Boss 里那一行也标成已联系", String(boss._row_labels["A"]["state"].text), "已联系")
 	_check("回车键之外的老路：不能再靠 DEV 开关白送", _game.state.unlocked_hr.size(), 1)
 	_check("聊完它会请手机屏切回微信", boss._chat_to_wechat.visible, true)
-	boss.free()
+	boss.queue_free()
 
 	# 回微信 = 手机屏重建一个实例（原来那个已经跟着切 App 销毁了）
 	#
@@ -176,6 +184,37 @@ func _run_all() -> void:
 	_check("两个入口都能点（没有子页面盖在上面了）", _app._go_boss_button.disabled, false)
 	_check("还没有附件", _app._pending, null)
 	_check("没有附件时发送按钮置灰", _app._send_button.disabled, true)
+
+	# 【加完人就有聊天记录】这段该从「我是谁」开始（提提点名），而不是一上来只有系统提示
+	var co := CompanyLibrary.by_code("A")
+	_check("第一条是 HR 自报家门",
+			_chat_text(0), "我是%s的%s" % [co.display_name, co.hr_name])
+	_check("第二条是我回自己的名字", _chat_text(1), "我是" + _player_name())
+
+	# 【气泡的形状与配色】对方在左（灰底、头像在最左）、自己在右（绿底、头像在最右）——
+	# 同一个聊天里只允许这两种底色，不再按成败 / 哪条会话换色
+	var rows := _bubble_rows()
+	_check("开头就是两条气泡（不是系统提示）", rows.size() >= 2, true)
+	if rows.size() >= 2:
+		# 一行 = 【头像 + 气泡】两件，外加一个撑开的空控件把整行顶到该去的那一边。
+		# 【为什么连控件类型一起钉】这两处正是最容易写反的地方：
+		# 头像挂错侧 → 对方的头像跑到自己气泡右边；撑开的控件一律挂行尾 →
+		# 自己的气泡被推到左边（看着就是「右边没靠边」）
+		_check("对方那行：头像在最左、气泡紧跟其后",
+				"%s/%s" % [rows[0].get_child(0).get_class(), rows[0].get_child(1).get_class()],
+				"Panel/PanelContainer")
+		_check("对方那条：气泡是中性灰", _bubble_bg(rows[0]), UiPalette.PANEL_SOFT)
+		_check("自己那行：气泡 + 头像，最前面是撑开的空控件（把气泡顶到右边）",
+				"%s/%s/%s" % [
+					rows[1].get_child(0).get_class(),
+					rows[1].get_child(1).get_class(),
+					rows[1].get_child(2).get_class(),
+				], "Control/PanelContainer/Panel")
+		_check("自己那条：气泡是微信绿", _bubble_bg(rows[1]), UiPalette.WECHAT)
+		_check("绿底上压的是深色字（白字在绿底上发虚）",
+				_bubble_text_color(rows[1]), UiPalette.INK)
+		_check("短消息的气泡跟着文字收窄，不是一条通栏",
+				_card_of(rows[0]).get_combined_minimum_size().x < 300.0, true)
 
 	# 「去录像机」同样是整屏切走。**录完的回程归手机屏管**（它记着是谁顶开的），
 	# 而表情包由核心层接住 —— 微信那一刻不在场，所以这两件事都不能指望它自己做
@@ -306,8 +345,18 @@ func _run_all() -> void:
 	_check("聊天记录里出现了对方的回话", _chat_has(String(ev.options[free].reply)), true)
 	_check("免费选项没花钱", _game.money(), money_before)
 	_check("行动点没被扣", _game.ap_left(), ap_before)
-	_check("回完话那人就撤出名单（事情办完，人走了）", _app._event_rows.has(ev.speaker), false)
+	# 【回完不删人】名单是「你和谁聊过」的记录，不是待办清单（提提点名）——
+	# 原来回完那人就从名单上消失，玩家想回头看那天的对话就找不到了
+	_check("回完之后那个人还留在名单上", _app._event_rows.has(ev.speaker), true)
+	_check("他的状态字改成了回过的样子", _app._speaker_state(ev.speaker), "已回过")
 	_check("但这条会话还开着，回完还能回头看", _app._is_event_chat(), true)
+
+	# 事件会话里的气泡走**同一套**配色：他说的灰、我说的绿 —— 不再另开一套青
+	var ev_rows := _bubble_rows()
+	_check("事件会话里他说的也是灰气泡", _bubble_bg(ev_rows[0]), UiPalette.PANEL_SOFT)
+	_check("我回的那句是绿气泡", _bubble_bg(ev_rows[1]), UiPalette.WECHAT)
+	_check("他后面那句还是灰的（不是绿也不是红）",
+			_bubble_bg(ev_rows[ev_rows.size() - 1]), UiPalette.PANEL_SOFT)
 	_check("本周不会再来第二件", _game.pending_event(), null)
 	_check("处理完事件那排按钮收起来了", _app._event_buttons[paid].visible, false)
 
@@ -329,6 +378,68 @@ func _visible_rows() -> int:
 		if (_app._rows[code] as Button).visible:
 			n += 1
 	return n
+
+
+# ============================================================
+# 气泡：形状（头像在哪一侧）与配色（左灰右绿）
+# ============================================================
+## 聊天区里的气泡行 —— 系统提示是 Label，气泡是 HBox（头像 + 气泡 + 撑开用的空控件）
+func _bubble_rows() -> Array:
+	var out: Array = []
+	for child: Node in _app._chat_log.get_children():
+		if child is HBoxContainer:
+			out.append(child)
+	return out
+
+
+## 一行里的气泡本身。**按类型找 PanelContainer**：另一侧那个头像也是 Panel，
+## 按类型才分得开（这也顺带钉住了「一行里只有一个气泡」）
+func _card_of(row: Node) -> PanelContainer:
+	for node in row.get_children():
+		if node is PanelContainer:
+			return node
+	return null
+
+
+## 第 i 条气泡的文字
+func _chat_text(i: int) -> String:
+	var rows := _bubble_rows()
+	if i >= rows.size():
+		return "<没有第 %d 条气泡>" % i
+	var card := _card_of(rows[i])
+	if card == null or card.get_child_count() == 0:
+		return "<这条气泡里没有文字框>"
+	var margin := card.get_child(0) as MarginContainer
+	if margin == null or margin.get_child_count() == 0:
+		return "<这条气泡里没有文字>"
+	return String((margin.get_child(0) as Label).text)
+
+
+## 第 i 条气泡的底色
+func _bubble_bg(row: Node) -> Color:
+	var card := _card_of(row)
+	if card == null:
+		return Color(0, 0, 0, 0)
+	var box := card.get_theme_stylebox("panel") as StyleBoxFlat
+	return box.bg_color if box != null else Color(0, 0, 0, 0)
+
+
+## 一条气泡里文字的颜色
+func _bubble_text_color(row: Node) -> Color:
+	var card := _card_of(row)
+	if card == null or card.get_child_count() == 0:
+		return Color(0, 0, 0, 0)
+	var margin := card.get_child(0) as MarginContainer
+	if margin == null or margin.get_child_count() == 0:
+		return Color(0, 0, 0, 0)
+	return (margin.get_child(0) as Label).get_theme_color("font_color")
+
+
+## 主角的名字：**界面上那一句是从内容池读的**（`data/casting_pool.tres`），
+## 所以这里也照同一条路读 —— 断了就说明「名字只有一个来源」这条破了
+func _player_name() -> String:
+	var pool := MailLibrary.casting_pool()
+	return pool.player_name if pool != null else ""
 
 
 # ============================================================

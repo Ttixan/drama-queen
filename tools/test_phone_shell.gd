@@ -26,6 +26,8 @@ var _checks := 0
 var _app        ## 日历屏（今日安排 / 结算 / 结局 / 重开都在它身上）
 var _phone      ## 手机屏（左栏 App 列表 / 右栏内容）
 var _game
+## 开跑之前那份 `user://save.json`（可能是玩家的真进度）。跑完原样写回
+var _save_snapshot: Dictionary = {}
 
 
 func _initialize() -> void:
@@ -50,6 +52,12 @@ func _run_all() -> void:
 		return
 	_game.new_game()
 
+	# 【整条链跑完必须把真存档还原】下面有好几节会走 `Game.advance_day()` ——
+	# 跨周时它会 `save_requested` → 写 `user://save.json`（那是产品行为，不是测试的错），
+	# 而 `user://` 与真机上那份存档**是同一个目录**。
+	# 不还原的话，跑完测试再打开游戏看到的是一个测试局 —— 10-16 就这么丢过一次进度。
+	_save_snapshot = _snapshot_save()
+
 	_test_desktop()
 	_test_work_and_class()
 	_test_app_switch()
@@ -65,6 +73,8 @@ func _run_all() -> void:
 
 	print("")
 	print("共 %d 项断言" % _checks)
+	# 无论成败都要还原真存档 —— 失败时更容易留下一个半截的测试局
+	_restore_save(_save_snapshot)
 	if _failures.is_empty():
 		print("✅ 全部通过")
 		quit(0)
@@ -461,11 +471,9 @@ func _test_save_load() -> void:
 ## 重开按钮：一局二十一天，误触一下进度全没 —— 所以必须两步确认。
 func _test_restart_button() -> void:
 	print("[9] 重开一局：两步确认")
-	# 【为什么要先备份存档】重开那一节会把新局写进 `user://save.json`（那是产品行为），
-	# 而 `user://` 跟真机上那份存档是同一个目录 —— 测试跑完必须还原，
-	# 否则你下次打开游戏会看到一个测试局。
-	var snap := _snapshot_save()
-
+	# 【存档的保护不在这儿】重开会把新局写进 `user://save.json`（那是产品行为），
+	# 但整条链的备份与还原来在 `_run_all` 的头尾统一做 —— 这一节以前只保护自己，
+	# 结果前面几节写入的那份测试局照样留在真存档里（见 `_run_all` 里那段注释）。
 	_game.new_game()
 	_app._restart_armed_at = 0
 	_game.state.day = 9
@@ -497,7 +505,6 @@ func _test_restart_button() -> void:
 	_app._refresh_restart()
 	_check("过期的待确认会被刷新顺手退掉", _app._restart_button.text, "重开一局")
 
-	_restore_save(snap)
 	print("   第一次按只是进入待确认，5 秒内再按才真重开 —— 二十一天的进度不能一键清掉")
 
 
