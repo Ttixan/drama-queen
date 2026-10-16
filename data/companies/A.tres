@@ -61,6 +61,7 @@ display_name = "小登传媒"
 conditions = Array[ExtResource("1_3n4am")]([SubResource("Resource_04nrh")])
 roles = Array[ExtResource("3_m8ys4")]([SubResource("Resource_v0kqa"), SubResource("Resource_7afj1"), SubResource("Resource_sgog3")])
 extra_payout = 40
+good_play_chance = 0.2
 tagline = "流水线烂片小厂"
 industry = "广播／影视"
 funding = "未融资"

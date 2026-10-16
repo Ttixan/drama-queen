@@ -68,6 +68,7 @@ acting_threshold = 15
 conditions = Array[ExtResource("1_0lt77")]([SubResource("Resource_711sn"), SubResource("Resource_p6y5r")])
 roles = Array[ExtResource("3_2n8ow")]([SubResource("Resource_qy2nu"), SubResource("Resource_e0wum"), SubResource("Resource_on0mf")])
 extra_payout = 96
+good_play_chance = 0.65
 tagline = "高门槛文艺公司"
 industry = "广播／影视"
 funding = "未融资"

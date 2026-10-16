@@ -231,7 +231,7 @@ func _build_ending() -> void:
 			Game.state.submissions_total, Game.state.successes_total], UiPalette.TEXT)
 	_ledger_row("龙套档成功", "%d 次" % Game.state.count_success_by_tier(RoleRequirement.Tier.EXTRA),
 			UiPalette.TEXT)
-	_ledger_row("A/B 公司成功", "%d 次" % Game.state.count_success_by_company(Broadcast.BAD_PLAY_CODES),
+	_ledger_row("演过的烂片", "%d 部" % Game.state.count_bad_plays(),
 			UiPalette.TEXT)
 	_ledger_row("期末金钱", "%d 元" % Game.money(),
 			UiPalette.DANGER if Game.money() < 0 else UiPalette.ACCENT)

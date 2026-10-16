@@ -24,6 +24,12 @@ extends RefCounted
 ## 打工与上课反过来是**即时到账**：那是当天付出的劳动与学费，不是播出收入。
 
 
+## 「好剧 / 烂剧」抽签的种子偏移 —— 与定角抽签的种子（`day * 1000 + submissions_total`）错开。
+## 【为什么不能共用】共用等于把「剧名抽到哪一本」和「这部戏好不好」绑在一起：
+## 同一部剧名永远是好剧（或永远是烂剧），玩家看得出来的规律就不是随机了。
+const PLAY_GOOD_SEED_STRIDE := 7777
+
+
 # ============================================================
 # 投递
 # ============================================================
@@ -57,6 +63,14 @@ static func submit(state: GameState, clip: Clip, company: CompanyData,
 	var casting := MailComposer.roll_casting(
 			MailLibrary.casting_pool(), seed_value, role.tier)
 	result["casting"] = casting
+
+	# 这部戏本身是好剧还是烂剧 —— 同样在投递这一刻**摇一次**，写进履历。
+	# 【为什么现在摇、而不是出周报时现算】口径是公司自带的概率（`good_play_chance`），
+	# 现算的话同一部戏读一次档就可能翻面（好剧变烂剧），龙套头条的口吻也跟着变。
+	# 与片酬 / 演技 / 定角是同一个处理：定下来，之后谁都读这一份。
+	var play_is_good := Broadcast.roll_play_is_good(
+			company, state.day * 1000 + state.submissions_total + PLAY_GOOD_SEED_STRIDE)
+
 	result["mail"] = MailComposer.compose_reply(
 			MailLibrary.for_company(company.code), company, role, casting,
 			state.day, result["passed"])
@@ -74,6 +88,9 @@ static func submit(state: GameState, clip: Clip, company: CompanyData,
 		# 和定角抽签同一个道理 —— 抽一次，之后谁都读同一份。
 		"payout": Economy.payout(company, role),
 		"acting_gain": role.acting_gain,
+		# 「这部戏对不对得起这张脸」—— 电子报的龙套头条按它分「好剧中的 / 烂剧中的」，
+		# 「烂片女王」也按它数。缺字段的旧存档一律当「好剧」（见 GameState.count_bad_plays）。
+		"play_is_good": play_is_good,
 		# 回信原文也存进去 —— 微信的聊天记录要能完整还原，
 		# 否则读档回来只剩一条「投递过」的摘要，玩家没法回看邮件
 		"mail": result["mail"],

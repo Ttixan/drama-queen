@@ -130,13 +130,57 @@ func _test_unnoticed_extra() -> void:
 
 
 func _test_play_good() -> void:
-	print("[3] 好剧 / 烂剧口径")
-	_check("A 厂 = 烂剧", Broadcast.play_is_good("A"), false)
-	_check("B 小公司 = 烂剧", Broadcast.play_is_good("B"), false)
-	_check("C 商业片 = 好剧", Broadcast.play_is_good("C"), true)
-	_check("D 文艺片 = 好剧", Broadcast.play_is_good("D"), true)
-	_check("E 大厂 = 好剧", Broadcast.play_is_good("E"), true)
-	print("   按公司档次定（口径见 broadcast.gd 顶部注释，需狗牙确认）")
+	print("[3] 好剧 / 烂剧：投递时按公司自带的概率摇一次")
+	# 概率两端的两个临时公司 —— 0 必出烂剧、1 必出好剧，验的是「概率真的被读了」
+	var always_bad := CompanyData.new()
+	always_bad.good_play_chance = 0.0
+	var always_good := CompanyData.new()
+	always_good.good_play_chance = 1.0
+	var all_bad := true
+	var all_good := true
+	for i in 20:
+		if Broadcast.roll_play_is_good(always_bad, i):
+			all_bad = false
+		if not Broadcast.roll_play_is_good(always_good, i):
+			all_good = false
+	_check("概率 0 的公司永远出烂剧", all_bad, true)
+	_check("概率 1 的公司永远出好剧", all_good, true)
+
+	# 中间值：200 个种子下两边都出得来 —— 不然二维标题表又塌回一维
+	var half := CompanyData.new()
+	half.good_play_chance = 0.5
+	var good_count := 0
+	for i in 200:
+		if Broadcast.roll_play_is_good(half, i):
+			good_count += 1
+	_check("概率 0.5 时好剧与烂剧都出得来（各留出余量）", good_count > 30 and good_count < 170, true)
+
+	# 【为什么要同种子同结果】结果本来就要写进履历，这里守的是「摇法本身可复现」
+	_check("同一个种子两次摇出同一个结果",
+			Broadcast.roll_play_is_good(half, 42) == Broadcast.roll_play_is_good(half, 42), true)
+
+	# 五家公司的真实数据必须严格递增，否则「档次越高的公司越不容易出烂片」这条就不成立
+	var prev := -1.0
+	var increasing := true
+	for code: String in ["A", "B", "C", "D", "E"]:
+		var co := CompanyLibrary.by_code(code)
+		if co == null or co.good_play_chance <= prev:
+			increasing = false
+			continue
+		prev = co.good_play_chance
+	_check("五家公司的好剧概率严格递增（A→E）", increasing, true)
+
+	# 履历缺字段（旧存档）时按「好剧」算 —— 不能凭空多出一柜子烂片
+	var legacy := GameState.new()
+	legacy.record_submission(true, {"company_code": "A", "role_tier": 0})
+	_check("旧存档（缺 play_is_good）不算烂片", legacy.count_bad_plays(), 0)
+	var marked := GameState.new()
+	marked.record_submission(true, {"company_code": "A", "role_tier": 0, "play_is_good": false})
+	_check("履历里标了烂片才算", marked.count_bad_plays(), 1)
+	# 没通过的那次不算 —— 烂片也得是真演过的
+	marked.record_submission(false, {"company_code": "A", "role_tier": 0, "play_is_good": false})
+	_check("没通过的投递不计数", marked.count_bad_plays(), 1)
+	print("   概率由公司自带（口径见 broadcast.gd 顶部注释，数值待狗牙确认）")
 
 
 func _test_settle_money() -> void:
@@ -241,11 +285,25 @@ func _test_headlines() -> void:
 	_check("没演过烂剧时 D 高分走备选",
 			String(d_plain["kind"]), String(Headline.KIND_FALLBACK_D_HIGH))
 	var d_veteran := GameState.new()
-	d_veteran.record_submission(true, {"company_code": "A", "role_tier": 0})
+	# 【履历里要标成烂片】「演过烂剧」现在的口径是履历里的 `play_is_good`，
+	# 不是「演没演过 A/B 公司」—— 只写公司代号会被当成好剧，这条就会掉到备选去
+	d_veteran.record_submission(true, {"company_code": "A", "role_tier": 0, "play_is_good": false})
 	# 【注意比的是 id 不是 kind】kind 只对 SPECIAL 类的标题有值，
 	# 主表和龙套表的标题靠 (公司, 档位) 或 (档位, 剧好不好) 定位。
 	_check("演过烂剧就用主表那条", String(HeadlineComposer.compose(d_res, d_veteran, 0)["id"]),
 			String(HeadlineLibrary.find_main("D", BalanceData.Grade.HIGH).id))
+
+	# 【回归：读的是 entry 里那一次抽签】同一部高分龙套，标「好剧 / 烂剧」必须取到不同标题。
+	# 曾经这里读错一层（读 play 而不是 play["entry"]），四格永远只会命中「好剧」那两条。
+	var good_play := _play_result("C", RoleRequirement.Tier.EXTRA, 0.90, 0)
+	good_play["entry"]["play_is_good"] = true
+	var bad_play := _play_result("C", RoleRequirement.Tier.EXTRA, 0.90, 0)
+	bad_play["entry"]["play_is_good"] = false
+	var seen := s_with_star(true)  # 已经出过圈，绕开「找人」那条
+	var hl_good := HeadlineComposer.compose(good_play, seen, 0)
+	var hl_bad := HeadlineComposer.compose(bad_play, seen, 0)
+	_check("好剧中的龙套取到「好剧」那一格", String(hl_good["id"]), "extra_high_good")
+	_check("烂剧中的龙套取到「烂剧」那一格", String(hl_bad["id"]), "extra_high_bad")
 	print("   报道对象按知名度切换：角色名 / 角色定位 / 玩家名")
 
 
@@ -316,6 +374,33 @@ func _test_endings() -> void:
 		king.acting += 1
 		king.record_submission(true, {"company_code": "A", "role_tier": RoleRequirement.Tier.EXTRA})
 	_check("龙套之王成立", String(EndingResolver.resolve(king)["id"]), "extra_king")
+
+	# 烂片女王：6 部烂片 + 演技 ≤ 12，且龙套不够 8 次（和龙套之王是两条路）
+	# 【履历必须显式标 play_is_good = false】这个结局现在按「演过的烂片数」判，
+	# 只写公司代号会被当成好剧 —— 那正是被换掉的旧口径。
+	var bad_queen := GameState.new()
+	for i in 4:
+		bad_queen.acting += 1
+		bad_queen.record_submission(true, {"company_code": "A",
+				"role_tier": RoleRequirement.Tier.EXTRA, "play_is_good": false})
+	for i in 2:
+		bad_queen.acting += 2
+		bad_queen.record_submission(true, {"company_code": "B",
+				"role_tier": RoleRequirement.Tier.SUPPORTING, "play_is_good": false})
+	_check("烂片女王成立（烂片 6 部 且 演技 8 ≤ 12）",
+			String(EndingResolver.resolve(bad_queen)["id"]), "bad_movie_queen")
+
+	# 反证：同样 6 次成功投递，但都是好剧 → 掉回平庸，不该判烂片女王
+	# （旧口径只看公司代号，这六部会全部算成烂片 —— 这就是这次改口径想要的效果）
+	var six_good := GameState.new()
+	for i in 6:
+		six_good.acting += 1
+		six_good.record_submission(true, {"company_code": "A",
+				"role_tier": RoleRequirement.Tier.SUPPORTING, "play_is_good": true})
+	_check("六部好剧不算烂片女王",
+			String(EndingResolver.resolve(six_good)["id"]) != "bad_movie_queen", true)
+	_check("结局条件文案也换了口径（不再写 A/B 公司）",
+			String(EndingResolver.by_id(&"bad_movie_queen")["condition"]).contains("A/B"), false)
 
 	# ★优先级：同时满足影后与龙套之王时必须判影后 ——
 	# 否则「演技 25 但早年演过 8 个龙套」的玩家会拿到一句「你一直没红」

@@ -69,6 +69,7 @@ acting_threshold = 3
 conditions = Array[ExtResource("1_bgd73")]([SubResource("Resource_13sw3"), SubResource("Resource_cdox5")])
 roles = Array[ExtResource("3_s2fnj")]([SubResource("Resource_4ohv7"), SubResource("Resource_o7pjj"), SubResource("Resource_3mp8e")])
 extra_payout = 64
+good_play_chance = 0.35
 tagline = "小公司 HR 与学徒制"
 industry = "广播／影视"
 funding = "未融资"

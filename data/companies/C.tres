@@ -68,6 +68,7 @@ acting_threshold = 8
 conditions = Array[ExtResource("1_gtl06")]([SubResource("Resource_d55ta"), SubResource("Resource_k0jyu")])
 roles = Array[ExtResource("3_jud2a")]([SubResource("Resource_b6fd2"), SubResource("Resource_aqyr6"), SubResource("Resource_qn5k2")])
 extra_payout = 80
+good_play_chance = 0.5
 tagline = "正规公司，简短招聘"
 industry = "广播／影视"
 funding = "不需要融资"

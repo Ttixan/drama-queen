@@ -74,6 +74,7 @@ acting_threshold = 20
 conditions = Array[ExtResource("1_1q5vd")]([SubResource("Resource_dk8u0"), SubResource("Resource_ya4v8"), SubResource("Resource_ubwe2")])
 roles = Array[ExtResource("3_ux0ye")]([SubResource("Resource_o6qdy"), SubResource("Resource_7iqpk"), SubResource("Resource_1jdqm")])
 extra_payout = 120
+good_play_chance = 0.8
 tagline = "上市大厂与夸张的压榨制度"
 industry = "广播／影视"
 funding = "已上市"

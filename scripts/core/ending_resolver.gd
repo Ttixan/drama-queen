@@ -50,9 +50,9 @@ static func all() -> Array[Dictionary]:
 			"id": &"bad_movie_queen",
 			"name": "烂片女王",
 			"implemented": false,
-			"text": "【文案待补 · 狗牙】A/B 公司成功演出 ≥ 6 且演技 ≤ 12。\n"
+			"text": "【文案待补 · 狗牙】累计演过 ≥ 6 部烂片且演技 ≤ 12。\n"
 					+ "判定已生效，缺的只是这一句结语。",
-			"condition": "A/B 公司成功 ≥ 6 ｜ 演技 ≤ 12",
+			"condition": "演过的烂片 ≥ 6 ｜ 演技 ≤ 12",
 		},
 		{
 			"id": &"fired",
@@ -108,7 +108,10 @@ static func _meets(state: GameState, id: StringName) -> bool:
 			# 两者都写成「演得多 + 演技低」的话，玩家根本分不出区别。
 			return state.count_success_by_tier(RoleRequirement.Tier.EXTRA) >= 8 and state.acting <= 12
 		&"bad_movie_queen":
-			return state.count_success_by_company(Broadcast.BAD_PLAY_CODES) >= 6 and state.acting <= 12
+			# 【为什么按「烂片」数而不是按公司代号】片子好坏是公司的概率属性
+			# （`CompanyData.good_play_chance`），A 厂也会出好片 ——
+			# 按代号数会把「你拍了多少部烂片」数成「你签了多少家小厂」。
+			return state.count_bad_plays() >= 6 and state.acting <= 12
 		&"fired":
 			return state.failed_submissions() >= 8 and state.money < 0
 		&"mediocre":

@@ -10,18 +10,27 @@ extends RefCounted
 ## 一部烂剧里可以有演得出色的演员 —— 所以 A 厂的高分标题是「又出烂片，倒把演员捧红了」，
 ## 而不是「A 厂出了好片」。这两件事必须在数据里分开。
 
-## 「这部戏本身是好剧还是烂剧」—— 只用来区分**龙套**标题的口吻（好剧中的龙套 / 烂剧中的龙套）。
+## 「这部戏本身是好剧还是烂剧」—— 区分**龙套**标题的口吻（好剧中的龙套 / 烂剧中的龙套）。
 ##
-## 【口径说明 · 需要狗牙确认】按**公司档次**定：A 烂片厂、B 草台班子 = 烂剧，C/D/E = 好剧。
-## 依据是 `data/news/README.md` 的「作品质量（公司档次）决定标题的背景」。
-## ⚠️ 同一份文档还有一句「好剧或烂剧仍应按本次项目的结果判定」，读起来像是要按匹配度判；
-## 但那样的话「好剧 × 低分」这一格永远不会被取到，二维表会塌回一维。
-## 所以这里按公司档次实现 —— 若狗牙的本意是按结果，改这一个常量即可。
-const BAD_PLAY_CODES: Array[String] = ["A", "B"]
+## 【口径】**公司自带的概率**（`CompanyData.good_play_chance`，A→E 依次递增）。
+## 在**投递那一刻**摇一次、结果写进履历的 `play_is_good` ——
+## 与片酬/演技同一个理由：读档重算会让同一部戏一会儿是好剧、一会儿是烂剧。
+##
+## 【为什么不再按公司代号硬编码 A/B = 烂剧】那样「好剧 × 低分」这一格永远取不到，
+## 二维表会塌成一维；而且公司数量一变，「烂片」的比例就跟着乱跳。
+## 现在 A 厂也会碰巧出好片、E 厂也会出烂片，四格全部可达。
 
 
-static func play_is_good(company_code: String) -> bool:
-	return not BAD_PLAY_CODES.has(company_code)
+## 投递时摇一次「这部戏本身好不好」，结果由调用方写进履历。概率取自公司自带属性。
+##
+## 【为什么走 seed 而不是 randf】与定角抽签同一套：一次投递一个种子，
+## 结果存进履历之后谁都读同一份 —— 中途换台机器、重新读档都不会变。
+static func roll_play_is_good(company: CompanyData, seed_value: int) -> bool:
+	if company == null:
+		return true
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	return rng.randf() < company.good_play_chance
 
 
 ## 一条作品播出后是什么反应。

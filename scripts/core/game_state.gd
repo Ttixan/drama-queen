@@ -45,7 +45,10 @@ var extra_star_seen: bool = false ## 龙套「首次出圈」出现过没有 —
 var reports: Array[Dictionary] = []
 
 ## ---- 履历 ----
-## 每条：{day, company_code, role_tier, passed, match_rate, labels, play_title, role_name}
+## 每条：{day, company_code, role_tier, passed, match_rate, labels, play_title, role_name,
+##        payout, acting_gain, play_is_good, mail}
+## `play_is_good` = 投递那一刻按公司概率摇的「这部戏本身好不好」，**存下来不再重算**
+## （口径见 `core/broadcast.gd`）。缺这个字段的旧存档一律当「好剧」。
 ## 表情包一次性消耗，所以这里天然按时间顺序记录「你演过什么」，
 ## 供电子报的「标题调用条件」判断玩家过往经历。
 var history: Array[Dictionary] = []
@@ -218,7 +221,9 @@ func count_success_by_tier(tier: int) -> int:
 	return n
 
 
-## 按公司代号统计成功演出次数（「烂片女王」传 ["A", "B"]）
+## 按公司代号统计成功演出次数 —— 回答「你签过几家、在哪几家演成过」。
+## 【不再是「烂片女王」的口径】片子好坏看履历里的 `play_is_good`（见 `count_bad_plays`），
+## 按代号数会把「你拍了多少部烂片」数成「你签了多少家小厂」。
 func count_success_by_company(codes: Array) -> int:
 	var n := 0
 	for h: Dictionary in history:
@@ -236,6 +241,20 @@ func count_success_by_company_tier(codes: Array, tier: int) -> int:
 		if h.get("passed", false) \
 				and h.get("company_code", "") in codes \
 				and int(h.get("role_tier", -1)) == tier:
+			n += 1
+	return n
+
+
+## 累计演过的**烂片**部数 —— 「烂片女王」用这个口径。
+##
+## 【为什么不再按公司代号数】片子好坏是公司自带的概率（`CompanyData.good_play_chance`），
+## 投递那一刻摇一次、写进履历（`play_is_good`）—— A 厂也会出好片、E 厂也会出烂片。
+## 按代号数等于把「你拍了多少部烂片」数成「你签了多少家小厂」。
+## 【缺字段时按「好剧」】旧存档的履历里没有这个字段，读回来不该突然变成一柜子烂片。
+func count_bad_plays() -> int:
+	var n := 0
+	for h: Dictionary in history:
+		if h.get("passed", false) and not bool(h.get("play_is_good", true)):
 			n += 1
 	return n
 

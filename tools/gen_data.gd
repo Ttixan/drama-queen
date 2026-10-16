@@ -89,6 +89,7 @@ func _gen_companies() -> int:
 		co.ap_cost = 1
 		co.weekly_limit = GameState.MAX_SUBMIT_PER_WEEK
 		co.extra_payout = spec["extra_payout"]
+		co.good_play_chance = spec["good_play_chance"]
 		co.conditions = spec["conditions"]
 		co.roles = _roles()
 		# 线索文案里写了 `**纯**` 这种强调。Label 不认 markdown，星号会原样显示出来，
@@ -323,11 +324,19 @@ func _role(tier: int, need: int, line: float, gain: int, ratio: float) -> RoleRe
 	return r
 
 
+## 【good_play_chance 是什么】这家公司出的戏本身是好剧的概率，A→E 依次递增。
+## 玩家投递那一刻按它摇一次，写进履历（见 `core/broadcast.gd`）——
+## 用来区分「好剧中的龙套 / 烂剧中的龙套」的口吻，并给「烂片女王」计口径。
+##
+## ⚠️ **这几个数是占位值，数值表里没有对应的一栏，待狗牙拍板**。定它的原则有两条：
+##   1. 必须**严格递增**：档次越高的公司越不容易出烂片。
+##   2. 不能太极端（不要 0 / 1）：两边都留出「A 厂偶尔也有好戏、E 厂也会翻车」的余地，
+##      否则二维标题表又退回一维，等于绕一圈回到硬编码。
 func _company_specs() -> Array[Dictionary]:
 	return [
 		{
 			"code": "A", "display_name": "小登传媒", "tier": CompanyData.Tier.A_LOW,
-			"threshold": 0, "extra_payout": 40,
+			"threshold": 0, "extra_payout": 40, "good_play_chance": 0.2,
 			"conditions": _conds([
 				# L0 教学关：只要求「情绪别打架」。玩家在 A 学到的第一课是「一致」。
 				_cond(AuditionCondition.Type.NO_EMOTION, Emotion.Kind.ANGER, 0.0, 1.0, 0, true),
@@ -337,7 +346,7 @@ func _company_specs() -> Array[Dictionary]:
 		},
 		{
 			"code": "B", "display_name": "剧是本影视", "tier": CompanyData.Tier.B_SMALL,
-			"threshold": 3, "extra_payout": 64,
+			"threshold": 3, "extra_payout": 64, "good_play_chance": 0.35,
 			"conditions": _conds([
 				# L1 单情绪命中：教「情绪是能被识别的」
 				_cond(AuditionCondition.Type.HAS_EMOTION, Emotion.Kind.JOY, 1.0, 2.0, 0, true),
@@ -348,7 +357,7 @@ func _company_specs() -> Array[Dictionary]:
 		},
 		{
 			"code": "C", "display_name": "好日子传媒", "tier": CompanyData.Tier.C_COMMERCIAL,
-			"threshold": 8, "extra_payout": 80,
+			"threshold": 8, "extra_payout": 80, "good_play_chance": 0.5,
 			"conditions": _conds([
 				# L2 情绪纯度：教「克制」。注意是纯，不是多。
 				_cond(AuditionCondition.Type.DOMINANT_EMOTION, Emotion.Kind.JOY, 0.0, 2.0, 0, true),
@@ -359,7 +368,7 @@ func _company_specs() -> Array[Dictionary]:
 		},
 		{
 			"code": "D", "display_name": "未完成电影工作室", "tier": CompanyData.Tier.D_ARTHOUSE,
-			"threshold": 15, "extra_payout": 96,
+			"threshold": 15, "extra_payout": 96, "good_play_chance": 0.65,
 			"conditions": _conds([
 				# L3 曲线形态：教「表演弧线」。要的是滑落，不是掉头。
 				_cond(AuditionCondition.Type.VALENCE_TREND, Emotion.Kind.JOY, 0.0, 2.0,
@@ -377,7 +386,7 @@ func _company_specs() -> Array[Dictionary]:
 			# 门槛 25 越过了这条线 → E 公司永远进不去 → 挂在上面的「影后」变成死结局。
 			# 降到 20（留 1 点冗余）之后影后实测 100% 可达，而 E 仍是五家里门槛最高的（D 是 15）。
 			# ⚠️ 这个数**不能**再往上调超过 21 —— `tools/test_economy.gd` 有一条断言守着它。
-			"threshold": 20, "extra_payout": 120,
+			"threshold": 20, "extra_payout": 120, "good_play_chance": 0.8,
 			"conditions": _conds([
 				# L4 帧间反转：教「转折」。中间必须掉头，慢慢滑下来的不算。
 				_cond(AuditionCondition.Type.VALENCE_REVERSAL, Emotion.Kind.JOY, 1.0, 2.0, 0, true),

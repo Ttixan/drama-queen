@@ -119,21 +119,27 @@ func _test_submission_counters() -> void:
 ##
 ## 这两个结局必须测【不同的东西】，否则玩家分不出它们的区别：
 ##   龙套之王 = 数量 —— 成功了 8 次，但全是龙套（演技上不去）
-##   烂片女王 = 品质 —— 成功了 6 次，但全是 A/B 两家的烂片
+##   烂片女王 = 品质 —— 成功了 6 次，但这 6 部都是**烂片**（履历里 `play_is_good = false`）
+##
+## 【烂片不再按公司代号算】片子好坏是公司的概率属性（`CompanyData.good_play_chance`），
+## A 厂也会出好片、E 厂也会出烂片 —— 所以测试里必须**显式把履历标成烂片**，
+## 只写公司代号（旧写法）会被当成好剧，测的就不是现在的口径了。
 ##
 ## 另有一条数学死结要守住：演技单调递增，所以「成功演出 ≥ N」必然推出「演技 ≥ N」。
 ## 任何写成「成功 ≥ N 且 演技 ≤ M」的结局，必须有 M > N，否则条件自相矛盾。
 func _test_dragon_extra_ending() -> void:
 	print("[5] 龙套之王 / 烂片女王 口径")
 	var s := GameState.new()
-	# 演 8 次龙套，全在 A 烂片厂，演技 8
+	# 演 8 次龙套，全在 A 厂、且这 8 部都是烂片，演技 8
 	for i in 8:
 		s.acting += 1
-		s.record_submission(true, {"company_code": "A", "role_tier": RoleRequirement.Tier.EXTRA})
+		s.record_submission(true, {"company_code": "A",
+				"role_tier": RoleRequirement.Tier.EXTRA, "play_is_good": false})
 
 	_check("成功次数", s.successes_total, 8)
 	_check("龙套档成功次数", s.count_success_by_tier(RoleRequirement.Tier.EXTRA), 8)
-	_check("A/B 公司成功次数", s.count_success_by_company(["A", "B"]), 8)
+	_check("A 公司成功次数", s.count_success_by_company(["A", "B"]), 8)
+	_check("演过的烂片", s.count_bad_plays(), 8)
 	_check("演技", s.acting, 8)
 
 	var king := s.count_success_by_tier(RoleRequirement.Tier.EXTRA) >= 8 and s.acting <= 12
@@ -144,21 +150,23 @@ func _test_dragon_extra_ending() -> void:
 	var dead := s.count_success_by_tier(RoleRequirement.Tier.EXTRA) >= 8 and s.acting <= 5
 	_check("旧口径（演技≤5）不可达 —— 证明上限必须 >8", dead, false)
 
-	# ---- 烂片女王走的是另一条路：成功次数够，但龙套不够多 ----
+	# ---- 烂片女王走的是另一条路：烂片够 6 部，但龙套不够多 ----
 	var q := GameState.new()
 	for i in 4:
 		q.acting += 1
-		q.record_submission(true, {"company_code": "A", "role_tier": RoleRequirement.Tier.EXTRA})
+		q.record_submission(true, {"company_code": "A",
+				"role_tier": RoleRequirement.Tier.EXTRA, "play_is_good": false})
 	for i in 2:
 		q.acting += 2
-		q.record_submission(true, {"company_code": "B", "role_tier": RoleRequirement.Tier.SUPPORTING})
+		q.record_submission(true, {"company_code": "B",
+				"role_tier": RoleRequirement.Tier.SUPPORTING, "play_is_good": false})
 
 	_check("烂片女王·成功次数", q.successes_total, 6)
 	_check("烂片女王·龙套只演了 4 次", q.count_success_by_tier(RoleRequirement.Tier.EXTRA), 4)
 	_check("龙套之王不成立（龙套不足 8）",
 			q.count_success_by_tier(RoleRequirement.Tier.EXTRA) >= 8, false)
-	_check("烂片女王成立（A/B 成功 6 次 且 演技 8≤12）",
-			q.count_success_by_company(["A", "B"]) >= 6 and q.acting <= 12, true)
+	_check("烂片女王成立（烂片 6 部 且 演技 8≤12）",
+			q.count_bad_plays() >= 6 and q.acting <= 12, true)
 	print("   两个结局走不同的路 —— 一个看数量，一个看品质")
 
 

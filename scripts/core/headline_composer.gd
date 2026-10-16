@@ -30,12 +30,16 @@ static func compose(play: Dictionary, state: GameState, fame_now: int) -> Dictio
 		if grade == BalanceData.Grade.HIGH and fame_now >= bal.fame_named_threshold \
 				and not state.extra_star_seen:
 			return _fill(HeadlineLibrary.find_kind(Headline.KIND_EXTRA_STAR), {}, ctx)
-		var lv := 1 if play_is_good(code) else 0
+		# 好剧 / 烂剧读的是**投递时写进履历的那一次抽签**，不是现在按公司档次重算。
+		# 缺字段（旧存档）一律当「好剧」—— 与 GameState.count_bad_plays 同一个回退。
+		var lv := 1 if bool(entry.get("play_is_good", true)) else 0
 		return _fill(HeadlineLibrary.find_extra(grade, lv), {}, ctx)
 
 	# 主要角色：两处需要换备选 —— 主表里的句子**预设了一段履历**，玩家没有那段履历就穿帮
-	if code == "D" and grade == BalanceData.Grade.HIGH and state.count_success_by_company(["A", "B"]) == 0:
-		# 「谁说【报道对象】只会演烂剧？」—— 人家根本没演过烂剧
+	if code == "D" and grade == BalanceData.Grade.HIGH and state.count_bad_plays() == 0:
+		# 「谁说【报道对象】只会演烂剧？」—— 人家根本没演过烂剧。
+		# 【为什么按烂片数而不是按「演没演过 A/B」】口径改了：烂片是投递时摇出来的，
+		# 在 A 厂也可能一部烂片都没演到 —— 那种人同样不该被问「只会演烂剧？」。
 		return _fill(HeadlineLibrary.find_kind(Headline.KIND_FALLBACK_D_HIGH), {}, ctx)
 	if code == "B" and grade == BalanceData.Grade.LOW and fame_now >= bal.fame_named_threshold:
 		# 已经点得起名了，就别再写「《剧名》演员哪找的」这种泛指
@@ -51,10 +55,6 @@ static func compose_black_fame(state: GameState, repeat: bool) -> Dictionary:
 
 
 # ============================================================
-static func play_is_good(company_code: String) -> bool:
-	return Broadcast.play_is_good(company_code)
-
-
 ## 电子报的替换字段表。**故意与邮件的 ctx 分开**：这里多一个【报道对象】，
 ## 而「日期 / 地点 / 截止时间」这些邮件专用字段一个都不给。
 static func _context(entry: Dictionary, code: String, cast: int, fame_now: int) -> Dictionary:
