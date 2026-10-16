@@ -65,6 +65,20 @@ var unlocked_hr: Array[String] = []
 ## 与 `unlocked_hr` 一样是**进度**：读档回来再点开那家，看到的还是他选过的。
 var hr_choice: Dictionary = {}
 
+## ---- 待投递的表情包 ----
+## 录像机拼好、还没发出去的那一段。
+## 【为什么放在状态里，而不是留在微信手上】录像机与微信是**两个各自整屏的 App**，
+## 从微信点「去录像机」会整屏切过去，微信随之被手机屏销毁 —— 拼好的那段留在界面里
+## 就等于白录一次。放进状态之后：切回来它还在，读档回来它也在。
+## 一次性消耗由界面负责（投出去 / 重开一局时清掉，见 `Game.clear_pending_clip`）。
+var pending_clip: Clip = null
+
+## 微信该打开哪位联系人：刚从「简历拿来」加上的那位 / 刚在聊的那位。
+## 【为什么不是界面自己的事】微信同样会被销毁重建（去录像机、去简历拿来都要整屏切走），
+## 回来时落到「第一家已解锁的」而不是「你刚才那位」，玩家会以为自己点错了。
+## 写入口有两处：`Game.unlock_hr()`（刚加上的人优先）与微信选中联系人时。
+var focus_hr: String = ""
+
 ## ---- 周初事件 ----
 ## 【为什么种子要进存档】事件是抽签选出来的，读档重抽会让「这周那出戏」变成另一出。
 ## 与定角抽签同一个道理（决策：抽一次，之后谁都读同一份）：
@@ -243,6 +257,10 @@ func to_save_dict() -> Dictionary:
 		"ps5_paid": ps5_paid,
 		"black_fame_seen": black_fame_seen, "extra_star_seen": extra_star_seen,
 		"unlocked_hr": unlocked_hr, "hr_choice": hr_choice,
+		# 待投递的表情包存成部件 id（见 `Clip.save_dict`）。没有时给一个空字典 ——
+		# JSON 里 null 落不住，`from_save_dict` 认空字典就是「没有」。
+		"pending_clip": {} if pending_clip == null else pending_clip.save_dict(),
+		"focus_hr": focus_hr,
 		"reports": reports,
 		"history": history,
 		# 【pending_event 存成空串而不是 null】JSON 里 StringName 落不住，
@@ -275,6 +293,9 @@ func from_save_dict(d: Dictionary) -> void:
 	extra_star_seen = bool(d.get("extra_star_seen", false))
 	unlocked_hr.assign(d.get("unlocked_hr", []))
 	hr_choice = d.get("hr_choice", {})
+	var clip_dict: Variant = d.get("pending_clip", null)
+	pending_clip = Clip.from_save_dict(clip_dict) if typeof(clip_dict) == TYPE_DICTIONARY else null
+	focus_hr = String(d.get("focus_hr", ""))
 	reports.assign(d.get("reports", []))
 	history.assign(d.get("history", []))
 	event_seed = int(d.get("event_seed", 0))

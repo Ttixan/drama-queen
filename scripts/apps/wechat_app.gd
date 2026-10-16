@@ -24,6 +24,11 @@ const CONTACT_AVATAR := 54
 ## 被手机壳当成一个 App 打开时才需要返回。独立运行时它是主场景，没有"上一步"。
 signal cancelled
 
+## 请求上层换一个 App —— 「去简历拿来」与「去录像机」都是**整屏切过去**，
+## 不是把对方塞进右栏。约定与 `boss_app.gd` 相同：本 App 只发一个场景路径，
+## 切屏是手机屏的事（它才管着左栏与周围那圈颜色，见 `phone_screen.gd`）。
+signal open_app_requested(scene_path: String)
+
 ## 公司档位配色统一在 UiPalette（Boss直聘 的联系人头像用同一套）
 const TIER_COLORS := UiPalette.COMPANY_TIER_COLORS
 
@@ -59,7 +64,6 @@ var _pending: Clip
 var _rows: Dictionary = {}            ## code -> Button
 var _row_labels: Dictionary = {}      ## code -> {name, state}
 var _role_buttons: Dictionary = {}    ## tier -> Button
-var _overlay: Node                    ## 当前嵌进来盖在整页上的子 App
 ## 程序化改按钮状态时会触发 toggled，用它挡住自己绕自己
 var _syncing := false
 
@@ -87,6 +91,10 @@ var _hr_caption: Label
 func _ready() -> void:
 	_companies = CompanyLibrary.all()
 
+	# 【拼好的表情包从状态里取，不从「上次那个实例」取】点「去录像机」会整屏切走，
+	# 本 App 随之被手机屏销毁 —— 那段表情包只有存在 `GameState` 里才活得下来。
+	_pending = Game.pending_clip()
+
 	_apply_styles()
 	_build_contacts()
 	_build_event_composer()
@@ -106,6 +114,13 @@ func _ready() -> void:
 	var opening := Game.pending_event()
 	if opening != null and not opening.speaker.is_empty():
 		_select_event_speaker(opening.speaker)
+		return
+
+	# 【先看「刚才在聊谁」】去录像机录完回来、去「简历拿来」加完人回来，都会把本 App
+	# 重建一遍。落到「第一家已解锁的」而不是他刚才那位，玩家会以为自己点错了。
+	var want := Game.focus_hr()
+	if not want.is_empty() and Game.is_hr_unlocked(want):
+		_select_company(want)
 		return
 
 	var first := _first_contact_code()
@@ -409,6 +424,8 @@ func _on_contact_toggled(on: bool, code: String) -> void:
 
 func _select_company(code: String) -> void:
 	_current = CompanyLibrary.by_code(code)
+	# 记进状态：本 App 被切走再建起来时，要落在同一位联系人上（见 `_ready`）
+	Game.set_focus_hr(code)
 	# 【两个开关必须成对】`_is_event_chat()` 只看 `_event_speaker`，
 	# 切回 HR 会话时忘了清它，界面会一直停在「事件会话」那一套上 ——
 	# 表现是 HR 的三排 composer 全不见、头部还在显示事件内容。
@@ -603,11 +620,11 @@ func _refresh_composer() -> void:
 	_send_row.visible = not in_event
 	_event_row.visible = in_event
 
-	# 有子页面盖上来时，两个入口都别再点（避免叠两层 App）。
-	# 事件会话里它们本来就无从下手，一并禁掉。
-	var covered := _overlay != null
-	_open_recorder_button.disabled = covered or in_event
-	_go_boss_button.disabled = covered or in_event
+	# 事件会话里这两个入口本来就无从下手（没有 HR 会话可投），禁掉。
+	# 【不再需要「有子页面盖着」那一档】跳到录像机 / 简历拿来 现在会整屏切走，
+	# 本 App 连同这两个按钮一起被销毁 —— 不存在「两边同时开着」的状态了。
+	_open_recorder_button.disabled = in_event
+	_go_boss_button.disabled = in_event
 
 	if in_event:
 		_refresh_event_composer()
@@ -930,18 +947,14 @@ func _on_send() -> void:
 
 	# 表情包一次性消耗（决策 1.6）：投出去就没了，下次必须重新拼
 	_pending = null
+	Game.clear_pending_clip()
 	_refresh_all()
 	_scroll_chat_to_bottom()
 
 
 # ============================================================
-# 子页面（录像机 / Boss直聘）
+# 去别的 App（整屏切走，不是嵌进右栏）
 # ============================================================
-## 真机上这两个 App 由手机壳切换。手机壳还没做，所以先内嵌打开。
-##
-## 【这不是"又一个开发脚手架"】上个版本这里是一个 `DEV_UNLOCK_ALL` 开关，
-## 直接把「先逛 Boss直聘 才解锁 HR」短路掉了。现在换成真的能打开 Boss直聘 ——
-## 于是这条规则**真的会生效**：从零解锁一家公司、再投出去，全程没有作弊开关。
 ## 让调用方把本页当 App 打开时显示「返回桌面」（见 phone_screen.gd）
 func enable_back() -> void:
 	_back_button.visible = true
@@ -963,59 +976,36 @@ func sidebar_title() -> String:
 	return "微信 · 联系人"
 
 
-func _open_overlay(scene_path: String) -> Node:
-	if _overlay != null:
-		return null
-	_overlay = load(scene_path).instantiate()
-	add_child(_overlay)
-	if _overlay.has_method("enable_back"):
-		_overlay.enable_back()
-	if _overlay.has_signal("cancelled"):
-		_overlay.connect("cancelled", _close_overlay)
-	_refresh_composer()
-	return _overlay
-
-
-func _close_overlay() -> void:
-	if _overlay != null:
-		if _overlay.is_connected("cancelled", _close_overlay):
-			_overlay.disconnect("cancelled", _close_overlay)
-		_overlay.queue_free()
-		_overlay = null
-	if EventBus.recorder_finished.is_connected(_on_clip_ready):
-		EventBus.recorder_finished.disconnect(_on_clip_ready)
-	_refresh_composer()
-
-
+## 「去录像机」拼一段表情包。
+##
+## 【这一版为什么改成整屏切走】原来是把录像机**内嵌在右栏**（手机壳做出来之前的
+## 权宜之计）：同一台手机上于是有了两套导航（外面一层 App 列表、里面一层子页面），
+## 而录像机还得挤在 1065 宽的一块里。现在由手机屏换 App —— 左栏跟着变成录像机自己
+## 那一列，周围那圈颜色也换过去。
+##
+## 【代价：本 App 会被销毁】所以「拼好的表情包」与「在聊谁」都在状态层
+## （`Game.pending_clip` / `Game.focus_hr`），回来时 `_ready()` 自己取。
+## 录完的回程由手机屏负责（它记着是谁顶开的），见 `phone_screen._on_recorder_finished`。
 func _on_open_recorder() -> void:
-	if _open_overlay(RECORDER_SCENE) == null:
-		return
-	# 只在这时候订阅：录像机点「确认」才会 emit，平时挂着没意义
-	EventBus.recorder_finished.connect(_on_clip_ready)
+	open_app_requested.emit(RECORDER_SCENE)
 
 
+## 「去简历拿来」加联系人。那边聊完会有一条「去微信聊」，回程由它自己发；
+## 刚加上的那位由 `Game.unlock_hr()` 记进 `focus_hr`，回来时直接就是这条会话。
 func _on_open_boss() -> void:
-	var boss := _open_overlay(BOSS_SCENE)
-	if boss != null:
-		_add_note("去看看谁在招人 —— 加上的 HR 会直接出现在左边的联系人里")
-		_scroll_chat_to_bottom()
-
-
-## 录像机点「确认」→ 拿到待投递的表情包，关掉子页面
-func _on_clip_ready(clip: Clip) -> void:
-	_pending = clip
-	_close_overlay()
-	_add_note("录好了一段表情包，选好角色就能发给 %s" % _current.hr_name)
-	_scroll_chat_to_bottom()
+	open_app_requested.emit(BOSS_SCENE)
 
 
 # ============================================================
 # 信号
 # ============================================================
+## 某家公司的 HR 刚被加上。
+## 【主干路径现在已经不经过这里了】「去简历拿来」是整屏切走，加人时本 App 并不在场 ——
+## 「回来直接打开刚加上的那位」改由 `GameState.focus_hr` 完成（见 `_ready`）。
+## 这条留着是因为本 App 开着的时候也可能解锁（比如以后从别处解锁、或测试里直接调）。
 func _on_hr_unlocked(code: String) -> void:
 	_refresh_contacts()
 	if _current == null:
-		# 从 Boss直聘 回来时本来没选中任何人 —— 直接把刚加上的这位打开
 		_select_company(code)
 	else:
 		_refresh_header()
@@ -1042,11 +1032,12 @@ func _on_ap_changed(_left: int) -> void:
 	_refresh_composer()
 
 
-## 状态被整个换掉（开新局 / 读档）：选中联系人、待投递表情包、子页面 —— 一样都不能留
+## 状态被整个换掉（开新局 / 读档）：选中联系人、待投递表情包 —— 一样都不能留。
+## 【表情包跟着状态走】开新局时它是空的；读档时它是存档里那一段 —— 两者都是状态说了算，
+## 所以这里不是「清成 null」，而是「重新问状态要一次」。
 func _on_state_reset() -> void:
-	_close_overlay()
 	_current = null
-	_pending = null
+	_pending = Game.pending_clip()
 	_role = null
 	_event_speaker = &""
 	for child in _role_buttons_row.get_children():

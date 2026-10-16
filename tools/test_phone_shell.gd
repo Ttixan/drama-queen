@@ -17,6 +17,9 @@ extends SceneTree
 
 const SCENE := "res://scenes/main/calendar_screen.tscn"
 const PHONE_SCENE := "res://scenes/main/phone_screen.tscn"
+const WECHAT_SCENE := "res://scenes/apps/wechat.tscn"
+const BOSS_SCENE := "res://scenes/apps/boss.tscn"
+const RECORDER_SCENE := "res://scenes/minigame/recorder.tscn"
 
 var _failures: Array[String] = []
 var _checks := 0
@@ -50,6 +53,7 @@ func _run_all() -> void:
 	_test_desktop()
 	_test_work_and_class()
 	_test_app_switch()
+	_test_app_jump()
 	_test_end_day()
 	_test_week_settle()
 	_test_full_run_to_ending()
@@ -198,6 +202,65 @@ func _test_app_switch() -> void:
 	_check("右栏回到空态", _phone._empty_hint.visible, true)
 	_check("话没说完就退了：不算解锁", _game.state.unlocked_hr.size(), unlocked_before)
 	print("   一次只开一个；交得出二级列表的 App 会把左栏换掉")
+
+
+## App 之间互相顶开（微信 → 简历拿来 / 录像机），以及录像机录完的回程。
+##
+## 【为什么要单独一条】这两个入口原来是把对方**嵌在自己的右栏里**，切 App 这一层根本不参与；
+## 改成整屏切换之后，「是谁顶开的」「录完回哪儿」都成了手机屏身上的新状态 ——
+## 而且它坏起来很安静（确实切过去了，只是回来时东西没了、或者回不来）。
+func _test_app_jump() -> void:
+	print("[3b] 手机屏：App 之间互相顶开 + 录像机的回程")
+	var bus := root.get_node("EventBus")
+	_game.new_game()
+	_phone.open_app(WECHAT_SCENE)
+	_check("先开着微信", _phone.current_app_path(), WECHAT_SCENE)
+
+	# 微信 → 简历拿来：整屏切过去（不是塞进右栏）
+	_phone._current._on_open_boss()
+	_check("「去简历拿来」把手机屏切过去了", _phone.current_app_path(), BOSS_SCENE)
+	_check("左栏换成它的公司列表", _phone._sidebar != null, true)
+	_check("周围那圈换成它的青", _phone._accent(), UiPalette.BOSS)
+
+	# 回微信 → 再走一次录像机
+	_phone.open_app(WECHAT_SCENE)
+	_check("回到微信", _phone.current_app_path(), WECHAT_SCENE)
+	_phone._current._on_open_recorder()
+	_check("「去录像机」也是整屏切过去", _phone.current_app_path(), RECORDER_SCENE)
+	_check("录像机不交二级列表，左栏继续列 App", _phone._app_list.visible, true)
+	_check("它自己的「返回」露出来了（在这一层它就是「上一步」）",
+			_phone._current._back_button.visible, true)
+
+	# 录像机点「确认」→ 表情包进状态 → 手机屏把玩家送回微信
+	var clip := _flat_clip()
+	bus.recorder_finished.emit(clip)
+	_check("录完自动回到微信（不用自己从列表里找）", _phone.current_app_path(), WECHAT_SCENE)
+	_check("表情包已进状态", _game.pending_clip(), clip)
+	_check("回微信后附件就在那儿", _phone._current._pending, clip)
+	_check("周围那圈跟着回到微信绿", _phone._accent(), UiPalette.WECHAT)
+
+	# 录像机的「返回」= 回顶开它的那个 App，而不是回 App 列表
+	_phone._current._on_open_recorder()
+	_check("又切到录像机", _phone.current_app_path(), RECORDER_SCENE)
+	_phone._current.cancelled.emit()
+	_check("它的「返回」回到来路", _phone.current_app_path(), WECHAT_SCENE)
+
+	# 「← 全部」仍然是「离开这个 App」，与上面那条是两回事
+	_phone._column_back.pressed.emit()
+	_check("「← 全部」回 App 列表", _phone.current_app_path(), "")
+	_check("左栏换回 App 列表", _phone._app_list.visible, true)
+	print("   整屏切换 + 录完回程都是通的；「返回」是上一步、「← 全部」是离开")
+
+
+## 平脸表情包（A 厂的一票否决是「不许有怒」，平脸必过）——
+## 这里只是当个「录像机录好了」的载荷，判定不在这条链上
+func _flat_clip() -> Clip:
+	var c := Clip.new()
+	for i in c.frame_count():
+		c.frames[i] = Clip.Frame.new(
+				PartLibrary.by_id("eyes_00"), PartLibrary.by_id("mouth_00"),
+				PartLibrary.by_id("brows_00"), null)
+	return c
 
 
 func _test_end_day() -> void:

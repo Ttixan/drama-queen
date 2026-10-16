@@ -121,3 +121,49 @@ func all_labels() -> Array[String]:
 ## 作品集／履历用的简短描述，如「喜 → 惊 → 哀」
 func summarize() -> String:
 	return " → ".join(all_labels())
+
+
+# ============================================================
+# 存档
+# ============================================================
+## 【为什么它需要能进存档】拼好的表情包现在是**待投递的道具**，存在 `GameState` 里
+## （录像机与微信是两个各自整屏的 App，切过去时微信会被销毁）。
+## 状态里躺着一个不进存档的字段，读档回来就会静默地少一样东西 —— 所以它得能序列化。
+##
+## 存的是**部件 id**，不是资源本身：`PartData` 是 `.tres`，JSON 存不下；
+## 而 id 是稳定键（美术换图不改 id），读回来由 `PartLibrary` 还原。
+func save_dict() -> Dictionary:
+	var out: Array = []
+	for f: Frame in frames:
+		out.append({
+			"eyes": _part_id(f.eyes),
+			"mouth": _part_id(f.mouth),
+			"brows": _part_id(f.brows),
+			"extra": _part_id(f.extra),
+		})
+	return {"frames": out}
+
+
+## 从存档还原。**认不出来的一律返回 null**（空帧数组、坏了的结构）——
+## 调用方把 null 当成「没有待投递的表情包」，界面因此只会少一个附件，不会崩。
+static func from_save_dict(d: Dictionary) -> Clip:
+	var raw: Variant = d.get("frames", null)
+	if typeof(raw) != TYPE_ARRAY or (raw as Array).is_empty():
+		return null
+	var c := Clip.new((raw as Array).size())
+	for i in c.frame_count():
+		var fd: Variant = (raw as Array)[i]
+		if typeof(fd) != TYPE_DICTIONARY:
+			return null
+		var parts: Dictionary = fd
+		c.frames[i] = Frame.new(
+				PartLibrary.by_id(String(parts.get("eyes", ""))),
+				PartLibrary.by_id(String(parts.get("mouth", ""))),
+				PartLibrary.by_id(String(parts.get("brows", ""))),
+				PartLibrary.by_id(String(parts.get("extra", ""))))
+	return c
+
+
+## 「其他」可以留空 —— 空槽存成空串
+static func _part_id(p: PartData) -> String:
+	return "" if p == null else String(p.id)

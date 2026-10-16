@@ -14,6 +14,9 @@ func _ready() -> void:
 	# 不必知道存档文件在哪，将来加「手动存档按钮」也只是再 emit 一次。
 	EventBus.save_requested.connect(_on_save_requested)
 
+	# 录像机录完那段表情包也由本单例接住（理由见 `_on_recorder_finished`）
+	EventBus.recorder_finished.connect(_on_recorder_finished)
+
 	# 【开局先试着读档】决策 1.1 只说了「每周结算自动存档」——
 	# **存了却没人读，那份存档就是死的**。读不到（第一次玩 / 文件坏了 / 格式对不上）
 	# 才开新局，所以这里不需要额外的"有没有存档"判断。
@@ -92,6 +95,35 @@ func ps5_paid_off() -> bool:
 	return Economy.ps5_paid_off(state)
 
 
+# ============================================================
+# 待投递的表情包 + 微信该打开哪位联系人
+# ============================================================
+# 【为什么这两样要放在 Game 层】它们都是**跨 App 的中间状态**：录像机录完要交给微信，
+# 而录像机与微信不会同时活着（手机屏一次只开一个 App，切走就把上一个销毁）。
+# 界面之间不互相递东西（决策：App 只发信号、不知道别家住在哪儿），所以得有个
+# 两边都认的地方 —— 就是状态层。
+func pending_clip() -> Clip:
+	return state.pending_clip
+
+
+func set_pending_clip(clip: Clip) -> void:
+	state.pending_clip = clip
+
+
+## 投出去（或重开一局）之后清掉。表情包一次性消耗，决策 1.6。
+func clear_pending_clip() -> void:
+	state.pending_clip = null
+
+
+## 微信该打开哪位联系人。界面只读，写入口是下面这个与 `unlock_hr()`
+func focus_hr() -> String:
+	return state.focus_hr
+
+
+func set_focus_hr(code: String) -> void:
+	state.focus_hr = code
+
+
 func ending_id() -> StringName:
 	return state.ending_id
 
@@ -161,6 +193,11 @@ func _notify_reputation(delta: int) -> void:
 func unlock_hr(code: String) -> bool:
 	if not state.unlock_hr(code):
 		return false
+	# 【刚加上的人优先】玩家在「简历拿来」跟 HR 聊完，回来多半就是想跟他说话。
+	# 原来这一步是微信自己做的（`hr_unlocked` 一响就直接打开那位）—— 但现在微信
+	# 那一刻并不活着（他从微信整屏跳去了简历拿来），所以这件事得落在状态上，
+	# 由微信下次建起来时读（见 `wechat_app.gd` 的 `_ready`）。
+	state.focus_hr = code
 	EventBus.hr_unlocked.emit(code)
 	return true
 
@@ -329,6 +366,15 @@ func _on_save_requested() -> void:
 	var err := save_to()
 	if err != OK:
 		push_error("[Game] 自动存档失败：%s" % error_string(err))
+
+
+## 录像机录完一段（`EventBus.recorder_finished`）—— 接住它的是**核心层**。
+##
+## 【为什么不是微信接】决策写着录像机只发信号、不认识公司也不认识微信；而微信那一刻
+## 可能根本不在场（他从微信整屏跳去了录像机，微信已被手机屏销毁）。
+## 所以这里只做一件事：把它存进状态。微信下次建起来时自己会取（见 `_ready`）。
+func _on_recorder_finished(clip: Clip) -> void:
+	set_pending_clip(clip)
 
 
 # ============================================================

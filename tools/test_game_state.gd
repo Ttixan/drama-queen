@@ -191,6 +191,10 @@ func _test_save_roundtrip() -> void:
 	s.advance_day()
 	s.record_submission(true, {"company_code": "C", "role_tier": 2, "match_rate": 0.75})
 	s.record_submission(false, {"company_code": "D", "role_tier": 1, "match_rate": 0.4})
+	s.focus_hr = "C"
+	# 待投递的表情包（录像机拼好、还没发出去的那一段）也要能进存档：
+	# 它在状态里躺着，不进存档就会在读档后静默消失
+	s.pending_clip = _clip_with("eyes_04", "mouth_02", "brows_06", "")
 
 	# 走一遍真实的序列化路径（JSON 会把整数变成浮点，这是最容易踩的坑）
 	var blob := JSON.stringify(s.to_save_dict())
@@ -211,4 +215,27 @@ func _test_save_roundtrip() -> void:
 	_check("存档·成功数", r.successes_total, 1)
 	_check("存档·履历条数", r.history.size(), 2)
 	_check("存档·履历可查主角经历", r.has_ever_played(RoleRequirement.Tier.LEAD), true)
-	print("   JSON 往返后属性与履历完整还原")
+	_check("存档·微信该打开哪位联系人", r.focus_hr, "C")
+	# 【为什么这两条重要】待投递的表情包是玩家刚在录像机里拼出来的东西，而它躺在
+	# `GameState` 里 —— 状态里有一个不进存档的字段，读档后就会**静默地**少一样东西
+	_check("存档·待投递的表情包还在", r.pending_clip != null, true)
+	if r.pending_clip == null:
+		print("   ❌ 表情包没还原 —— 它就是「读档后附件凭空消失」那个 bug")
+	else:
+		var f: Clip.Frame = r.pending_clip.frames[0]
+		_check("存档·表情包帧数", r.pending_clip.frame_count(), 3)
+		_check("存档·第 1 帧的眼部是同一件部件", String(f.eyes.id), "eyes_04")
+		_check("存档·嘴与眉也各归各位",
+				"%s/%s" % [f.mouth.id, f.brows.id], "mouth_02/brows_06")
+		_check("存档·「其他」留空仍然是空（不是被换成某件部件）", f.extra, null)
+	print("   JSON 往返后属性、履历与待投递的表情包完整还原")
+
+
+## 造一段表情包。`extra` 传空串 = 「其他」留空（它本来就是可选项）
+func _clip_with(eye: String, mouth: String, brow: String, extra: String) -> Clip:
+	var c := Clip.new()
+	for i in c.frame_count():
+		c.frames[i] = Clip.Frame.new(
+				PartLibrary.by_id(eye), PartLibrary.by_id(mouth),
+				PartLibrary.by_id(brow), PartLibrary.by_id(extra))
+	return c

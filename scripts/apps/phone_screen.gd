@@ -26,6 +26,12 @@ const P_CONTENT := "Page/BodyWrap/Body/ContentPanel/ContentMargin/ContentHost"
 
 const DEFAULT_HINT := "悬浮看每个 App 是干什么的"
 
+## 录像机。**只有它**在被别的 App 顶开时才露自己的返回按钮 ——
+## 它的按钮写着中性的「返回」（回到顶开它的那个 App，正是玩家预期）；
+## 微信与简历拿来的写着「← 返回桌面」「← 返回微信」——那是它们原来那位宿主的说法，
+## 在这台手机上按下去会指错地方，所以那两家的返回按钮仍然只由桌子开（`enable_back`）。
+const RECORDER_SCENE := "res://scenes/minigame/recorder.tscn"
+
 ## 上层（桌子）离开本屏
 signal cancelled
 
@@ -50,6 +56,13 @@ var _current: Node
 var _current_path := ""
 ## 从 App 手里接管过来的二级列表
 var _sidebar: Control
+## 当前这个 App 是**被哪个 App 顶开的**（空 = 从左边列表点开的）。
+## 【为什么要记】「去录像机」是整屏切走：录完之后玩家得回到微信，才接得上刚才那件事。
+## 而录像机不认识微信（决策：它只发 `EventBus.recorder_finished`），
+## 所以「回程去哪儿」只能由切屏的这一层记着。
+## 【复位点在 `_close_app`】它是唯一的「离开当前 App」出口 —— 换 App、点「← 全部」、
+## 返回桌面都会经过它。跨对象留下的成员变量必须有一个明确的复位点，否则会串场。
+var _opened_from := ""
 ## 右栏空着时的提示（开 App 时收起来）
 var _empty_hint: Label
 
@@ -66,6 +79,8 @@ func _ready() -> void:
 	EventBus.ap_changed.connect(_on_ap_changed)
 	EventBus.money_changed.connect(_on_money_changed)
 	EventBus.state_reset.connect(_on_state_reset)
+	# 录像机点「确认」→ 把玩家送回顶开它的那个 App（表情包已由 `Game` 存进状态）
+	EventBus.recorder_finished.connect(_on_recorder_finished)
 	_refresh_hud()
 
 
@@ -218,12 +233,12 @@ func open_app(scene_path: String) -> void:
 	_current_path = scene_path
 	_content.add_child(_current)
 	if _current.has_signal("cancelled"):
-		_current.cancelled.connect(_close_app)
-	# App 之间互相「顶开」：Boss聊完会说「去微信聊」，微信也这么被打开过。
+		_current.cancelled.connect(_on_app_cancelled)
+	# App 之间互相「顶开」：Boss聊完会说「去微信聊」，微信会说「去录像机」。
 	# 【为什么由本屏接】切 App 是这一层的事，App 自己不该知道别家住在哪儿 ——
 	# 它只发一个场景路径，剩下交给这里（`open_app` 会先关掉当前那个）。
 	if _current.has_signal("open_app_requested"):
-		_current.open_app_requested.connect(open_app)
+		_current.open_app_requested.connect(_on_app_requested)
 	# 【故意不调 `enable_back()`】那是「被当成整屏打开」时的约定，各 App 的返回按钮
 	# 写的是自己原来那位宿主的话（Boss 上写着「返回微信」，本屏根本没有微信那回事）。
 	# 现在本屏就是宿主：顶上一条「← 桌面」、左边一列 App，两层导航都齐了 ——
@@ -232,6 +247,48 @@ func open_app(scene_path: String) -> void:
 	_take_sidebar()
 	# 周围那圈（状态栏下边线 / 左右两块面板的描边 / 左栏标题）跟着这个 App 换色
 	_apply_styles()
+
+
+# ============================================================
+# App 之间互相顶开 / 回程
+# ============================================================
+## 某个 App 请求「帮我打开另一个 App」（`open_app_requested`）。
+##
+## 【顺带记下来路】「去录像机」是整屏切走，录完后玩家得回到微信才接得上刚才那件事。
+## 录像机不认识微信，所以谁顶开的它、录完就回谁那儿。
+func _on_app_requested(scene_path: String) -> void:
+	var from := _current_path
+	# 【先切再记】`open_app` 内部会 `_close_app()`，而复位点在那边 —— 先记就会被清掉
+	open_app(scene_path)
+	_opened_from = from
+	if scene_path == RECORDER_SCENE and _current != null and _current.has_method("enable_back"):
+		_current.enable_back()
+
+
+## 某个 App 自己的返回按钮被按下（`cancelled`）。
+##
+## 【有来路就回那个 App】被顶开的 App 上，「上一步」就是顶开它的那个 ——
+## 这也是录像机那边「返回」按钮的语义。没来路（从左边列表点开的）就是**离开这个 App**。
+##
+## 【与「← 全部」的区别】「← 全部」永远是回 App 列表（见 `_back_to_app_list`），
+## 它是「我不玩这个了」；这里这条是「上一步」。
+func _on_app_cancelled() -> void:
+	if _opened_from.is_empty() or _opened_from == _current_path:
+		_close_app()
+		return
+	open_app(_opened_from)
+
+
+## 录像机录完一段。
+##
+## 【Clip 不归本屏管】它由核心层接住并写进状态（`Game._on_recorder_finished`）——
+## 本屏只做一件界面上的事：把玩家送回顶开录像机的那个 App。
+## 不做的话他会停在一个死角里（屏幕上写着「已录好，拿去微信投递」，
+## 而对面那个 App 得自己从列表里找回来）。
+func _on_recorder_finished(_clip: Clip) -> void:
+	if _current_path != RECORDER_SCENE or _opened_from.is_empty():
+		return
+	open_app(_opened_from)
 
 
 ## 问 App 要它的二级列表，接到左栏来。
@@ -274,11 +331,14 @@ func _close_app() -> void:
 	if _sidebar != null:
 		_sidebar.queue_free()
 		_sidebar = null
-	if _current.has_signal("cancelled") and _current.cancelled.is_connected(_close_app):
-		_current.cancelled.disconnect(_close_app)
+	if _current.has_signal("cancelled") and _current.cancelled.is_connected(_on_app_cancelled):
+		_current.cancelled.disconnect(_on_app_cancelled)
 	_current.queue_free()
 	_current = null
 	_current_path = ""
+	# 【来路的唯一复位点】换 App、点「← 全部」、返回桌面都经过这里 ——
+	# 漏了它，「上次是谁顶开的」会跟着活到下一次 App 里（跨对象成员变量的老坑）
+	_opened_from = ""
 	_empty_hint.visible = true
 	_show_app_list()
 	# 没 App 了 —— 周围那圈退回通用强调色
@@ -324,7 +384,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	# 安卓返回键的惯例：先关最上面那一层，再谈退到哪去
 	get_viewport().set_input_as_handled()
 	if _current != null:
-		_close_app()
+		# 与「App 自己的返回按钮」走同一条：有来路就回那个 App
+		_on_app_cancelled()
 		return
 	cancelled.emit()
 

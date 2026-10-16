@@ -16,6 +16,8 @@ extends SceneTree
 ## 因为那几条是玩法规则，界面只是它的一个入口。
 
 const SCENE := "res://scenes/apps/wechat.tscn"
+const BOSS_SCENE := "res://scenes/apps/boss.tscn"
+const RECORDER_SCENE := "res://scenes/minigame/recorder.tscn"
 const SAVE_PATH := "user://test_wechat_save.json"
 
 var _failures: Array[String] = []
@@ -23,11 +25,28 @@ var _checks := 0
 var _app                       ## 故意不标类型：要动态访问场景脚本的成员
 var _game                      ## Game autoload（动态调用）
 var _bus                       ## EventBus autoload（动态调用）
+## 微信发出的「换一个 App」请求（`open_app_requested`）
+var _jumps: Array[String] = []
+
+
+## 手机屏切 App 时会把上一个 App 销毁、回来时重建 —— 这里照做一遍。
+## 【为什么要重建】「去录像机」是**整屏切走**，微信那一刻不在了；屏幕里那个附件
+## 只能从状态里取回来。这条测试因此天然守住「切走再回来，东西还在不在」。
+func _rebuild_app() -> void:
+	_app.free()
+	_app = load(SCENE).instantiate()
+	root.add_child(_app)
+	_app.open_app_requested.connect(_on_jump)
+
+
+func _on_jump(scene_path: String) -> void:
+	_jumps.append(scene_path)
 
 
 func _initialize() -> void:
 	_app = load(SCENE).instantiate()
 	root.add_child(_app)
+	_app.open_app_requested.connect(_on_jump)
 	process_frame.connect(_run_all, CONNECT_ONE_SHOT)
 
 
@@ -109,16 +128,22 @@ func _run_all() -> void:
 	_check("跨周后本周计数清零", _game.state.submissions_this_week, 0)
 
 	print("")
-	print("[4] 真实链路：去 Boss直聘 解锁 → 回来投递")
+	print("[4] 真实链路：去「简历拿来」解锁 → 回微信投递")
 	_game.new_game()
 	_app._refresh_all()
 	_check("重开后没有联系人", _app._current, null)
 
-	# 从零开始：微信里打开 Boss直聘（上个版本这里是个 DEV_UNLOCK_ALL 作弊开关）
+	# 【这两个入口现在是「整屏切走」】微信只发一个场景路径，由手机屏换 App ——
+	# 对方不再被嵌进右栏（内嵌那一套已经删了）
 	_app._on_open_boss()
-	_check("Boss直聘 被嵌进来了", _app._overlay != null, true)
-	_check("子页面盖上来时「去 Boss直聘」置灰", _app._go_boss_button.disabled, true)
-	var boss = _app._overlay
+	_check("「去简历拿来」发的是整屏切换请求", _jumps.size(), 1)
+	_check("请求的是简历拿来", _jumps[0] if not _jumps.is_empty() else "", BOSS_SCENE)
+	_jumps.clear()
+
+	# 手机屏收到请求会真的把简历拿来开起来（两台是同一层的 App，不是父子）——
+	# 这里直接建一个驱动它，简历拿来自己的链路在 test_boss 里
+	var boss = load(BOSS_SCENE).instantiate()
+	root.add_child(boss)
 	boss._select_company("A")   # 模拟玩家点开 A 的招聘页
 	# 【别再设 `_chat_step`】那个值现在每次进聊天都会被复位（Boss 的 [11] 就是这条）——
 	# 想一次放完要走这个专门的开关。
@@ -127,23 +152,42 @@ func _run_all() -> void:
 	_check("跟 HR 聊完后 A 的 HR 解锁了", _game.is_hr_unlocked("A"), true)
 	_check("Boss 里那一行也标成已联系", String(boss._row_labels["A"]["state"].text), "已联系")
 	_check("回车键之外的老路：不能再靠 DEV 开关白送", _game.state.unlocked_hr.size(), 1)
+	_check("聊完它会请手机屏切回微信", boss._chat_to_wechat.visible, true)
+	boss.free()
 
-	_app._close_overlay()
-	_check("子页面关掉了", _app._overlay, null)
-	_check("回来时自动打开了刚加上的 HR", _app._current.code, "A")
-	_check("「去 Boss直聘」重新可用", _app._go_boss_button.disabled, false)
+	# 回微信 = 手机屏重建一个实例（原来那个已经跟着切 App 销毁了）
+	#
+	# 【注意这里有个优先级】开新局排了第 1 周的事件，而「周初事件必须先被看见」
+	# 是 GDD 阶段 1 的要求 —— 所以重建后的微信**先打开事件那一条会话**，
+	# 而不是他刚才在聊的 HR。这条先单独钉住，免得以后有人以为那是 bug。
+	_rebuild_app()
+	var ev_now = _game.pending_event()
+	_check("开新局排出了第 1 周的事件（下面两条才有意义）", ev_now != null, true)
+	if ev_now != null:
+		_check("还有事没回时，回微信先给你看那条会话",
+				String(_app._event_speaker), String(ev_now.speaker))
+	_check("事件会话开着时不选中任何 HR", _app._current, null)
+
+	# 料理掉事件再回一次 —— 这时才该落在「刚加上的那位」上
+	_game.state.pending_event = &""
+	_check("刚加上的那位被记进了状态", _game.focus_hr(), "A")
+	_rebuild_app()
+	_check("没有待办事件时，落回刚加上的那位", _app._current.code, "A")
+	_check("两个入口都能点（没有子页面盖在上面了）", _app._go_boss_button.disabled, false)
 	_check("还没有附件", _app._pending, null)
 	_check("没有附件时发送按钮置灰", _app._send_button.disabled, true)
 
-	# 走真实握手：打开内嵌录像机 → 它 emit recorder_finished → 微信接住
+	# 「去录像机」同样是整屏切走。**录完的回程归手机屏管**（它记着是谁顶开的），
+	# 而表情包由核心层接住 —— 微信那一刻不在场，所以这两件事都不能指望它自己做
 	_app._on_open_recorder()
-	_check("录像机被嵌进来了", _app._overlay != null, true)
-	_check("录像机打开时「去录像机」置灰", _app._open_recorder_button.disabled, true)
+	_check("「去录像机」也是整屏切换请求", _jumps.size(), 1)
+	_check("请求的是录像机", _jumps[0] if not _jumps.is_empty() else "", RECORDER_SCENE)
 	var clip := _flat_clip()
 	_bus.recorder_finished.emit(clip)
-	_check("微信接住了表情包", _app._pending, clip)
-	_check("录像机已关闭", _app._overlay, null)
-	_check("「去录像机」重新可用", _app._open_recorder_button.disabled, false)
+	_check("表情包落进了状态（微信不在场也不会丢）", _game.pending_clip(), clip)
+
+	_rebuild_app()
+	_check("重建后附件从状态里取回来", _app._pending, clip)
 	_check("有附件后发送按钮解禁", _app._send_button.disabled, false)
 
 	_app._role_buttons[RoleRequirement.Tier.EXTRA].button_pressed = true
@@ -153,6 +197,7 @@ func _run_all() -> void:
 	var bubbles_before: int = _app._chat_log.get_child_count()
 	_app._send_button.pressed.emit()
 	_check("附件被消耗（一次性）", _app._pending, null)
+	_check("状态里那份也清掉了（下次进微信不会又冒出来）", _game.pending_clip(), null)
 	_check("落了一条履历", _game.state.history.size(), 1)
 	_check("花了 1 点行动点", _game.state.ap_left_today, GameState.AP_PER_DAY - 1)
 	var entry: Dictionary = _game.state.history[0]
