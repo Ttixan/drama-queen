@@ -216,6 +216,25 @@ func hr_choice_of(code: String, run: int) -> int:
 
 
 # ============================================================
+# 剧本（HR 发的那份 .docx）
+# ============================================================
+## 这家 HR 手上那份剧本：`{"play": 1, "tier": 0}`。**空字典 = 还没要过 / 已经拍完**
+func hr_script_of(code: String) -> Dictionary:
+	return state.hr_script_of(code)
+
+
+## 在聊天里点一个档位 = 跟 HR 要一份剧本。返回抽中的那份；发不出来时 null。
+## 【规则不在这里】校验与抽签在 `DailyActions.request_script`（纯 RefCounted，模拟器可调）
+func request_script(company: CompanyData, tier: int) -> ScriptDoc:
+	return DailyActions.request_script(state, company, tier)
+
+
+## 这一份拍完了 —— HR 接着问下一部。由界面在投递成功后调。
+func clear_hr_script(code: String) -> void:
+	state.clear_hr_script(code)
+
+
+# ============================================================
 # 投递
 # ============================================================
 ## 一次投递。

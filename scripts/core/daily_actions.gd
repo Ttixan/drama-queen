@@ -29,6 +29,11 @@ extends RefCounted
 ## 同一部剧名永远是好剧（或永远是烂剧），玩家看得出来的规律就不是随机了。
 const PLAY_GOOD_SEED_STRIDE := 7777
 
+## 「HR 发哪份剧本」抽签的种子偏移 —— 与定角抽签、好剧抽签都错开。
+## 【为什么也要错开】同一个偏移会让「A 公司第 3 次投递的剧本」和「那部戏好不好」永远配对，
+## 玩到第三周就能背出「剧名 → 好不好」的规律 —— 那就不是抽签了。
+const SCRIPT_SEED_STRIDE := 3131
+
 
 # ============================================================
 # 投递
@@ -100,6 +105,37 @@ static func submit(state: GameState, clip: Clip, company: CompanyData,
 	result["clip_summary"] = clip.summarize()
 	result["labels"] = clip.all_labels()
 	return result
+
+
+# ============================================================
+# 剧本（HR 发的那份 .docx）—— **不花行动点**
+# ============================================================
+## 玩家在聊天里点了档位，HR 就抽一份剧本发过来。发不出来（没解锁 / 没这个档 / 演技不够）
+## 返回 null。
+##
+## 【为什么不花行动点】行动点是「一天里做的事」（投递 / 打工 / 上课 / 事件）。
+## 要剧本是聊天的一部分，不是第四个选择 —— 收它 1 点等于把一天劈成两半。
+##
+## 【为什么抽签在核心层】与定角抽签同一条决策：抽一次，之后谁都读同一份。
+## 抽中的是哪份要写进存档（`GameState.hr_script`），读档 / 重进聊天不能换一本；
+## 放核心层还意味着数值模拟器能直接调它，不必经过界面。
+static func request_script(state: GameState, company: CompanyData, tier: int) -> ScriptDoc:
+	if company == null:
+		return null
+	if not state.is_hr_unlocked(company.code):
+		return null
+	var role := company.role_of(tier)
+	if role == null:
+		return null
+	# 演技门槛的口径同 AuditionResolver：公司门槛与角色要求取「且」
+	if state.acting < maxi(company.acting_threshold, role.acting_required):
+		return null
+	var seed_value := state.day * 1000 + state.submissions_total + SCRIPT_SEED_STRIDE
+	var doc := ScriptLibrary.pick_for_tier(tier, seed_value)
+	if doc == null:
+		return null
+	state.set_hr_script(company.code, doc.play_index, doc.tier)
+	return doc
 
 
 # ============================================================

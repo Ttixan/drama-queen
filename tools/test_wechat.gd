@@ -227,26 +227,50 @@ func _run_all() -> void:
 
 	_rebuild_app()
 	_check("重建后附件从状态里取回来", _app._pending, clip)
-	_check("有附件后发送按钮解禁", _app._send_button.disabled, false)
+	# 【附件到位 ≠ 能发】提提 10-16 的新流程：还得先在聊天里挑一个档位、等 HR 把剧本发过来
+	_check("有附件、但还没剧本时发送键仍然是灰的", _app._send_button.disabled, true)
+	_check("聊天里 HR 在问「试哪类角色」", _chat_contains("试哪类角色"), true)
+	_check("三个档位的选项都摆出来了", _app._tier_buttons.size(), co.roles.size())
+	_check("底部那排一个都没预选（预选了反倒要点两下才走得通）", _app._role, null)
+	_check("composer 的状态行说的是还没拿到剧本",
+			_app._status_line.text.contains("剧本"), true)
 
+	# 底部那排档位 = 要一份这一档的剧本（和聊天里那三个按钮是同一件事）
 	_app._role_buttons[RoleRequirement.Tier.EXTRA].button_pressed = true
+	await _settle()
 	_check("选中了龙套", _app._role.tier, RoleRequirement.Tier.EXTRA)
 	_check("公司门槛显示正确", _app._requirement_label.text.contains("演技门槛 0"), true)
+	_check("要到了剧本：状态里记下了这一档",
+			int(_game.hr_script_of("A").get("tier", -1)), RoleRequirement.Tier.EXTRA)
+	_check("剧本发过来了（聊天里出现那个 .docx）", _chat_contains(".docx"), true)
+	_check("我先开口要了龙套这一档", _chat_contains("我想试龙套"), true)
+	_check("有剧本之后发送键才解禁", _app._send_button.disabled, false)
 
-	var bubbles_before: int = _app._chat_log.get_child_count()
 	_app._send_button.pressed.emit()
+	await _settle()
 	_check("附件被消耗（一次性）", _app._pending, null)
 	_check("状态里那份也清掉了（下次进微信不会又冒出来）", _game.pending_clip(), null)
 	_check("落了一条履历", _game.state.history.size(), 1)
+	# 【闸门】下面每一条都要读 entry，履历为空时中断会让这一节静默变绿（还曾把整轮测试吊死）
+	if _game.state.history.is_empty():
+		print("❌ 没有履历，本节后面的断言无从谈起")
+		_finish()
+		return
 	_check("花了 1 点行动点", _game.state.ap_left_today, GameState.AP_PER_DAY - 1)
+	_check("这一份剧本用掉了 —— 状态里空了", _game.hr_script_of("A"), {})
 	var entry: Dictionary = _game.state.history[0]
 	_check("履历记了公司", entry.get("company_code", ""), "A")
 	_check("履历记了剧名", String(entry.get("play_title", "")).is_empty(), false)
 	_check("履历记了角色名", String(entry.get("role_name", "")).is_empty(), false)
 	_check("履历存了回信原文（读档才能还原聊天记录）",
 			(entry.get("mail", {}) as Dictionary).get("text", "").is_empty(), false)
-	_check("聊天气泡增加了 2 条（投递 + 回信）",
-			_app._chat_log.get_child_count(), bubbles_before + 2)
+	# 【为什么不数「气泡 +2」】投递 + 回信那一整段现在是**从履历重建**出来的
+	# （`_on_send` 后面跟着 `_rebuild_chat`），日志里同时还要把「这一部拍完、
+	# HR 接着问下一部」摆进去 —— 数条数不如直接看内容在不在。
+	_check("聊天记录里有投递那一条", _chat_contains("【投递】"), true)
+	_check("回信原文铺在聊天记录里", _chat_has(String(entry["mail"]["text"])), true)
+	_check("投完 HR 接着问下一部要试哪类角色", _chat_contains("试哪类角色"), true)
+	_check("下一个档位的选项又摆出来了", _app._tier_buttons.size(), co.roles.size())
 
 	var mail: Dictionary = entry["mail"]
 	# 拿**填好的**期望主题去比，不是拿带《【剧名】》的原始模板 ——
@@ -368,7 +392,161 @@ func _run_all() -> void:
 	_check("切回 HR 后事件那排藏起来", _app._event_row.visible, false)
 	print("   自动打开 → 门槛预演 → 二选一 → 切回 HR，全程走通")
 
+	print("")
+	print("[8] 剧本：HR 问档位 → 发 .docx → 玩家点开看（提提 10-16）")
+	_game.new_game()
+	_game.unlock_hr("A")
+	# 【先把演技提上去】A 厂三个档位的门槛是 0 / 5 / 15 —— 不上演技就测不出「换档」
+	_game.state.acting = 30
+	# 开新局排了第 1 周的事件，不料理掉的话微信会先开事件那条会话（见 [4] 的说明）
+	_game.state.pending_event = &""
+	_rebuild_app()
+	_check("落在刚加上的那位身上", _app._current.code, "A")
+
+	# 一进门：HR 先问，三个档位摆出来；还没有剧本，发送键是灰的
+	_check("HR 先问试哪类角色", _chat_contains("试哪类角色"), true)
+	_check("三个档位都摆出来了", _app._tier_buttons.size(), 3)
+	_check("状态里还没有剧本", _game.hr_script_of("A"), {})
+	_check("发送键灰着", _app._send_button.disabled, true)
+	_check("底部档位没有预选", _app._role, null)
+
+	# 点「配角」→ HR 发一份配角视角的剧本过来
+	var sup := _tier_button(RoleRequirement.Tier.SUPPORTING)
+	_check("聊天里有「配角」那个选项", sup != null, true)
+	if sup == null:
+		_finish()
+		return
+	sup.pressed.emit()
+	# 【必须等一帧】重建聊天是 queue_free 旧气泡 —— 不等的话下面按下标读气泡
+	# 会读到上一轮那几条（`_settle` 的说明）
+	await _settle()
+	var hand: Dictionary = _game.hr_script_of("A")
+	_check("状态里记下了这一档", int(hand.get("tier", -1)), RoleRequirement.Tier.SUPPORTING)
+	var doc := ScriptLibrary.for_play_tier(int(hand.get("play", 0)), int(hand.get("tier", -1)))
+	_check("抽到的是三份剧本里某一本的配角视角", doc != null, true)
+	if doc == null:
+		print("❌ 没有配角剧本 —— tools/gen_scripts.gd 跑过了吗")
+		_finish()
+		return
+	_check("抽中的那份档位就是配角", doc.tier, RoleRequirement.Tier.SUPPORTING)
+	_check("文件名是 剧本标题-角色名·档位名.docx",
+			doc.file_name(), "%s-%s·配角.docx" % [doc.play_title, doc.role_name])
+	_check("聊天里出现了这个文件名", _chat_contains(doc.file_name()), true)
+	_check("我先开口要了配角这一档", _chat_contains("我想试配角"), true)
+	_check("我还回了一句", _chat_contains("我先看剧本"), true)
+	_check("底部档位跟着选中了配角", _app._role.tier, RoleRequirement.Tier.SUPPORTING)
+	# 【卡点已经越过剧本那一关】这一节没拼表情包，所以发送键还是灰的 ——
+	# 但拦它的理由应该换成了「还没拼表情包」，而不是「还没拿到剧本」
+	_check("拦住它的理由换成了「还没拼表情包」",
+			_app._status_line.text.contains("表情包"), true)
+	_check("最后一条气泡是我那句（文件卡不算气泡）",
+			_chat_text(_bubble_rows().size() - 1), "好，我先看剧本。")
+	# 【顺序：邀请 → 我开口 → 他发】提提 10-16 点出来的两件事：
+	# 邀请那句要**留着**（聊天记录是「聊过什么」，不是「还剩什么待办」），
+	# 而「我先说试配角」要排在「这是《…》的桂香剧本」前面。
+	# 数气泡：0/1 是自我介绍，2 是他邀请我挑档，3 是我要的档，4 才是他发的
+	_check("邀请选角色那句话留在记录里", _chat_text(2).contains("试哪类角色"), true)
+	_check("顺序是「我先说试哪一档」", _chat_text(3), "我想试配角。")
+	_check("紧接着才是 HR 发剧本的那句", _chat_text(4).contains(doc.play_title), true)
+
+	# 文件卡：整张可点，点开铺出橘色的剧本页
+	var card := _script_card()
+	_check("文件卡在聊天记录里（是 Button，整张可点）", card is Button, true)
+	_check("卡上画着那个「W」图标", _has_label(card, "W"), true)
+	# 【W 要落在蓝底正中间】提提一眼看出来过「偏了」—— 量的是几何中心对几何中心。
+	# 蓝底是 PanelContainer（会把子节点铺满），W 靠两个 alignment 居中；
+	# 自己摆锚点那种写法在布局跑完之后才会看出偏，所以这条必须等布局跑完再量。
+	var icon := _find_named(card, "WordIcon")
+	var mark := _find_named(card, "WordMark")
+	_check("蓝底是个 56×56 的 PanelContainer", icon is PanelContainer, true)
+	if icon != null and mark != null:
+		_check("W 的横向中心 = 蓝底的横向中心",
+				absf(mark.position.x + mark.size.x / 2.0 - icon.size.x / 2.0) < 0.5, true)
+		_check("W 的纵向中心 = 蓝底的纵向中心",
+				absf(mark.position.y + mark.size.y / 2.0 - icon.size.y / 2.0) < 0.5, true)
+		# 【图标不能贴着卡片边】提提两次看出「太靠左」—— Button 不是容器，
+		# 子节点不会自动让开 stylebox 的 content_margin，留白得显式给（见 CARD_PAD）
+		var pad: float = icon.get_global_rect().position.x - card.get_global_rect().position.x
+		_check("图标离卡片左边缘有留白（%d px）" % int(pad), pad >= 16.0, true)
+	_check("剧本页默认关着", _app._script_overlay.visible, false)
+	_app._open_script()
+	_check("点开后铺出剧本页", _app._script_overlay.visible, true)
+	_check("标题就是那个文件名", _app._script_title.text, doc.file_name())
+	_check("副标题写了哪一本 / 哪一档 / 几场",
+			_app._script_subtitle.text.contains(doc.tier_name()), true)
+	_check("正文逐字就是那一份（原文照搬）", _app._script_text.text, doc.body)
+	_check("正文里留着试镜批注", _app._script_text.text.contains("[试镜批注]"), true)
+	_check("正文里留着拼贴标记", _app._script_text.text.contains("拼贴表情轮"), true)
+	_check("剧本页盖在聊天区上（不是另开一个 App）",
+			_app._script_overlay.get_parent().name, "BodyWrap")
+	_check("聊天记录还在底下（只是被盖住）", _app._chat_log.get_child_count() > 0, true)
+	_app._script_back_button.pressed.emit()
+	_check("返回键关掉它，回到聊天", _app._script_overlay.visible, false)
+
+	# 换档位 = 重新要一份（提提选的 B：每次投递前都要走一遍）。
+	# 【换档走底部那排】聊天里那三个按钮**只在手上没剧本时才出现**（有剧本就摆文件卡了），
+	# 所以换档是点底部那排 —— 两条路最后都进 `_pick_tier`
+	_check("手上有剧本时，聊天里不再摆选项", _app._tier_buttons.size(), 0)
+	_app._role_buttons[RoleRequirement.Tier.EXTRA].button_pressed = true
+	_check("档位换成龙套了", int(_game.hr_script_of("A").get("tier", -1)), RoleRequirement.Tier.EXTRA)
+	_check("手上那份也跟着换了", _app._role.tier, RoleRequirement.Tier.EXTRA)
+	_check("剧本页还关着", _app._script_overlay.visible, false)
+
+	# 同一档再要一次：不重抽（不然刚看过的内容白看了）
+	var keep := str(_game.hr_script_of("A"))
+	_app._pick_tier(RoleRequirement.Tier.EXTRA)
+	_check("同一档再点不重抽", str(_game.hr_script_of("A")), keep)
+
+	# 演技不够的档位在底部那排上不了台：灰掉并写明要多少演技 ——
+	# 但**已经拿到手的剧本不会被收走**（那是他要来的东西，凭什么收）
+	_game.state.acting = 0
+	# 【走真实路径】真机上演技是在别的 App 里涨的，回微信时这个 App 是**重建**的 ——
+	# `_select_company` 正是重建后必然走的那一步（它重摆底部那排按钮与聊天记录）
+	_app._select_company("A")
+	_check("演技掉回 0 后，配角那个按钮灰了",
+			(_app._role_buttons[RoleRequirement.Tier.SUPPORTING] as Button).disabled, true)
+	_check("按钮上写着要多少演技",
+			String((_app._role_buttons[RoleRequirement.Tier.SUPPORTING] as Button).text).contains("演技"), true)
+	_check("已经拿到手的剧本不会被收走", str(_game.hr_script_of("A")), keep)
+
+	# 【一个档都够不着时不该摆选项】提提 10-16：三个按钮全灰着摆出来的话，
+	# 玩家只会一遍遍点 —— 干脆先不出现，只留一句说清差什么。
+	# B 厂的门槛是 3，演技 0 时它的三个档位一个都够不着（A 厂不一样：龙套档 0 就能上）
+	_game.unlock_hr("B")
+	_app._select_company("B")
+	await _settle()   # 同上：等 A 家那几条被真的丢掉，免得下面按内容查时串台
+	_check("够不着任何档位时不摆选项", _app._tier_buttons.size(), 0)
+	_check("也不问「试哪类角色」", _chat_contains("试哪类角色"), false)
+	_check("但留了一句说清为什么", _chat_contains("演技"), true)
+	_check("发送键当然也是灰的", _app._send_button.disabled, true)
+	print("   问档位 → 我先开口 → 他发 .docx → 点开看 → 换档重抽，全程走通")
+
 	_finish()
+
+
+## 聊天里那个「试镜 N 档」的按钮。**每次重建聊天都是新对象**，所以按名字现找。
+## 【为什么不存下标】按钮是按 `_current.roles` 的顺序建的，换一家公司顺序就可能变
+func _tier_button(tier: int) -> Button:
+	for b: Button in _app._tier_buttons:
+		if b.name == "Tier_%d" % tier:
+			return b
+	return null
+
+
+## HR 发过来的那张文件卡（名字固定在 `_file_card` 里）
+func _script_card() -> Button:
+	return _find_named(_app._chat_log, "ScriptCard") as Button
+
+
+## 按名字递归找节点 —— 卡片那几个部件都是脚本建的，没有 @onready 引用
+func _find_named(root: Node, node_name: String) -> Node:
+	for child: Node in root.get_children():
+		if child.name == node_name:
+			return child
+		var deep := _find_named(child, node_name)
+		if deep != null:
+			return deep
+	return null
 
 
 ## 名单上真正露出来的 HR 行有几条（没加上的那些是 `visible = false`）
@@ -384,10 +562,12 @@ func _visible_rows() -> int:
 # 气泡：形状（头像在哪一侧）与配色（左灰右绿）
 # ============================================================
 ## 聊天区里的气泡行 —— 系统提示是 Label，气泡是 HBox（头像 + 气泡 + 撑开用的空控件）
+## 【为什么要多判一次有没有气泡】HR 发的那份 `.docx` 文件消息也是个 HBox，
+## 但它里面装的是按钮、不是 PanelContainer 气泡 —— 不排掉它，后面按下标取气泡全错位。
 func _bubble_rows() -> Array:
 	var out: Array = []
 	for child: Node in _app._chat_log.get_children():
-		if child is HBoxContainer:
+		if child is HBoxContainer and _card_of(child) != null:
 			out.append(child)
 	return out
 
@@ -459,6 +639,32 @@ func _has_label(node: Node, text: String) -> bool:
 		if _has_label(c, text):
 			return true
 	return false
+
+
+## 「这段话在不在聊天里」—— 子串匹配。
+## 【和 `_chat_has` 的分工】那个是**整段相等**（比一整条正文，比如回信原文）；
+## 想查「有没有这一句」用子串，省得把整句文案再抄一份到测试里（抄了就会漂）。
+func _chat_contains(text: String) -> bool:
+	for child: Node in _app._chat_log.get_children():
+		if _label_contains(child, text):
+			return true
+	return false
+
+
+func _label_contains(node: Node, text: String) -> bool:
+	if node is Label and String((node as Label).text).contains(text):
+		return true
+	for c: Node in node.get_children():
+		if _label_contains(c, text):
+			return true
+	return false
+
+
+## 等一帧。`_rebuild_chat` 是用 `queue_free` 丢旧气泡的 —— **同一帧里它们还是子节点**，
+## 不等一帧就按下标读气泡，读到的是上一轮那份（顺序断言会假红）。
+func _settle() -> void:
+	await process_frame
+	await process_frame
 
 
 # ============================================================

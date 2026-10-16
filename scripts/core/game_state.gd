@@ -68,6 +68,15 @@ var unlocked_hr: Array[String] = []
 ## 与 `unlocked_hr` 一样是**进度**：读档回来再点开那家，看到的还是他选过的。
 var hr_choice: Dictionary = {}
 
+## 这家 HR **手上那份剧本**：`"A" -> {"play": 1, "tier": 0}`（剧本1 的龙套视角）。
+##
+## 【为什么是进度而不是界面状态】微信会被销毁重建（去录像机 / 去简历拿来都整屏切走），
+## 而读档回来时玩家还得看得见「我手上是哪个档的剧本」。
+## 存的是 (剧本序号, 档位) 两个数、不是文案 —— 狗牙改剧本内容不用迁移任何存档。
+## 【什么时候清】投出去之后清掉（由界面在投递成功后调 `clear_hr_script`）——
+## 一部拍完，HR 接着问下一部要试哪类角色。
+var hr_script: Dictionary = {}
+
 ## ---- 待投递的表情包 ----
 ## 录像机拼好、还没发出去的那一段。
 ## 【为什么放在状态里，而不是留在微信手上】录像机与微信是**两个各自整屏的 App**，
@@ -135,8 +144,27 @@ func hr_choice_of(code: String, run: int) -> int:
 	return int(hr_choice.get("%s#%d" % [code, run], -1))
 
 
+## 这家 HR 手上那份剧本。**没有就返回空字典**（还没要过 / 已经拍完了）
+func hr_script_of(code: String) -> Dictionary:
+	var v: Variant = hr_script.get(code, {})
+	return v if typeof(v) == TYPE_DICTIONARY else {}
+
+
+## 记下 HR 刚发过来的这份剧本。`play_index` = 三份剧本里的第几份（1 起）
+func set_hr_script(code: String, play_index: int, tier: int) -> void:
+	if code.is_empty():
+		return
+	hr_script[code] = {"play": play_index, "tier": tier}
+
+
+## 这一份用掉了（投出去了）—— HR 会接着问下一部
+func clear_hr_script(code: String) -> void:
+	hr_script.erase(code)
+
+
 func week() -> int:
 	return int((day - 1) / DAYS_PER_WEEK) + 1
+
 
 
 func day_of_week() -> int:
@@ -276,6 +304,7 @@ func to_save_dict() -> Dictionary:
 		"ps5_paid": ps5_paid,
 		"black_fame_seen": black_fame_seen, "extra_star_seen": extra_star_seen,
 		"unlocked_hr": unlocked_hr, "hr_choice": hr_choice,
+		"hr_script": hr_script,
 		# 待投递的表情包存成部件 id（见 `Clip.save_dict`）。没有时给一个空字典 ——
 		# JSON 里 null 落不住，`from_save_dict` 认空字典就是「没有」。
 		"pending_clip": {} if pending_clip == null else pending_clip.save_dict(),
@@ -312,6 +341,8 @@ func from_save_dict(d: Dictionary) -> void:
 	extra_star_seen = bool(d.get("extra_star_seen", false))
 	unlocked_hr.assign(d.get("unlocked_hr", []))
 	hr_choice = d.get("hr_choice", {})
+	# 旧存档没有这一项 —— 读回空字典就是「还没跟 HR 要过剧本」，界面会重新问一遍
+	hr_script = d.get("hr_script", {})
 	var clip_dict: Variant = d.get("pending_clip", null)
 	pending_clip = Clip.from_save_dict(clip_dict) if typeof(clip_dict) == TYPE_DICTIONARY else null
 	focus_hr = String(d.get("focus_hr", ""))

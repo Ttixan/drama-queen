@@ -15,6 +15,10 @@ const P_CONTACTS := "Page/BodyWrap/Body/ContactsPanel/ContactsMargin/ContactsBox
 const P_CHAT := "Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox"
 const P_HEADER := P_CHAT + "/ChatHeader/HeaderMargin/HeaderBox"
 const P_COMPOSER := P_CHAT + "/Composer/ComposerMargin/ComposerBox"
+## 剧本页 —— 盖在**聊天区**上的一层（不是第三栏，也不是独立的 App）。
+## 它在 `BodyWrap` 里排在 `Body` 后面，所以天然画在聊天之上；关掉它还回原来的聊天记录。
+const P_SCRIPT := "Page/BodyWrap/ScriptOverlay"
+const P_SCRIPT_SHEET := P_SCRIPT + "/ScriptMargin/ScriptBox"
 
 const RECORDER_SCENE := "res://scenes/minigame/recorder.tscn"
 const BOSS_SCENE := "res://scenes/apps/boss.tscn"
@@ -28,6 +32,20 @@ const CHAT_AVATAR := 40.0
 ## 自己那一侧的头像字。**与「简历拿来」里的自己用同一个标记**：
 ## 同一台手机上的同一个人，名片该长得一样
 const ME_MARK := "你"
+
+## ---- 文件卡（HR 发的那份 .docx）的留白 ----
+## 【为什么要写成常量】Button 不是容器：子节点只按锚点摆，**不会**自动让开
+## stylebox 的 content_margin。只给锚点的话图标就贴着卡片左边缘，得显式给留白。
+const CARD_PAD := 20
+const CARD_PAD_V := 14
+
+## ---- HR 发剧本那三句文案（**占位 · 狗牙**）----
+## 【为什么不进存档】和事件会话的 intro / reply 同一个做法：存档只记「谁、哪一档、哪份剧本」，
+## 话怎么说是现取现拼的 —— 狗牙改一遍文案，所有历史会话跟着更新，不用迁移存档。
+const ASK_SCRIPT := "这部戏你想试哪类角色？龙套、配角、主角各有一份剧本。"
+const PICK_SCRIPT := "我想试%s。"
+const OFFER_SCRIPT := "这是《%s》的%s剧本，你先看看。"
+const REPLY_SCRIPT := "好，我先看剧本。"
 
 ## 被手机壳当成一个 App 打开时才需要返回。独立运行时它是主场景，没有"上一步"。
 signal cancelled
@@ -64,6 +82,12 @@ const TIER_COLORS := UiPalette.COMPANY_TIER_COLORS
 @onready var _status_line: Label = get_node(P_COMPOSER + "/SendRow/StatusLine")
 @onready var _send_button: Button = get_node(P_COMPOSER + "/SendRow/SendButton")
 @onready var _back_button: Button = get_node("Page/BackButton")
+@onready var _script_overlay: PanelContainer = get_node(P_SCRIPT)
+@onready var _script_title: Label = get_node(P_SCRIPT_SHEET + "/ScriptHeader/ScriptTitleBox/ScriptTitle")
+@onready var _script_subtitle: Label = get_node(P_SCRIPT_SHEET + "/ScriptHeader/ScriptTitleBox/ScriptSubtitle")
+@onready var _script_back_button: Button = get_node(P_SCRIPT_SHEET + "/ScriptHeader/ScriptBackButton")
+@onready var _script_scroll: ScrollContainer = get_node(P_SCRIPT_SHEET + "/ScriptScroll")
+@onready var _script_text: Label = get_node(P_SCRIPT_SHEET + "/ScriptScroll/ScriptText")
 
 var _companies: Array[CompanyData] = []
 var _current: CompanyData
@@ -72,6 +96,9 @@ var _pending: Clip
 var _rows: Dictionary = {}            ## code -> Button
 var _row_labels: Dictionary = {}      ## code -> {name, state}
 var _role_buttons: Dictionary = {}    ## tier -> Button
+## 聊天记录里那三个「试镜哪档」按钮（脚本建的，每次重建聊天都重来一遍）。
+## 留着引用是为了测试能直接按 —— 与 `_event_buttons` 同一个道理。
+var _tier_buttons: Array[Button] = []
 ## 程序化改按钮状态时会触发 toggled，用它挡住自己绕自己
 var _syncing := false
 
@@ -116,6 +143,7 @@ func _ready() -> void:
 	_open_recorder_button.pressed.connect(_on_open_recorder)
 	_send_button.pressed.connect(_on_send)
 	_back_button.pressed.connect(func() -> void: cancelled.emit())
+	_script_back_button.pressed.connect(_close_script)
 
 	# 【开局先打开「找上门的人」】周初事件是 GDD 一周流程的阶段 1，它得先被看见 ——
 	# 否则玩家会一路投递到周末，才发现有人在等他回话。
@@ -279,6 +307,7 @@ func _select_event_speaker(speaker: StringName) -> void:
 	_current = null
 	_event_speaker = speaker
 	_role = null
+	_close_script()
 	_syncing = true
 	for c: String in _rows:
 		(_rows[c] as Button).button_pressed = false
@@ -461,6 +490,8 @@ func _select_company(code: String) -> void:
 	# 表现是 HR 的三排 composer 全不见、头部还在显示事件内容。
 	_event_speaker = &""
 	_role = null
+	# 【换人就把剧本页关了】不然 A 家的剧本会挂在那儿，玩家以为它是 B 家的
+	_close_script()
 	_syncing = true
 	for c: String in _rows:
 		(_rows[c] as Button).button_pressed = (c == code)
@@ -522,11 +553,26 @@ func _acting_ok(role: RoleRequirement) -> bool:
 	return Game.acting() >= _required_acting(role)
 
 
+## 这家公司有没有**任何一个**够得着的档位。没有的话，连剧本都无从要起
+func _any_role_ok() -> bool:
+	if _current == null:
+		return false
+	for role: RoleRequirement in _current.roles:
+		if _acting_ok(role):
+			return true
+	return false
+
+
+## 底部那排档位按钮。**和聊天里那三个按钮是同一件事**：
+## 点一个档位 = 跟 HR 要一份这一档的剧本（见 `_pick_tier`）——
+## 分成两条路的话，会出现「按钮选着配角、手上却是主角的剧本」。
 func _on_role_toggled(on: bool, tier: int) -> void:
 	if _syncing or not on or _current == null:
 		return
 	_role = _current.role_of(tier)
-	_refresh_composer()
+	# 已经拿着这一档的剧本时 `_pick_tier` 不重抽，这时才需要自己刷一遍 composer
+	if not _pick_tier(tier):
+		_refresh_composer()
 
 
 ## 没选过 / 选的那个现在不够格 → 自动落在第一个够格的档位上。
@@ -535,12 +581,14 @@ func _on_role_toggled(on: bool, tier: int) -> void:
 func _auto_pick_role() -> void:
 	if _current == null or _current.roles.is_empty():
 		return
-	if _role == null or not _acting_ok(_role):
+	# 【没剧本时不预选】档位是**手上那份剧本**定的。还没要到剧本就先空着 ——
+	# 预选一个的话，玩家会以为「已经选好了、可以发了」，而这一排按钮还是摁下去的
+	# （已按下的按钮再点一次不发信号），于是永远走不到「要剧本」那一步。
+	var wanted := _script_role()
+	if wanted != null:
+		_role = wanted
+	elif _role != null and not _acting_ok(_role):
 		_role = null
-		for role: RoleRequirement in _current.roles:
-			if _acting_ok(role):
-				_role = role
-				break
 	_syncing = true
 	for tier: int in _role_buttons:
 		var b: Button = _role_buttons[tier]
@@ -631,8 +679,23 @@ func _block_reason() -> String:
 		return "还没加上 %s 的 HR —— 点下面「简历拿来」看它的招聘页" % _current.code
 	if _pending == null:
 		return "还没有表情包 —— 点「去录像机」拼一段 3 帧的"
+	# 【先看剧本，再看档位】提提 10-16 定的流程：选档位 → HR 发剧本 → 去拼表情包 → 发过来。
+	# 于是「手上这份剧本」就是**这一部戏里你演谁** —— 投递只认它，不认底部那排按钮。
+	# 【为什么必须排在「档位」前面】还没要到剧本时底部那排本来就是空的，
+	# 这时候说「演技不够」是假话 —— 该做的是回聊天里挑一个档位，不是去涨演技。
+	var entry := Game.hr_script_of(_current.code)
+	if entry.is_empty():
+		if not _any_role_ok():
+			return "演技还不够这家公司的任何一个档位（现在 %d）" % Game.acting()
+		return "还没拿到剧本 —— 在下面挑一个档位，HR 会把剧本发过来"
+	var doc := _script_doc()
+	if doc == null:
+		return "手上那份剧本读不出来了 —— 再挑一个档位要一份"
 	if _role == null:
 		return "演技还不够这家公司的任何一个档位（现在 %d）" % Game.acting()
+	if doc.tier != _role.tier:
+		return "手上那份是「%s」的剧本 —— 想投%s，先在下面挑它再要一份" % [
+			doc.tier_name(), _role.tier_name()]
 	if Game.submissions_left_this_week() <= 0:
 		return "本周 %d 次投递已经用完了 —— 等周末结算翻篇" % GameState.MAX_SUBMIT_PER_WEEK
 	if Game.ap_left() <= 0:
@@ -806,6 +869,7 @@ func _on_event_option(index: int) -> void:
 func _rebuild_chat() -> void:
 	for child in _chat_log.get_children():
 		child.queue_free()
+	_tier_buttons.clear()
 	if _is_event_chat():
 		_rebuild_event_chat()
 		return
@@ -838,6 +902,9 @@ func _rebuild_chat() -> void:
 		_add_entry_bubbles(entry)
 	if found == 0:
 		_add_note("还没有投过 %s —— 拼好表情包就能发第一条" % _current.display_name)
+
+	# 眼前这一句永远排在最后：要么是 HR 在问「试哪类角色」，要么是他刚发过来的剧本
+	_add_script_turn()
 
 
 ## 主角的名字。**单一来源是内容池**（`data/casting_pool.tres` 的 `player_name`）——
@@ -1036,6 +1103,241 @@ func _scroll_chat_to_bottom() -> void:
 
 
 # ============================================================
+# 剧本：HR 在聊天里发过来的那份 .docx
+# ============================================================
+## 聊天记录的最后一段：要么是 HR 在问「试哪类角色」，要么是他刚发过来的那份剧本。
+##
+## 【为什么它永远在最后】聊天的顺序就是对话的顺序：自我介绍 → 口味线索 → 履历 →
+## **眼前这一句**。投递之后剧本被清掉（见 `_on_send`），这一段自己就变回「问下一部」——
+## 不需要任何「已经问过没有」的标记，全部从 `Game.hr_script_of` 推出来。
+func _add_script_turn() -> void:
+	if _current == null or not Game.is_hr_unlocked(_current.code):
+		return
+	if Game.hr_script_of(_current.code).is_empty():
+		# 【一个档都够不着时先不摆选项】三个按钮全灰着摆在那儿，玩家只会反复点 ——
+		# 提提 10-16 定的：这时候干脆不出现，只留一句说清差什么。
+		if not _any_role_ok():
+			_add_note("（这家公司的档位他现在都够不着 —— 先把演技练上去，再来找他要剧本）")
+			return
+		_add_bubble(ASK_SCRIPT, false)
+		_add_tier_buttons()
+		return
+	var doc := _script_doc()
+	if doc == null:
+		# 那几份 .tres 没生成、或剧本被改过：明说一句，并让玩家能重新要一份
+		_add_note("（那份剧本读不出来了 —— 再挑一个档位要一份）")
+		_add_tier_buttons()
+		return
+	# 【邀请那句话要留在记录里】（提提 10-16）挑完档位之后它不该消失 ——
+	# 聊天记录是「你和这个人聊过什么」，不是「眼前还剩什么待办」。
+	# 跟着它一起留下的是我要的档 + 他发过来的文件，读起来就是一段完整对话。
+	_add_bubble(ASK_SCRIPT, false)
+	# 【顺序是「我先开口 → 他再发」】挑完档位不是 HR 自说自话，
+	# 是玩家要了哪一档、HR 才把那一档的剧本递过来。
+	# 这一句由**手上那份剧本**推出来，所以换档时它跟着换，不用额外存。
+	_add_bubble(PICK_SCRIPT % doc.tier_name(), true)
+	_add_bubble(OFFER_SCRIPT % [doc.play_title, doc.role_name], false)
+	_add_file_card(doc)
+	_add_bubble(REPLY_SCRIPT, true)
+	_add_note("（点一下文件看剧本）")
+
+
+## 手上那份剧本。没有 / 内容读不出来时返回 null。
+##
+## 【为什么按 (剧本序号, 档位) 还原，而不是把正文存进存档】
+## 存档里只有两个数 —— 狗牙改剧本内容、改角色名、甚至改文件名，读档回来照样对得上。
+func _script_doc() -> ScriptDoc:
+	if _current == null:
+		return null
+	var entry := Game.hr_script_of(_current.code)
+	if entry.is_empty():
+		return null
+	return ScriptLibrary.for_play_tier(int(entry.get("play", 0)), int(entry.get("tier", -1)))
+
+
+## 手上那份剧本对应的档位（没有剧本时 null）—— 发送栏那一排看它
+func _script_role() -> RoleRequirement:
+	if _current == null:
+		return null
+	var doc := _script_doc()
+	return _current.role_of(doc.tier) if doc != null else null
+
+
+## 聊天里那三个「试镜哪档」按钮。**竖排、带门槛**（与「简历拿来」的三选一同一个样子）：
+## 够格的标出匹配线，不够格的直接灰掉并写明还差多少演技。
+func _add_tier_buttons() -> void:
+	if _current == null:
+		return
+	# 缩进一点 —— 让它看着像「在这个会话里回答 HR」，而不是一条系统提示
+	var indent := MarginContainer.new()
+	indent.add_theme_constant_override("margin_left", 50)
+	var box := VBoxContainer.new()
+	box.name = "TierChoices"
+	box.add_theme_constant_override("separation", 10)
+	indent.add_child(box)
+
+	for role: RoleRequirement in _current.roles:
+		var b := Button.new()
+		b.name = "Tier_%d" % role.tier
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(0, 64)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if _acting_ok(role):
+			b.text = "试镜「%s」｜ 匹配 %.0f%%" % [role.tier_name(), role.match_line * 100.0]
+		else:
+			b.text = "试镜「%s」—— 还差：要演技 %d（现在 %d）" % [
+				role.tier_name(), _required_acting(role), Game.acting()]
+			b.disabled = true
+		b.add_theme_stylebox_override("normal",
+				UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.SCRIPT, 2, 14, 0, 12))
+		b.add_theme_stylebox_override("hover",
+				UiPalette.button(Color("35353f"), UiPalette.SCRIPT, 2, 14, 0, 12))
+		b.add_theme_stylebox_override("pressed",
+				UiPalette.button(Color("3a2c1c"), UiPalette.SCRIPT, 3, 14, 3, 12))
+		b.add_theme_stylebox_override("disabled",
+				UiPalette.button(Color("1c1c22"), UiPalette.LINE, 1, 14, 0, 12))
+		b.add_theme_color_override("font_color", UiPalette.SCRIPT)
+		b.add_theme_color_override("font_hover_color", UiPalette.SCRIPT)
+		b.add_theme_color_override("font_pressed_color", UiPalette.SCRIPT)
+		b.add_theme_color_override("font_disabled_color", Color("5a5a63"))
+		b.add_theme_font_size_override("font_size", 18)
+		b.pressed.connect(_on_tier_pressed.bind(role.tier))
+		box.add_child(b)
+		_tier_buttons.append(b)
+
+	_chat_log.add_child(indent)
+
+
+func _on_tier_pressed(tier: int) -> void:
+	_pick_tier(tier)
+
+
+## 点一个档位 = 跟 HR 要一份这一档的剧本。返回 true 表示这次真的换了一份。
+##
+## 【同一档不重抽】手上已经是这一档的剧本时什么都不做 ——
+## 否则玩家手滑多点一下剧本就从头换一本，刚看过的内容白看了。
+func _pick_tier(tier: int) -> bool:
+	if _current == null:
+		return false
+	var entry := Game.hr_script_of(_current.code)
+	if not entry.is_empty() and int(entry.get("tier", -1)) == tier:
+		return false
+	var doc := Game.request_script(_current, tier)
+	if doc == null:
+		return false
+	_role = _current.role_of(doc.tier)
+	_auto_pick_role()
+	_refresh_composer()
+	_rebuild_chat()
+	_scroll_chat_to_bottom()
+	return true
+
+
+## 一条文件消息：头像 + [W] 文件名 / 大小。**整张卡可点** —— 点开就是剧本页。
+func _add_file_card(doc: ScriptDoc) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(_bubble_avatar(false))
+	row.add_child(_file_card(doc))
+	row.add_child(spacer)
+	_chat_log.add_child(row)
+
+
+func _file_card(doc: ScriptDoc) -> Button:
+	var b := Button.new()
+	b.name = "ScriptCard"
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(360, 96)
+	b.add_theme_stylebox_override("normal",
+			UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 16))
+	b.add_theme_stylebox_override("hover",
+			UiPalette.button(Color("35353f"), UiPalette.SCRIPT, 2, 16))
+	b.add_theme_stylebox_override("pressed",
+			UiPalette.button(Color("2a2622"), UiPalette.SCRIPT, 3, 16, 3))
+	b.pressed.connect(_open_script)
+
+	# 内容全部 MOUSE_FILTER_IGNORE —— 点击要透给按钮本身，否则 hover / pressed 失灵
+	var margin := MarginContainer.new()
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", CARD_PAD)
+	margin.add_theme_constant_override("margin_right", CARD_PAD)
+	margin.add_theme_constant_override("margin_top", CARD_PAD_V)
+	margin.add_theme_constant_override("margin_bottom", CARD_PAD_V)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(margin)
+
+	var hbox := HBoxContainer.new()
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hbox.add_theme_constant_override("separation", 14)
+	margin.add_child(hbox)
+
+	# 那个「W」：真 Word 图标的蓝底白字，玩家一眼认出是文档。
+	# 【为什么是 PanelContainer 而不是 Panel】Panel 不是容器 —— 塞在里面的 Label
+	# 得自己摆锚点，于是字会飘（提提一眼看出来的那个「偏」）。PanelContainer 会把
+	# 子节点铺满自己的内容区，Label 靠两个 alignment 居中，尺寸怎么变都不会偏。
+	var icon := PanelContainer.new()
+	icon.name = "WordIcon"
+	icon.custom_minimum_size = Vector2(56, 56)
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.add_theme_stylebox_override("panel", UiPalette.rounded(UiPalette.DOCX, 10))
+	hbox.add_child(icon)
+
+	var w := Label.new()
+	w.name = "WordMark"
+	w.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	w.text = "W"
+	w.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	w.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	w.add_theme_font_size_override("font_size", 28)
+	w.add_theme_color_override("font_color", UiPalette.PAPER)
+	icon.add_child(w)
+
+	var text_box := VBoxContainer.new()
+	text_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	text_box.add_theme_constant_override("separation", 4)
+	hbox.add_child(text_box)
+
+	var name_label := Label.new()
+	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name_label.text = doc.file_name()
+	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	UiPalette.text(name_label, 20, UiPalette.TEXT)
+	text_box.add_child(name_label)
+
+	var size_label := Label.new()
+	size_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	size_label.text = doc.size_text()
+	UiPalette.text(size_label, 15, UiPalette.TEXT_DIM)
+	text_box.add_child(size_label)
+
+	return b
+
+
+## 把剧本页铺出来（橘色那一页，盖在聊天区上）。关掉就回到刚才那条会话。
+func _open_script() -> void:
+	var doc := _script_doc()
+	if doc == null:
+		return
+	_script_title.text = doc.file_name()
+	_script_subtitle.text = "《%s》· %s ｜ %d 场" % [
+		doc.play_title, doc.tier_name(), doc.scene_count]
+	_script_text.text = doc.body
+	_script_overlay.visible = true
+	# 每次打开都从头看：上一份剧本滚到哪儿了，与这一份无关
+	await get_tree().process_frame
+	_script_scroll.scroll_vertical = 0
+
+
+func _close_script() -> void:
+	_script_overlay.visible = false
+
+
+# ============================================================
 # 发送 = 投递
 # ============================================================
 func _on_send() -> void:
@@ -1051,20 +1353,15 @@ func _on_send() -> void:
 		_refresh_all()
 		return
 
-	var labels: Array = _pending.all_labels()
-	_add_bubble("【投递】《%s》· %s\n表情包：%s" % [
-		res.get("casting", {}).get("剧名", "?"),
-		RoleRequirement.TIER_NAMES.get(int(res.get("role_tier", 0)), "?"),
-		" → ".join(labels),
-	], true)
-
-	var mail: Dictionary = res.get("mail", {})
-	_add_bubble(String(mail.get("text", "")), false)
-
 	# 表情包一次性消耗（决策 1.6）：投出去就没了，下次必须重新拼
 	_pending = null
 	Game.clear_pending_clip()
+	# 【这一份剧本也用掉了】投出去之后清掉 —— HR 接着问下一部（提提 10-16 的 B+C）。
+	# 【为什么改成整段重建】回信的画面本来就是从履历铺出来的（`_add_entry_bubbles`），
+	# 手工再铺一遍等于同一件事写两处；重建还顺手把顺序摆对：回信在上、新问题在下。
+	Game.clear_hr_script(_current.code)
 	_refresh_all()
+	_rebuild_chat()
 	_scroll_chat_to_bottom()
 
 
@@ -1156,6 +1453,7 @@ func _on_state_reset() -> void:
 	_pending = Game.pending_clip()
 	_role = null
 	_event_speaker = &""
+	_close_script()
 	for child in _role_buttons_row.get_children():
 		child.queue_free()
 	_role_buttons.clear()
@@ -1229,15 +1527,26 @@ func _apply_styles() -> void:
 			UiPalette.button(Color("2a2a30"), UiPalette.LINE, 1, 14))
 	_send_button.add_theme_color_override("font_disabled_color", Color("5a5a63"))
 
-	# 滚动条（联系人 + 聊天）
+	# 滚动条（联系人 + 聊天 + 剧本）
 	for bar: VScrollBar in [
 			_contact_list.get_parent().get_v_scroll_bar(),
-			_chat_scroll.get_v_scroll_bar()]:
+			_chat_scroll.get_v_scroll_bar(),
+			_script_scroll.get_v_scroll_bar()]:
 		bar.custom_minimum_size = Vector2(10, 0)
 		bar.add_theme_stylebox_override("scroll",
 				UiPalette.button(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 0, 0))
 		bar.add_theme_stylebox_override("grabber", UiPalette.rounded(UiPalette.LINE, 5))
 		bar.add_theme_stylebox_override("grabber_highlight", UiPalette.rounded(UiPalette.WECHAT, 5))
+
+	# ---- 剧本页 ----
+	# 【纸的比方】这页是「打印出来的剧本」，所以整体离开微信那套绿灰，改用剧本橘 ——
+	# 一眼就知道自己不在聊天里了，而是在看一样东西（关掉就回去）。
+	_node_panel(_script_overlay, Color("1f1b17"), 18, 2, UiPalette.SCRIPT)
+	UiPalette.text(_script_title, 24, UiPalette.SCRIPT)
+	UiPalette.text(_script_subtitle, 15, UiPalette.TEXT_DIM)
+	UiPalette.text(_script_text, 18, UiPalette.SCRIPT)
+	_script_text.add_theme_constant_override("line_spacing", 6)
+	_style_action(_script_back_button, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.SCRIPT, 20)
 
 
 func _node_panel(node: Node, bg: Color, radius: int, border: int,

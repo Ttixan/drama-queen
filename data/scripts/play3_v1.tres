@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="ScriptDoc" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/script_doc.gd" id="1_jkfpq"]
+
+[resource]
+script = ExtResource("1_jkfpq")
+id = &"play3_v1"
+play_index = 3
+play_title = "极寒末世"
+role_name = "白月光"
+scene_count = 1
+body = "角色代号：`play3_v1`
+角色名：白月光
+场景数：1
+
+男友的白月光。末世中她找上男主，靠着旧情催化，让男主做出抛弃女主的决定。看似柔弱，实则每一步都是算计。
+
+场景 1 · 场景ONLY：外景，避难所门口，雪夜
+
+场景代号：`play3_v1_s1`
+场景头：场景ONLY：外景，避难所门口，雪夜
+单场景视角：是
+
+白月光拖着行李箱找到男友的避难所，睫毛上挂着雪花，肩膀微微发抖。她敲了敲门，门开了一道缝。
+她抬头，眼眶泛红，嘴唇冻得发白，两只手交叠在胸前，摆出一副泫然欲泣的姿态。
+白月光（小声）：“我找了你好久……外面太冷了，能不能让我进去？”
+男友犹豫了一瞬，侧身让她进门。门关上的瞬间，白月光回头看了一眼门缝外的风雪，嘴角微不可察地弯了一下。
+
+【拼贴表情轮 → 条件见 `play3_v1_s1`】"
