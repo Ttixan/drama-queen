@@ -6,5 +6,5 @@
 [resource]
 script = ExtResource("1_x8qy5")
 id = &"eyes_00"
-display_name = "平静"
+display_name = "信任"
 texture = ExtResource("2_aaql1")

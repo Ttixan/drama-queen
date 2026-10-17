@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_c5prn")
 id = &"eyes_07"
-display_name = "泪如雨下"
+display_name = "想起已故的爱人"
 tier = 7
 texture = ExtResource("2_6lmfx")
 sorrow = 4.0

@@ -6,8 +6,8 @@
 [resource]
 script = ExtResource("1_kuv21")
 id = &"extra_03"
-display_name = "泪珠"
+display_name = "加载中"
 slot = 3
 tier = 3
 texture = ExtResource("2_lieeo")
-sorrow = 3.0
+shock = 2.0

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_7obo1"]
+[ext_resource type="Texture2D" path="res://assets/parts/skin_06.png" id="2_sp5i4"]
+
+[resource]
+script = ExtResource("1_7obo1")
+id = &"skin_06"
+display_name = "悲"
+slot = 4
+tier = 6
+texture = ExtResource("2_sp5i4")

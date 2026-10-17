@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_65q7c")
 id = &"extra_00"
-display_name = "黑线"
+display_name = "要吐了"
 slot = 3
 texture = ExtResource("2_tm186")
 awkward = 3.0

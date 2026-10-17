@@ -11,12 +11,13 @@ extends SceneTree
 
 const EXPECT_SLOT_COUNT := {
 	PartData.Slot.EYES: 8,
-	PartData.Slot.MOUTH: 10,
+	PartData.Slot.MOUTH: 11,
 	PartData.Slot.BROWS: 8,
 	PartData.Slot.EXTRA: 6,
+	PartData.Slot.SKIN: 9,
 }
 
-const EXPECT_TOTAL := 32
+const EXPECT_TOTAL := 42
 
 var _failures: Array[String] = []
 var _checks := 0
@@ -46,9 +47,10 @@ func _initialize() -> void:
 	print("")
 	print("[2] 页签顺序")
 	var order := PartLibrary.TAB_ORDER
-	_check("页签个数", order.size(), 4)
+	_check("页签个数", order.size(), 5)
 	_check("第一个页签是眼", order[0], PartData.Slot.EYES)
-	_check("最后一个页签是其他", order[3], PartData.Slot.EXTRA)
+	_check("第四个页签是其他", order[3], PartData.Slot.EXTRA)
+	_check("最后一个页签是肤色", order[4], PartData.Slot.SKIN)
 	# all() 必须按页签顺序成段，否则 UI 直接拿 all() 分组会错位
 	var all_parts := PartLibrary.all()
 	var seen_slots: Array[int] = []
@@ -57,7 +59,7 @@ func _initialize() -> void:
 			if p.slot in seen_slots:
 				_failures.append("all() 里槽位 %s 被拆成了不相邻的多段" % p.slot)
 			seen_slots.append(p.slot)
-	_check("all() 按页签顺序分成 4 段", seen_slots, PartLibrary.TAB_ORDER)
+	_check("all() 按页签顺序分成 5 段", seen_slots, PartLibrary.TAB_ORDER)
 
 	print("")
 	print("[3] 其他 = 留空（组合数 ×7 的那 1 种）")
@@ -81,7 +83,7 @@ func _initialize() -> void:
 
 	print("")
 	print("[4] 按 id 取件")
-	for id in ["eyes_00", "eyes_07", "mouth_09", "brows_03", "extra_05"]:
+	for id in ["eyes_00", "eyes_07", "mouth_09", "brows_03", "extra_05", "skin_00"]:
 		var p := PartLibrary.by_id(id)
 		_check("按 id 取到 %s" % id, p != null, true)
 		if p != null:
@@ -89,7 +91,24 @@ func _initialize() -> void:
 	_check("取不存在的 id 返回 null", PartLibrary.by_id("eyes_99"), null)
 
 	print("")
-	print("[5] 缓存（static var 只加载一次）")
+	print("[5] 肤色：可选、无留空、默认那件一定在")
+	var skin_opts := PartLibrary.slot_options(PartData.Slot.SKIN)
+	_check("肤色选项数 = 9（没有留空）", skin_opts.size(), 9)
+	var skin_null := 0
+	for o: Variant in skin_opts:
+		if o == null:
+			skin_null += 1
+	_check("肤色没有留空选项", skin_null, 0)
+	var def := PartLibrary.default_skin()
+	_check("默认肤色取得到", def != null, true)
+	if def != null:
+		_check("默认肤色就是 skin_00", String(def.id), PartLibrary.DEFAULT_SKIN_ID)
+	# 【纯外观槽】一件都不能带情绪 —— 否则玩家换张脸就悄悄改了判定结果
+	for p: PartData in PartLibrary.by_slot(PartData.Slot.SKIN):
+		_check("肤色「%s」不参与判定" % p.display_name, p.emotion_labels(), "中性")
+
+	print("")
+	print("[6] 缓存（static var 只加载一次）")
 	var a1 := PartLibrary.by_id("eyes_04")
 	var a2 := PartLibrary.by_id("eyes_04")
 	_check("两次取到的是同一个 Resource 实例", a1 == a2, true)

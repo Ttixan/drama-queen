@@ -1,6 +1,6 @@
 class_name PartLibrary
 extends RefCounted
-## 运行时部件库 —— 32 件 PartData 的**唯一读取入口**
+## 运行时部件库 —— 42 件 PartData 的**唯一读取入口**
 ##
 ## 【为什么需要它】
 ## 在这之前，只有 `tools/test_data.gd` 里的私有方法会读 `data/parts`。那是测试脚本，
@@ -8,7 +8,7 @@ extends RefCounted
 ## `DirAccess + load` 的循环 —— 而且一定会漏掉「其他可以留空」这条规则。
 ##
 ## 【为什么是 static 缓存，不是 autoload】
-## 32 个 Resource 加载一次就够，进程内复用。做成 autoload 等于往全局命名空间里
+## 42 个 Resource 加载一次就够，进程内复用。做成 autoload 等于往全局命名空间里
 ## 塞一个只有两个界面会用到的东西；`data/` 这一层本来就不该有生命周期。
 ##
 ## 【为什么放 scripts/data/ 而不是 scripts/core/】
@@ -18,13 +18,20 @@ extends RefCounted
 
 const PART_DIR := "res://data/parts"
 
-## 页签顺序 —— 必须与 PartData.Slot 的枚举顺序一致，UI 直接用它排页签。
+## 页签顺序 —— UI 直接拿它排右边的页签轨，也决定 all() 怎么分段。
+## 【已经不等于 PartData.Slot 的枚举顺序了】肤色是后加的外观槽，枚举里排在末尾，
+## 但它要显示在页签轨最后、并让 all() 继续按「眼→嘴→眉→其他→肤色」成段。
 const TAB_ORDER: Array[int] = [
 	PartData.Slot.EYES,
 	PartData.Slot.MOUTH,
 	PartData.Slot.BROWS,
 	PartData.Slot.EXTRA,
+	PartData.Slot.SKIN,
 ]
+
+## 默认肤色。`Clip.Frame.skin` 为 null（没选过／老存档）时，界面按它渲染。
+## 【必须是 tier 0 那件】`tools/part_catalog.gd` 的 SKIN 段第一行就是它。
+const DEFAULT_SKIN_ID := "skin_00"
 
 ## 「其他」槽位的留空选项。
 ## 【为什么用 null 而不是造一件「空部件」】造空部件就要给它情绪向量，而「没有情绪」
@@ -75,6 +82,12 @@ static func slot_options(slot: int) -> Array:
 static func by_id(id: String) -> PartData:
 	_ensure()
 	return _by_id.get(id, null)
+
+
+## 默认肤色。**永远不会返回 null**（除非 .tres 没生成）——
+## 调用方拿到 null 就该退回「不画肤色」，而不是自己再造一个默认值。
+static func default_skin() -> PartData:
+	return by_id(DEFAULT_SKIN_ID)
 
 
 static func count() -> int:
@@ -128,7 +141,7 @@ static func _ensure() -> void:
 static func _read_dir() -> Array[PartData]:
 	var out: Array[PartData] = []
 	# 【必须走 ResourceDir】导出包里目录里躺的是 `xxx.tres.remap`，
-	# 手写 `.ends_with(".tres")` 会让 32 件部件在读成 0 件（真出过这个 bug）。
+	# 手写 `.ends_with(".tres")` 会让 42 件部件在读成 0 件（真出过这个 bug）。
 	for path: String in ResourceDir.list_tres(PART_DIR):
 		var res: Resource = load(path)
 		if res is PartData:

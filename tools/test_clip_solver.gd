@@ -60,14 +60,14 @@ const TIERS: Array[int] = [
 
 # ============================================================
 func _test_candidates() -> void:
-	print("[1] 候选池：32 件部件能拼出多少种单帧")
+	print("[1] 候选池：必填的三槽能拼出多少种单帧（肤色不进判定，不算在内）")
 	var eyes := PartLibrary.by_slot(PartData.Slot.EYES).size()
 	var mouth := PartLibrary.by_slot(PartData.Slot.MOUTH).size()
 	var brows := PartLibrary.by_slot(PartData.Slot.BROWS).size()
 	# 「其他」的选项数要把「留空」这一种算进去
 	var extra := PartLibrary.slot_options(PartData.Slot.EXTRA).size()
 	_check("眼件数", eyes, 8)
-	_check("嘴件数", mouth, 10)
+	_check("嘴件数", mouth, 11)
 	_check("眉件数", brows, 8)
 	_check("其他选项数（含留空）", extra, 7)
 	_check("单帧候选总数", ClipSolver.candidate_count(), eyes * mouth * brows * extra)

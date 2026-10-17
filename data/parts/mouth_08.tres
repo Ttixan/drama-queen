@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_yc2ay")
 id = &"mouth_08"
-display_name = "嚎啕"
+display_name = "悲伤忧愁"
 slot = 1
 tier = 8
 texture = ExtResource("2_to3x5")

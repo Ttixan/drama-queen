@@ -2,19 +2,24 @@ class_name PartData
 extends Resource
 ## 表情部件
 ##
-## 32 张图 → 8(眼) × 10(嘴) × 8(眉) × 7(其他含空) = 4480 种脸。
+## 42 张图 → 8(眼) × 11(嘴) × 8(眉) × 7(其他含空) × 9(肤色) = 44352 种脸。
 ## 拼贴法的全部价值就在这个组合爆炸上，所以部件池小完全没问题。
 ##
-## 【美术约束】每类必须有**强度梯度**（眼：平静→睁大→瞪→含泪→眯笑），
+## 【美术约束】每类必须有**强度梯度**（眼：信任→惊讶→愤怒→悲伤忧愁→喜悦…），
 ## 否则玩家拼不出 3 帧内的情绪变化，多帧机制就废了。tier 字段记录梯度档位。
+##
+## 【SKIN 为什么排在枚举最后】`.tres` 里存的是枚举的数值（extra = 3）。
+## 插在中间会让所有已有资源的 slot 值整体错位 —— 旧档读回来眼睛变嘴。
+## 新槽位一律往后追加。
 
-enum Slot { EYES, MOUTH, BROWS, EXTRA }
+enum Slot { EYES, MOUTH, BROWS, EXTRA, SKIN }
 
 const SLOT_NAMES := {
 	Slot.EYES: "眼",
 	Slot.MOUTH: "嘴",
 	Slot.BROWS: "眉",
 	Slot.EXTRA: "其他",
+	Slot.SKIN: "肤色",
 }
 
 @export var id: StringName = &""
@@ -47,11 +52,12 @@ func emotion_vector() -> PackedFloat32Array:
 	return v
 
 
-## 给玩家看的部件标签，如「喜·魅」
+## 给玩家看的部件标签，如「喜·魅」。一个标签都没打的（平静 / 舒展 / 眼镜…）返回「中性」——
+## 直接回空串的话卡片上会留一行空白，看着像漏了图
 func emotion_labels() -> String:
 	var v := emotion_vector()
 	var names: Array[String] = []
 	for i in Emotion.COUNT:
 		if v[i] > 0.0:
 			names.append(Emotion.to_name(i))
-	return "·".join(names)
+	return "中性" if names.is_empty() else "·".join(names)

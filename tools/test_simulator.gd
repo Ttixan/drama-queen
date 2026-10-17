@@ -143,12 +143,15 @@ func _test_reproducible() -> void:
 	_check("成功次数相同", a["successes"], b["successes"])
 
 	# 反证：随机 agent 换个种子必须跑出不同的中间过程，
-	# 否则「随机」这个词是假的（这对应「rng 没被真正使用」这一类 bug）
-	var r1 := SimRunner.run_one(SimAgent.RandomPlayer.new(1, 0.0))
-	var r2 := SimRunner.run_one(SimAgent.RandomPlayer.new(2, 0.0))
-	var same := String(r1["ending"]) == String(r2["ending"]) \
-			and int(r1["successes"]) == int(r2["successes"])
-	_check("换种子后随机 agent 的结果确实不同", same, false)
+	# 否则「随机」这个词是假的（这对应「rng 没被真正使用」这一类 bug）。
+	# 【为什么取 5 个种子而不是 2 个】部件池一变（10-17 加了第 11 张嘴），
+	# 种子的随机流整体位移，两个特定种子撞出同一个结局是**完全可能的巧合** ——
+	# 原先钉死「种子 1 与 2 必须不同」就把测试变成了运气测试。这里只看多样性。
+	var outcomes := {}
+	for s in [1, 2, 3, 4, 5]:
+		var r := SimRunner.run_one(SimAgent.RandomPlayer.new(s, 0.0))
+		outcomes["%s|%s" % [r["ending"], int(r["successes"])]] = true
+	_check("换种子后随机 agent 的结果确实不同（5 个种子 ≥ 2 种结局）", outcomes.size() >= 2, true)
 	print("   种子固定 → 逐字可复现；种子一换 → 结果真的会变")
 
 

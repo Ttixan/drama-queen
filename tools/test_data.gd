@@ -5,7 +5,7 @@ extends SceneTree
 ##
 ## 【和 test_resolver.gd 的分工】
 ##   test_resolver 用的是**手搓的合成表情包**（每帧纯色向量），证明判定逻辑对。
-##   本测试用的是**从 32 件部件里真拼出来的表情包**，证明数据能玩 ——
+##   本测试用的是**从 42 件部件里真拼出来的表情包**，证明数据能玩 ——
 ##   即「玩家真的能拼过 D 的递减和 E 的反转」，而不是数学上恰好像对。
 ##
 ## 这两件事必须分开验：逻辑对但数据不可达，是最容易漏掉的一种死法。
@@ -29,11 +29,12 @@ func _initialize() -> void:
 	var companies := _load_companies()
 
 	print("[1] 部件池")
-	_check("部件总数", _parts.size(), 32)
+	_check("部件总数", _parts.size(), 42)
 	_check_slot_count("眼", PartData.Slot.EYES, 8)
-	_check_slot_count("嘴", PartData.Slot.MOUTH, 10)
+	_check_slot_count("嘴", PartData.Slot.MOUTH, 11)
 	_check_slot_count("眉", PartData.Slot.BROWS, 8)
 	_check_slot_count("其他", PartData.Slot.EXTRA, 6)
+	_check_slot_count("肤色", PartData.Slot.SKIN, 9)
 	_check_gradient()
 
 	print("")
@@ -169,7 +170,7 @@ func _check_real_clips(companies: Array) -> void:
 		"喜→平→哀（幻灭）": _clip([joy_frame, flat_frame, sad_frame]),
 		"喜→喜→哀（反转）": _clip([joy_frame, joy_frame, sad_frame]),
 		"怒压喜（翻车）": _clip([
-			_frame("eyes_00", "mouth_03", "brows_04", "extra_01"),    # 平静+大笑+倒竖+青筋
+			_frame("eyes_00", "mouth_03", "brows_04", "extra_01"),    # 平静+大笑+倒竖+压迫感
 			_frame("eyes_00", "mouth_03", "brows_04", "extra_01"),
 			_frame("eyes_00", "mouth_03", "brows_04", "extra_01")]),
 		"全空白（没拼）": _clip([flat_frame, flat_frame, flat_frame]),

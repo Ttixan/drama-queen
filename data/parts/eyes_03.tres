@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_kvugi")
 id = &"eyes_03"
-display_name = "含泪"
+display_name = "悲伤忧愁"
 tier = 3
 texture = ExtResource("2_gxds2")
 sorrow = 3.0

@@ -35,6 +35,9 @@ const EYE_R := Vector2(336, 208)
 const BROW_Y := 140.0
 const MOUTH := Vector2(256, 352)
 const EXTRA := Vector2(412, 124)
+## 脸皮：肤色不是挂件，是整张脸 —— 半径照着正片（386×481）量
+const FACE := Vector2(256, 256)
+const FACE_R := Vector2(193, 240)
 
 
 func _initialize() -> void:
@@ -58,6 +61,8 @@ func _initialize() -> void:
 				_draw_mouth(img, tier, col)
 			Catalog.EXTRA:
 				_draw_extra(img, tier, col)
+			Catalog.SKIN:
+				_draw_skin(img, tier, col)
 
 		var path := "%s/%s.png" % [OUT_DIR, Catalog.part_id(slot, tier)]
 		var err := img.save_png(path)
@@ -105,6 +110,13 @@ func _draw_extra(img: Image, tier: int, col: Color) -> void:
 	_ellipse(img, EXTRA.x, EXTRA.y, r, r, col)
 	# 挖个洞，和实心圆区分开，便于一眼认出是「其他」槽
 	_ellipse(img, EXTRA.x, EXTRA.y, r * 0.45, r * 0.45, TRANSPARENT)
+
+
+## 肤色 = 一张填满的椭圆脸皮。**它会盖住下面的一切**，所以占位色要淡；
+## tier 只用来错开明度，免得 9 张占位图长得一模一样。
+func _draw_skin(img: Image, tier: int, col: Color) -> void:
+	var c := col.lerp(Color(0.98, 0.93, 0.87), clampf(0.75 - float(tier) * 0.06, 0.1, 0.75))
+	_ellipse(img, FACE.x, FACE.y, FACE_R.x, FACE_R.y, c)
 
 
 # ============================================================

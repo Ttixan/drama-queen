@@ -21,14 +21,21 @@ class Frame extends RefCounted:
 	var mouth: PartData
 	var brows: PartData
 	var extra: PartData  ## 可为 null
+	## 肤色 —— 纯外观，**不参与情绪判定**。为 null 时按 `PartLibrary.DEFAULT_SKIN_ID` 渲染，
+	## 所以老存档（没有这个键）读回来也不会变成一张没有脸皮的图。
+	var skin: PartData
 
 	func _init(p_eyes: PartData = null, p_mouth: PartData = null,
-			p_brows: PartData = null, p_extra: PartData = null) -> void:
+			p_brows: PartData = null, p_extra: PartData = null,
+			p_skin: PartData = null) -> void:
 		eyes = p_eyes
 		mouth = p_mouth
 		brows = p_brows
 		extra = p_extra
+		skin = p_skin
 
+	## 【skin 为什么不在这里】parts() 是两个东西的唯一口径：情绪向量之和、「当前帧部件」那一行字。
+	## 肤色既没有情绪、写进明细也只会变成噪音 —— 它属于画面，不属于表演。
 	func parts() -> Array[PartData]:
 		var out: Array[PartData] = []
 		if eyes != null:
@@ -168,6 +175,7 @@ func save_dict() -> Dictionary:
 			"mouth": _part_id(f.mouth),
 			"brows": _part_id(f.brows),
 			"extra": _part_id(f.extra),
+			"skin": _part_id(f.skin),
 		})
 	return {"frames": out}
 
@@ -188,7 +196,8 @@ static func from_save_dict(d: Dictionary) -> Clip:
 				PartLibrary.by_id(String(parts.get("eyes", ""))),
 				PartLibrary.by_id(String(parts.get("mouth", ""))),
 				PartLibrary.by_id(String(parts.get("brows", ""))),
-				PartLibrary.by_id(String(parts.get("extra", ""))))
+				PartLibrary.by_id(String(parts.get("extra", ""))),
+				PartLibrary.by_id(String(parts.get("skin", ""))))   # 老存档没有 skin → null → 默认肤色
 	return c
 
 

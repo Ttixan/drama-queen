@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_my4rh")
 id = &"eyes_01"
-display_name = "睁大"
+display_name = "惊讶"
 tier = 1
 texture = ExtResource("2_vlcn2")
 shock = 2.0

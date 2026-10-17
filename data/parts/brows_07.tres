@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_e7txb")
 id = &"brows_07"
-display_name = "斜挑"
+display_name = "得意"
 slot = 2
 tier = 7
 texture = ExtResource("2_3f2ey")

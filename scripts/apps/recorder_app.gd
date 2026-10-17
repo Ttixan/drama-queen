@@ -46,7 +46,17 @@ const TAB_ICONS := {
 	PartData.Slot.MOUTH: "res://assets/ui/icons/tab_mouth.png",
 	PartData.Slot.BROWS: "res://assets/ui/icons/tab_brows.png",
 	PartData.Slot.EXTRA: "res://assets/ui/icons/tab_extra.png",
+	PartData.Slot.SKIN: "res://assets/ui/icons/tab_skin.png",
 }
+
+## 底图 —— 不是部件，玩家选不了，所以不从 PartLibrary 取。
+## `face_paper.png` 是整画布的白纸（压在最底下），`face_base.png` 是空白脸的轮廓 + 鼻子。
+## 两张都由 `tools/import_emoji_layers.py` 生成；缺图时 `load()` 返回 null，画面退化成
+## 「只有五官浮在黑底上」，界面不崩 —— 但那就说明美术管线没跑。
+const TEX_PAPER := "res://assets/parts/face_paper.png"
+const TEX_BASE := "res://assets/parts/face_base.png"
+
+
 ## 页签键的边长，以及图标在键里的最大显示尺寸
 const TAB_SIZE := 60
 const TAB_ICON_MAX := 38
@@ -94,6 +104,10 @@ const P_TOP := "Page/TopBar/TopMargin/TopRow"
 @onready var _frame_indicator: Label = get_node(P_TOP + "/InfoBox/FrameIndicator")
 @onready var _face_canvas: Control = get_node(P_FACE)
 @onready var _frame_badge: Label = get_node(P_FACE + "/FrameBadge")
+## 底图三层（纸 / 肤色 / 空白脸）—— .tscn 里的节点顺序就是绘制顺序，代码只负责填图
+@onready var _layer_paper: TextureRect = get_node(P_FACE + "/LayerPaper")
+@onready var _layer_skin: TextureRect = get_node(P_FACE + "/LayerSkin")
+@onready var _layer_base: TextureRect = get_node(P_FACE + "/LayerBase")
 @onready var _layer_brows: TextureRect = get_node(P_FACE + "/LayerBrows")
 @onready var _layer_eyes: TextureRect = get_node(P_FACE + "/LayerEyes")
 @onready var _layer_mouth: TextureRect = get_node(P_FACE + "/LayerMouth")
@@ -135,6 +149,8 @@ func _ready() -> void:
 	_clip = Clip.new()   # 默认就是 3 帧空 Frame，不用再补
 
 	_collect_nodes()
+	_load_base_art()
+	_apply_blend_modes()
 	_apply_styles()
 	_rebuild_slots()
 	_build_cards()
@@ -142,18 +158,53 @@ func _ready() -> void:
 	_pulse_rec_dot()
 
 
+## 纸底与空白脸是**场景资源**，不随帧变 —— 建一次就够，不用每帧重设
+func _load_base_art() -> void:
+	_layer_paper.texture = load(TEX_PAPER)
+	_layer_base.texture = load(TEX_BASE)
+	if _layer_paper.texture == null or _layer_base.texture == null:
+		push_warning("[录像机] 底图缺失，是不是忘了跑 tools/import_emoji_layers.py？")
+
+
+## 【五官走「正片叠底」】眉/眼/嘴的图是**灰线 + 白填充**（眼白、牙齿），
+## 按普通 alpha 叠法贴到深肤色上，那几块白就是贴在脸上的一块纸 —— 违和感全来自这里。
+## 正片叠底是「乘」：白 × 肤色 = 肤色（白自动消失），灰线 × 肤色 = 比肤色更深的线，
+## 于是无论底下是哪种肤色，五官都像是**长在这张脸上**的。
+##
+## 【为什么「其他」不跟着走】眼镜 / 脸红 / 汗滴是**挂在脸前面的东西**，不是脸上的线。
+## 乘上去的话，深肤色会把红色镜框压成暗红（约 = 肤色 × 红），配件就没了。
+## 两者要的是不同的合成语义，所以只给三层五官上材质。
+##
+## 【为什么用引擎自带的 MUL，而不是自己写着色器读屏幕纹理】那一版试过，不行：
+## 屏幕纹理一帧只拷一次 backbuffer，后画的层拿到的是**旧底图**，
+## 整块贴上去就把前一层盖掉了 —— 表现是「点一个部件，整张脸只剩这一层」。
+## 现在素材在导入时已经把 RGB 预乘成「正片叠底友好」的形态
+## （见 tools/import_emoji_layers.py 的 MULTIPLY_SLOTS：c' = 1 - a·(1-c)），
+## MUL 直接就是正确结果，不读屏幕、也不依赖绘制顺序。
+##
+## 三层共用同一个材质实例：材质无状态，没必要建三份。
+func _apply_blend_modes() -> void:
+	var mul := CanvasItemMaterial.new()
+	mul.blend_mode = CanvasItemMaterial.BLEND_MODE_MUL
+	for layer: TextureRect in [_layer_brows, _layer_eyes, _layer_mouth]:
+		layer.material = mul
+
+
 func _collect_nodes() -> void:
+	# 顺序必须与 PartLibrary.TAB_ORDER 一一对应 —— 下面按下标把页签和槽位绑在一起
 	_tabs = [
 		get_node(P_TABS + "/TabEyes"),
 		get_node(P_TABS + "/TabMouth"),
 		get_node(P_TABS + "/TabBrows"),
 		get_node(P_TABS + "/TabExtra"),
+		get_node(P_TABS + "/TabSkin"),
 	]
 	_pages = {
 		PartData.Slot.EYES: get_node(P_EDIT + "/ListScroll/PageEyes"),
 		PartData.Slot.MOUTH: get_node(P_EDIT + "/ListScroll/PageMouth"),
 		PartData.Slot.BROWS: get_node(P_EDIT + "/ListScroll/PageBrows"),
 		PartData.Slot.EXTRA: get_node(P_EDIT + "/ListScroll/PageExtra"),
+		PartData.Slot.SKIN: get_node(P_EDIT + "/ListScroll/PageSkin"),
 	}
 	# 帧槽按钮**不在这里取** —— 帧数可以增删，它们是 _rebuild_slots() 现建的
 
@@ -362,6 +413,8 @@ func _on_card_toggled(on: bool, slot: int, key: String) -> void:
 			f.brows = part
 		PartData.Slot.EXTRA:
 			f.extra = part
+		PartData.Slot.SKIN:
+			f.skin = part
 
 	_bump_card(_cards[slot][key])
 	_sync_all()
@@ -373,6 +426,7 @@ func _on_clear_pressed() -> void:
 	f.mouth = null
 	f.brows = null
 	f.extra = null
+	f.skin = null      # 肤色回到默认那件，而不是「没有肤色」
 	_sync_all()
 	_flash_face()
 
@@ -408,7 +462,10 @@ func _sync_all() -> void:
 
 func _sync_preview() -> void:
 	var f: Clip.Frame = _clip.frames[_frame]
-	# 四层同坐标叠加 —— 占位图规格（512×512 共用画布、人脸中心 = 画布中心）的第一次实战检验
+	# 七层同坐标叠加 —— 占位图规格（512×512 共用画布、人脸中心 = 画布中心）的第一次实战检验。
+	# 从下往上：纸 → 肤色 → 空白脸 → 眉 → 眼 → 嘴 → 其他。
+	# 【肤色与底图永远有】空帧也是一张白纸上的人脸，不是一块黑 —— 玩家一眼就知道「脸还在，只是没拼五官」。
+	_layer_skin.texture = _skin_texture(f)
 	_layer_brows.texture = null if f.brows == null else f.brows.texture
 	_layer_eyes.texture = null if f.eyes == null else f.eyes.texture
 	_layer_mouth.texture = null if f.mouth == null else f.mouth.texture
@@ -454,8 +511,7 @@ func _sync_cards() -> void:
 	_syncing = true
 	for slot: int in _cards:
 		var f: Clip.Frame = _clip.frames[_frame]
-		var selected: PartData = _part_of(f, slot)
-		var key := "" if selected == null else String(selected.id)
+		var key := _selected_key(f, slot)
 		for k: String in _cards[slot]:
 			var card: Button = _cards[slot][k]
 			card.button_pressed = (k == key)
@@ -513,7 +569,25 @@ func _part_of(f: Clip.Frame, slot: int) -> PartData:
 			return f.brows
 		PartData.Slot.EXTRA:
 			return f.extra
+		PartData.Slot.SKIN:
+			return f.skin
 	return null
+
+
+## 当前帧在这个槽位上「亮着」的那张卡。
+## 【肤色要特判】`f.skin == null` 画面上用的是默认肤色，卡片却不亮的话，
+## 玩家会以为自己这张脸没有肤色、或者以为选项坏了。
+func _selected_key(f: Clip.Frame, slot: int) -> String:
+	var p := _part_of(f, slot)
+	if p != null:
+		return String(p.id)
+	return PartLibrary.DEFAULT_SKIN_ID if slot == PartData.Slot.SKIN else ""
+
+
+## 画面上的肤色：没选过就用默认那件
+func _skin_texture(f: Clip.Frame) -> Texture2D:
+	var skin: PartData = f.skin if f.skin != null else PartLibrary.default_skin()
+	return null if skin == null else skin.texture
 
 
 ## 缺什么 —— 先说当前帧，当前帧齐了再说别的帧，避免玩家来回翻帧找问题
@@ -616,8 +690,12 @@ func _apply_styles() -> void:
 	canvas_sb.border_color = Color(1, 1, 1, 0.06)
 	canvas_sb.set_corner_radius_all(8)
 	_canvas_frame.add_theme_stylebox_override("panel", canvas_sb)
-	_face_hint.add_theme_font_size_override("font_size", 22)
-	_face_hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.16))
+	# 【提示字改成深色 + 缩到画布底部一行小字】画板底下现在压着**白纸**（face_paper），
+	# 浅色字会彻底看不见；而底图是常驻的（空帧也有一张脸），字留在正中就压在脸上。
+	_face_hint.add_theme_font_size_override("font_size", 16)
+	_face_hint.add_theme_color_override("font_color", Color(0.16, 0.13, 0.09, 0.38))
+	_face_hint.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_face_hint.offset_bottom = -10.0
 	_face_hint.add_theme_constant_override("line_spacing", 10)
 
 	# 帧角标（在取景框左上角，像机器丝印）

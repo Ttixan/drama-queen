@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_glmkc")
 id = &"extra_01"
-display_name = "青筋"
+display_name = "压迫感"
 slot = 3
 tier = 1
 texture = ExtResource("2_3j8ai")

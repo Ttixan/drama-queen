@@ -6,9 +6,7 @@
 [resource]
 script = ExtResource("1_imct3")
 id = &"extra_05"
-display_name = "呆毛"
+display_name = "眼镜"
 slot = 3
 tier = 5
 texture = ExtResource("2_1e6ci")
-joy = 1.0
-shock = 2.0

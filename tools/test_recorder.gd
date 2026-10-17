@@ -56,10 +56,10 @@ func _run_all() -> void:
 
 	print("")
 	print("[2] 选件写进当前帧")
-	_pick(PartData.Slot.EYES, "eyes_04")   # 眯笑：喜 + 魅 → 主导情绪「喜」
+	_pick(PartData.Slot.EYES, "eyes_04")   # 喜悦：喜 + 魅 → 主导情绪「喜」
 	_check("帧1 的眼 = eyes_04", String(_app._clip.frames[0].eyes.id), "eyes_04")
 	_check("情绪标签随之变「喜」", _app._emotion_value.text, "喜")
-	_check("部件明细", _app._emotion_parts.text, "眯笑")
+	_check("部件明细", _app._emotion_parts.text, "喜悦")
 	_check("选中的卡亮起", _card(PartData.Slot.EYES, "eyes_04").button_pressed, true)
 	_check("同槽位其他卡不亮", _card(PartData.Slot.EYES, "eyes_07").button_pressed, false)
 
@@ -80,7 +80,7 @@ func _run_all() -> void:
 	print("")
 	print("[4] 其他可以留空（组合数 ×7 的那 1 种）")
 	_check("初始 extra 为空", _app._clip.frames[0].extra, null)
-	_pick(PartData.Slot.EXTRA, "extra_04")   # 红晕
+	_pick(PartData.Slot.EXTRA, "extra_04")   # 脸红
 	_check("挂上别的部件", String(_app._clip.frames[0].extra.id), "extra_04")
 	_pick(PartData.Slot.EXTRA, "")           # 留空那张卡
 	_check("还能选回留空", _app._clip.frames[0].extra, null)
@@ -88,10 +88,26 @@ func _run_all() -> void:
 	_pick(PartData.Slot.EXTRA, "extra_04")
 
 	print("")
+	print("[4b] 肤色：写进帧、但不进判定")
+	_check("没选过时帧里是 null（渲染按默认肤色）", _app._clip.frames[0].skin, null)
+	_check("默认肤色那张卡亮着", _card(PartData.Slot.SKIN, "skin_00").button_pressed, true)
+	# 前后对比而不是写死「喜」：上一步挂了脸红的配件，这里的情绪本来就不是单纯的喜
+	var emo_before: String = _app._emotion_value.text
+	var parts_before: String = _app._emotion_parts.text
+	_pick(PartData.Slot.SKIN, "skin_02")     # 黑
+	_check("帧1 的肤色 = skin_02", String(_app._clip.frames[0].skin.id), "skin_02")
+	_check("肤色卡亮起", _card(PartData.Slot.SKIN, "skin_02").button_pressed, true)
+	_check("换肤色不改情绪", _app._emotion_value.text, emo_before)
+	_check("换肤色不改部件明细", _app._emotion_parts.text, parts_before)
+	_check("画面上的肤色层跟着换", _app._layer_skin.texture, _app._clip.frames[0].skin.texture)
+
+	print("")
 	print("[5] 清空本帧")
 	_app._clear_button.emit_signal("pressed")
 	_check("眼被清掉", _app._clip.frames[0].eyes, null)
 	_check("其他也被清掉", _app._clip.frames[0].extra, null)
+	_check("肤色回到默认（不是「没有脸皮」）", _app._clip.frames[0].skin, null)
+	_check("画面回落到默认肤色", _app._layer_skin.texture, PartLibrary.default_skin().texture)
 	_check("回到平静", _app._emotion_value.text, "平静")
 
 	print("")
@@ -116,8 +132,10 @@ func _run_all() -> void:
 		print("   摘要：%s" % got.summarize())
 
 	print("")
-	print("[8] 四层叠加的结构保证（占位图规格：共用画布 / 人脸中心 = 画布中心）")
-	var layers: Array = [_app._layer_brows, _app._layer_eyes, _app._layer_mouth, _app._layer_extra]
+	print("[8] 七层叠加的结构保证（占位图规格：共用画布 / 人脸中心 = 画布中心）")
+	# 从下往上：纸 → 肤色 → 空白脸 → 眉 → 眼 → 嘴 → 其他
+	var layers: Array = [_app._layer_paper, _app._layer_skin, _app._layer_base,
+			_app._layer_brows, _app._layer_eyes, _app._layer_mouth, _app._layer_extra]
 	var parent: Node = _app._layer_eyes.get_parent()
 	for l: TextureRect in layers:
 		_check("%s 与眼层同一个父节点" % l.name, l.get_parent() == parent, true)
@@ -130,6 +148,23 @@ func _run_all() -> void:
 	var f1: Clip.Frame = _app._clip.frames[0]
 	_check("帧1：眼层贴图 = eyes_04 的贴图", _app._layer_eyes.texture, f1.eyes.texture)
 	_check("帧1：眉层贴图 = brows_02 的贴图", _app._layer_brows.texture, f1.brows.texture)
+	# 底图不随帧变：纸与空白脸建一次就够，空帧也必须看得见一张脸
+	_check("纸底层已加载", _app._layer_paper.texture != null, true)
+	_check("空白脸层已加载", _app._layer_base.texture != null, true)
+	_check("没选过肤色 → 画的是默认肤色",
+			_app._layer_skin.texture, PartLibrary.default_skin().texture)
+
+	# 【正片叠底不能丢】眼白 / 牙齿是白色填充，普通叠加贴到深肤色上就是一块白纸。
+	# 守的是「三层五官必须挂着 MUL 材质」—— 掉了不会报错，只会重新长出白边。
+	# 前提是素材已经预乘过（import_emoji_layers.py 的 MULTIPLY_SLOTS），
+	# 所以这两件事要一起验：材质对了、素材也得是那个形态。
+	for l: TextureRect in [_app._layer_brows, _app._layer_eyes, _app._layer_mouth]:
+		_check("%s 挂着正片叠底材质" % l.name,
+				l.material is CanvasItemMaterial
+						and l.material.blend_mode == CanvasItemMaterial.BLEND_MODE_MUL, true)
+	_check("五官素材已预乘（透明区是白，不是黑）", _is_multiply_ready(_app._layer_eyes.texture), true)
+	# 配件是「挂在脸前面的东西」，不走正片叠底 —— 乘上去深肤色会把镜框压成暗红
+	_check("配件层不套正片叠底", _app._layer_extra.material, null)
 	_check("帧1：角标显示帧 1", _app._frame_badge.text, "帧 1")
 	_check("帧1：情绪标签 = 喜", _app._emotion_value.text, "喜")
 	_select_frame(2)
@@ -192,6 +227,23 @@ func _run_all() -> void:
 
 
 # ============================================================
+## 素材是不是「正片叠底友好」的形态：找一块**完全透明**的像素，RGB 应该是白。
+## 没预乘的话那块是 (0,0,0)，MUL 上去会把整块画板压成黑 —— 这条断言就是那个坑的守门人。
+func _is_multiply_ready(tex: Texture2D) -> bool:
+	if tex == null:
+		return false
+	var img := tex.get_image()
+	if img == null:
+		return false
+	if img.is_compressed():
+		img.decompress()
+	for p: Vector2i in [Vector2i(4, 4), Vector2i(img.get_width() / 2, 4)]:
+		var c := img.get_pixelv(p)
+		if c.a == 0.0:
+			return c.r > 0.9 and c.g > 0.9 and c.b > 0.9
+	return false
+
+
 func _card(slot: int, key: String) -> Button:
 	return _app._cards[slot][key]
 
@@ -208,13 +260,13 @@ func _select_frame(index: int) -> void:
 ## 拼一段「喜 → 平 → 哀」——顺带把 D 公司的递减曲线摆出来，方便 eyeball
 func _build_full_clip() -> void:
 	_select_frame(0)
-	_pick(PartData.Slot.EYES, "eyes_04")     # 眯笑
-	_pick(PartData.Slot.MOUTH, "mouth_03")   # 大笑
-	_pick(PartData.Slot.BROWS, "brows_02")   # 高扬
+	_pick(PartData.Slot.EYES, "eyes_04")     # 喜悦
+	_pick(PartData.Slot.MOUTH, "mouth_03")   # 喜悦
+	_pick(PartData.Slot.BROWS, "brows_02")   # 惊讶
 	_select_frame(1)
-	_pick(PartData.Slot.EYES, "eyes_00")     # 平静
-	_pick(PartData.Slot.MOUTH, "mouth_00")   # 闭合
-	_pick(PartData.Slot.BROWS, "brows_00")   # 舒展
+	_pick(PartData.Slot.EYES, "eyes_00")     # 信任
+	_pick(PartData.Slot.MOUTH, "mouth_00")   # 认真脸
+	_pick(PartData.Slot.BROWS, "brows_00")   # 信任
 	_select_frame(2)
 	_pick(PartData.Slot.EYES, "eyes_03")     # 含泪
 	_pick(PartData.Slot.MOUTH, "mouth_08")   # 嚎啕

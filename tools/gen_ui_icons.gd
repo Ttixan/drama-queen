@@ -1,5 +1,5 @@
 extends SceneTree
-## 生成 4 个**页签图标** —— 录像机右栏的「眼 / 嘴 / 眉 / 其他」不再写汉字，改用一个图形。
+## 生成 5 个**页签图标** —— 录像机右栏的「眼 / 嘴 / 眉 / 其他 / 肤色」不再写汉字，改用一个图形。
 ##
 ##   godot --headless --path <项目> --script res://tools/gen_ui_icons.gd
 ##   （跑完要再跑一次 --import，Godot 才会把新 PNG 登记成资源）
@@ -26,6 +26,7 @@ func _initialize() -> void:
 		"tab_mouth": _draw_mouth,
 		"tab_brows": _draw_brows,
 		"tab_extra": _draw_extra,
+		"tab_skin": _draw_skin,
 	}
 	var n := 0
 	for name: String in jobs:
@@ -72,6 +73,13 @@ func _draw_extra(img: Image) -> void:
 	# 空心环 —— 与 tools/gen_placeholder_art.gd 里 extra 槽的画法同源
 	_ellipse(img, 48.0, 48.0, 30.0, 30.0, WHITE)
 	_ellipse(img, 48.0, 48.0, 19.0, 19.0, CLEAR)
+
+
+func _draw_skin(img: Image) -> void:
+	# 环 + 实心芯 —— 「其他」只有环，肤色多一个芯，两张缩到 38px 也分得开
+	_ellipse(img, 48.0, 48.0, 30.0, 30.0, WHITE)
+	_ellipse(img, 48.0, 48.0, 24.0, 24.0, CLEAR)
+	_ellipse(img, 48.0, 48.0, 15.0, 15.0, WHITE)
 
 
 # ============================================================

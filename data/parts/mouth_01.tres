@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_vm4o6")
 id = &"mouth_01"
-display_name = "微张"
+display_name = "惊讶"
 slot = 1
 tier = 1
 texture = ExtResource("2_iqdim")

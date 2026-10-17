@@ -6,7 +6,7 @@
 [resource]
 script = ExtResource("1_nkt0d")
 id = &"eyes_06"
-display_name = "死鱼眼"
+display_name = "厌恶"
 tier = 6
 texture = ExtResource("2_3vtnq")
 awkward = 3.0
