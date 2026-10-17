@@ -32,12 +32,40 @@ const NEUTRAL_COLOR := UiPalette.TEXT_DIM
 ## 独立运行时它是主场景，没有"上一步"可返回，所以按钮默认隐藏。
 signal cancelled
 
-## 卡高受「4 行必须放得下」约束：嘴有 10 件 = 4 行，EditPanel 里留给网格的高度约 670。
-## 4 × 154 + 3 × 6 = 634，留出余量，免得无谓地弹出滚动条。
-const CARD_MIN_HEIGHT := 154
-const ART_HEIGHT := 74
+## 【部件卡为什么是「一行一条」】右边那栏是**单列列表**（手稿：右栏只列一行内容），
+## 卡片 = 左边一块缩略图 + 右边名字与情绪标签，高度 76 就够。
+## 一格放不下就滚动兜住（嘴有 10 件，一屏只装得下 6 张）—— 不再按 3 列网格摊。
+const CARD_MIN_HEIGHT := 76
+const ART_HEIGHT := 56
 
-## 【缩略图为什么必须裁】整张 512×512 画布缩到 74px 高，五官只剩几个像素，卡片等于没图。
+## 页签图标（由 `tools/gen_ui_icons.gd` 生成的纯白简笔图）。
+## 颜色不画进图里：Button 的 `icon_normal_color / icon_pressed_color` 负责上色，
+## 同一张图在「未选中（灰）」和「选中（黄）」两态都不用重画。
+const TAB_ICONS := {
+	PartData.Slot.EYES: "res://assets/ui/icons/tab_eyes.png",
+	PartData.Slot.MOUTH: "res://assets/ui/icons/tab_mouth.png",
+	PartData.Slot.BROWS: "res://assets/ui/icons/tab_brows.png",
+	PartData.Slot.EXTRA: "res://assets/ui/icons/tab_extra.png",
+}
+## 页签键的边长，以及图标在键里的最大显示尺寸
+const TAB_SIZE := 60
+const TAB_ICON_MAX := 38
+
+## 【取景器为什么是「等比缩放 + 不裁」】它原来是个 `CenterContainer` 包着 512×512 的画板 ——
+## 而**容器会把子节点的最小尺寸往上带**：取景器最小 518 → 预览列 644 → 整个 Page 1001，
+## 而手机右栏只有 952。差的那 49px 从底栏扣，最底下那排（帧槽 / 确认）就被切掉一截，
+## 看着就是「显示不全」（提提 10-16 报的）。
+## 现在 `ViewCenter` 是 `AspectRatioContainer`（ratio = 1，stretch_mode = FIT），画板只报一个
+## 很小的 `custom_minimum_size`（240×240）：**往上带的最小尺寸因此可以忽略**，取景器再矮也不会
+## 把底栏顶出屏幕；同时画板整体**等比缩到能放下的最大方形**，四边都不会被切。
+## 代价是画板不再是规格里的 512×512，而是「放着多少就是多少」（1920 宽下量到 621×621）。
+## 四层贴图都是 `anchors_preset = 15` 撑满画板，坐标随之等比例缩放，不存在错位。
+## 【画板为什么能一下长这么大】人脸列里现在**只剩取景框**：情绪条搬去了部件列顶部、
+## 「帧序列」搬去了顶栏 —— 那些曾和画板抢竖向空间的条带，一个都不剩了。
+## （量出来的数：右栏 1372×952、Body 高 663、取景框 646×627 → 画板 621×621
+## —— 见 `tools/_probe_layout.gd`。）
+
+## 【缩略图为什么必须裁】整张 512×512 画布缩到 56px 高，五官只剩几个像素，卡片等于没图。
 ## 五官按规格都长在画布中心附近（人脸中心 = 画布中心），所以眼/嘴/眉统一裁中心的 288×288；
 ## 「其他」是挂在脸侧脸角的附属件（占位图放在右上 412,124），单独走整图。
 ## ⚠️ 这两个矩形是**唯一**与美术摆位耦合的地方：扉师若把部件挪出中心区，改这里即可。
@@ -52,6 +80,8 @@ const THUMB_FULL := Rect2(0, 0, 512, 512)
 ## `$Page/Foo` 只是 GDScript 的语法糖，get_node("$Page/Foo") 会去找一个名叫 `$Page` 的节点。
 const P_PREVIEW := "Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox"
 const P_FACE := P_PREVIEW + "/ViewFinder/ViewCenter/FaceCanvas"
+## 页签轨是 Body 的**独立一列**（人脸的右邻、部件列的左邻），不在 EditPanel 里面
+const P_TABS := "Page/BodyWrap/Body/TabRail"
 const P_EDIT := "Page/BodyWrap/Body/EditPanel/EditMargin/EditBox"
 const P_BOTTOM := "Page/BottomBar/BottomMargin/BottomRow"
 const P_TOP := "Page/TopBar/TopMargin/TopRow"
@@ -65,13 +95,13 @@ const P_TOP := "Page/TopBar/TopMargin/TopRow"
 @onready var _layer_mouth: TextureRect = get_node(P_FACE + "/LayerMouth")
 @onready var _layer_extra: TextureRect = get_node(P_FACE + "/LayerExtra")
 @onready var _emotion_value: Label = get_node(
-		P_PREVIEW + "/EmotionStrip/EmotionMargin/EmotionRow/EmotionValue")
+		P_EDIT + "/EmotionStrip/EmotionMargin/EmotionRow/EmotionValue")
 @onready var _emotion_parts: Label = get_node(
-		P_PREVIEW + "/EmotionStrip/EmotionMargin/EmotionRow/EmotionParts")
-@onready var _sequence_label: Label = get_node(P_PREVIEW + "/SequenceLabel")
+		P_EDIT + "/EmotionStrip/EmotionMargin/EmotionRow/EmotionParts")
+@onready var _sequence_label: Label = get_node(P_TOP + "/InfoBox/SequenceLabel")
 @onready var _canvas_frame: Panel = get_node(P_FACE + "/CanvasFrame")
 @onready var _face_hint: Label = get_node(P_FACE + "/FaceHint")
-@onready var _grid_scroll: ScrollContainer = get_node(P_EDIT + "/GridScroll")
+@onready var _list_scroll: ScrollContainer = get_node(P_EDIT + "/ListScroll")
 @onready var _status_label: Label = get_node(P_BOTTOM + "/StatusBox/StatusLabel")
 @onready var _status_hint: Label = get_node(P_BOTTOM + "/StatusBox/StatusHint")
 @onready var _clear_button: Button = get_node(P_BOTTOM + "/ActionsRow/ClearButton")
@@ -86,7 +116,7 @@ var _clip: Clip
 var _frame := 0                       ## 当前编辑的帧下标
 var _tab: int = PartData.Slot.EYES    ## 当前页签
 var _tabs: Array[Button] = []         ## 与 PartLibrary.TAB_ORDER 一一对应
-var _pages: Dictionary = {}           ## slot -> GridContainer
+var _pages: Dictionary = {}           ## slot -> VBoxContainer（一页 = 一张单列部件列表）
 var _slot_buttons: Array[Button] = []
 var _cards: Dictionary = {}           ## slot -> { key -> Button }
 var _card_group: Dictionary = {}      ## slot -> ButtonGroup（同槽位内互斥）
@@ -106,16 +136,16 @@ func _ready() -> void:
 
 func _collect_nodes() -> void:
 	_tabs = [
-		get_node(P_EDIT + "/TabsRow/TabEyes"),
-		get_node(P_EDIT + "/TabsRow/TabMouth"),
-		get_node(P_EDIT + "/TabsRow/TabBrows"),
-		get_node(P_EDIT + "/TabsRow/TabExtra"),
+		get_node(P_TABS + "/TabEyes"),
+		get_node(P_TABS + "/TabMouth"),
+		get_node(P_TABS + "/TabBrows"),
+		get_node(P_TABS + "/TabExtra"),
 	]
 	_pages = {
-		PartData.Slot.EYES: get_node(P_EDIT + "/GridScroll/PageEyes"),
-		PartData.Slot.MOUTH: get_node(P_EDIT + "/GridScroll/PageMouth"),
-		PartData.Slot.BROWS: get_node(P_EDIT + "/GridScroll/PageBrows"),
-		PartData.Slot.EXTRA: get_node(P_EDIT + "/GridScroll/PageExtra"),
+		PartData.Slot.EYES: get_node(P_EDIT + "/ListScroll/PageEyes"),
+		PartData.Slot.MOUTH: get_node(P_EDIT + "/ListScroll/PageMouth"),
+		PartData.Slot.BROWS: get_node(P_EDIT + "/ListScroll/PageBrows"),
+		PartData.Slot.EXTRA: get_node(P_EDIT + "/ListScroll/PageExtra"),
 	}
 	_slot_buttons = [
 		get_node(P_BOTTOM + "/SlotsBox/SlotsRow/Slot1"),
@@ -123,13 +153,14 @@ func _collect_nodes() -> void:
 		get_node(P_BOTTOM + "/SlotsBox/SlotsRow/Slot3"),
 	]
 
-	# 页签：一个 ButtonGroup 保证只有一个亮着
+	# 页签：一个 ButtonGroup 保证只有一个亮着；键面只放图标（名字退到 tooltip）
 	var tab_group := ButtonGroup.new()
 	for i in _tabs.size():
 		var tab := _tabs[i]
 		var slot: int = PartLibrary.TAB_ORDER[i]
 		tab.button_group = tab_group
-		tab.text = PartData.SLOT_NAMES[slot]
+		tab.icon = load(TAB_ICONS[slot])
+		tab.tooltip_text = PartData.SLOT_NAMES[slot]
 		tab.toggled.connect(_on_tab_toggled.bind(slot))
 
 	# 帧槽：同样只亮一个
@@ -155,7 +186,7 @@ func enable_back() -> void:
 
 func _build_cards() -> void:
 	for slot: int in PartLibrary.TAB_ORDER:
-		var page: GridContainer = _pages[slot]
+		var page: VBoxContainer = _pages[slot]
 		var map: Dictionary = {}
 		# slot_options 对「其他」会多给一个 null（留空）—— 组合数里的那个 7
 		for opt: Variant in PartLibrary.slot_options(slot):
@@ -176,13 +207,13 @@ func _make_card(slot: int, part: PartData) -> Button:
 	card.toggle_mode = true
 	card.focus_mode = Control.FOCUS_NONE
 	card.custom_minimum_size = Vector2(0, CARD_MIN_HEIGHT)
-	# 【必须显式 EXPAND】GridContainer 只把剩余宽度分给带 SIZE_EXPAND 的子节点。
-	# 少了这一行，三列各自缩到内容最小宽度、挤在左边，中文名会叠在一起。
+	# 【必须显式 EXPAND】列表只把剩余宽度分给带 SIZE_EXPAND 的子节点。
+	# 少了这一行，卡片会缩到内容宽度，右边一大片点不到。
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.add_theme_stylebox_override("normal", _button_sb(C_PANEL_SOFT, Color(0, 0, 0, 0), 0, 14))
-	card.add_theme_stylebox_override("hover", _button_sb(Color("35353f"), C_LINE, 2, 14))
-	card.add_theme_stylebox_override("pressed", _button_sb(Color("3d3d26"), C_ACCENT, 3, 14, 3))
-	card.add_theme_stylebox_override("focus", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 14))
+	card.add_theme_stylebox_override("normal", _button_sb(C_PANEL_SOFT, Color(0, 0, 0, 0), 0, 12, 0, 10))
+	card.add_theme_stylebox_override("hover", _button_sb(Color("35353f"), C_LINE, 2, 12, 0, 10))
+	card.add_theme_stylebox_override("pressed", _button_sb(Color("3d3d26"), C_ACCENT, 3, 12, 0, 8))
+	card.add_theme_stylebox_override("focus", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 12, 0, 10))
 	card.toggled.connect(_on_card_toggled.bind(slot, key))
 
 	# 内容放在子节点里，子节点全部 MOUSE_FILTER_IGNORE —— 点击必须透给按钮本身，
@@ -194,35 +225,41 @@ func _make_card(slot: int, part: PartData) -> Button:
 		margin.add_theme_constant_override("margin_" + side, 10)
 	card.add_child(margin)
 
-	var box := VBoxContainer.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_theme_constant_override("separation", 4)
-	margin.add_child(box)
+	# 一行一条：缩略图钉在左边，名字与情绪标签在右边顺排
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 14)
+	margin.add_child(row)
 
 	var art := TextureRect.new()
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	art.custom_minimum_size = Vector2(0, ART_HEIGHT)
+	art.custom_minimum_size = Vector2(ART_HEIGHT, ART_HEIGHT)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	art.texture = _thumb(part)
-	box.add_child(art)
+	row.add_child(art)
+
+	var info := VBoxContainer.new()
+	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER   # 两行字整体贴卡片中线，别顶在上沿
+	info.add_theme_constant_override("separation", 2)
+	row.add_child(info)
 
 	var title := Label.new()
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title.text = "留空" if is_blank else part.display_name
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 18)
 	title.add_theme_color_override("font_color", C_TEXT_DIM if is_blank else C_TEXT)
-	box.add_child(title)
+	info.add_child(title)
 
 	# 部件自身的情绪标签 —— 缩略图还是占位色块时，这行是玩家唯一能读的信息
 	var tags := Label.new()
 	tags.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tags.text = "不挂附加部件" if is_blank else part.emotion_labels()
-	tags.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tags.add_theme_font_size_override("font_size", 13)
 	tags.add_theme_color_override("font_color", C_TEXT_DIM)
-	box.add_child(tags)
+	info.add_child(tags)
 
 	return card
 
@@ -377,7 +414,7 @@ func _sync_status() -> void:
 
 func _show_tab() -> void:
 	for slot: int in _pages:
-		var page: GridContainer = _pages[slot]
+		var page: VBoxContainer = _pages[slot]
 		var want := slot == _tab
 		if page.visible != want:
 			page.visible = want
@@ -488,12 +525,12 @@ func _apply_styles() -> void:
 
 	_panel(get_node("Page/BodyWrap/Body/PreviewPanel"), C_PANEL, 20, 2, C_LINE)
 	_panel(get_node(P_PREVIEW + "/ViewFinder"), Color("0f0f13"), 24, 3, C_LINE)
-	_panel(get_node(P_PREVIEW + "/EmotionStrip"), C_PANEL_SOFT, 16, 0)
+	_panel(get_node(P_EDIT + "/EmotionStrip"), C_PANEL_SOFT, 16, 0)
 	_panel(get_node("Page/BodyWrap/Body/EditPanel"), C_PANEL, 20, 2, C_LINE)
 	_panel(get_node("Page/BottomBar"), C_PAPER, 0, 0)
 
-	# 部件多于四行时靠滚动兜住（现在的池子最多 10 件 = 4 行，正好不溢，但不能靠运气）
-	var bar := _grid_scroll.get_v_scroll_bar()
+	# 列表装不下就靠滚动兜住（嘴有 10 件，一屏只放 6 张 —— 必须能滚，不能靠运气）
+	var bar := _list_scroll.get_v_scroll_bar()
 	bar.custom_minimum_size = Vector2(10, 0)
 	bar.add_theme_stylebox_override("scroll", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 0, 0))
 	var grabber := StyleBoxFlat.new()
@@ -537,27 +574,30 @@ func _apply_styles() -> void:
 	_txt(get_node(P_TOP + "/TitleBox/Title"), 40, C_TEXT)
 	_txt(get_node(P_TOP + "/TitleBox/Subtitle"), 15, C_TEXT_DIM)
 	_txt(_frame_indicator, 20, C_ACCENT)
-	_txt(get_node(P_TOP + "/InfoBox/RuleHint"), 15, C_TEXT_DIM)
+	# 「帧序列」从取景框下方搬到顶栏（帧槽按钮上已经有每帧的情绪，这里是总览）
+	_txt(_sequence_label, 15, C_TEXT_DIM)
+	_sequence_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 
-	# 取景框
+	# 情绪条（现在挂在部件列顶部，紧挨着它描述的那张列表）
 	_txt(_emotion_value, 30, C_TEXT)
-	_txt(get_node(P_PREVIEW + "/EmotionStrip/EmotionMargin/EmotionRow/EmotionCaption"), 15, C_TEXT_DIM)
+	_txt(get_node(P_EDIT + "/EmotionStrip/EmotionMargin/EmotionRow/EmotionCaption"), 15, C_TEXT_DIM)
 	_txt(_emotion_parts, 16, C_TEXT_DIM)
-	_txt(_sequence_label, 20, C_TEXT)
-	_sequence_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
-	# 页签
+	# 页签：一条竖轨上的方形图标键。图形是纯白的（tools/gen_ui_icons.gd），
+	# 颜色全在这里给 —— 未选中灰、选中黄，同一张图两态复用。
 	for tab: Button in _tabs:
 		tab.focus_mode = Control.FOCUS_NONE
-		tab.custom_minimum_size = Vector2(0, 56)
-		tab.add_theme_font_size_override("font_size", 20)
-		tab.add_theme_stylebox_override("normal", _button_sb(C_PANEL_SOFT, C_LINE, 2, 12))
-		tab.add_theme_stylebox_override("hover", _button_sb(Color("35353f"), C_LINE, 2, 12))
-		tab.add_theme_stylebox_override("pressed", _button_sb(C_ACCENT, C_ACCENT, 2, 12))
-		tab.add_theme_stylebox_override("focus", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 12))
-		tab.add_theme_color_override("font_color", C_TEXT_DIM)
-		tab.add_theme_color_override("font_hover_color", C_TEXT)
-		tab.add_theme_color_override("font_pressed_color", C_INK)
+		tab.custom_minimum_size = Vector2(TAB_SIZE, TAB_SIZE)
+		tab.add_theme_stylebox_override("normal", _button_sb(C_PANEL_SOFT, C_LINE, 2, 14, 0, 0))
+		tab.add_theme_stylebox_override("hover", _button_sb(Color("35353f"), C_LINE, 2, 14, 0, 0))
+		tab.add_theme_stylebox_override("pressed", _button_sb(C_ACCENT, C_ACCENT, 2, 14, 0, 0))
+		tab.add_theme_stylebox_override("focus", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 14, 0, 0))
+		tab.add_theme_constant_override("icon_max_width", TAB_ICON_MAX)
+		# 未选中的图标要「看得见但不出头」——直接用 TEXT_DIM 压在 PANEL_SOFT 上太灰，
+		# 玩家认不出是眼还是眉；提亮一档，选中的黄底压深色（C_INK）
+		tab.add_theme_color_override("icon_normal_color", C_TEXT_DIM.lightened(0.18))
+		tab.add_theme_color_override("icon_hover_color", C_TEXT)
+		tab.add_theme_color_override("icon_pressed_color", C_INK)
 
 	# 帧槽（选中态靠 content_margin 少 4px 实现「上浮」—— 容器会覆盖 position，动不了）
 	for b: Button in _slot_buttons:

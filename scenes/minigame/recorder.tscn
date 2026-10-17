@@ -88,22 +88,22 @@ text = "正在编辑：帧 1 / 3"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="RuleHint" type="Label" parent="Page/TopBar/TopMargin/TopRow/InfoBox"]
+[node name="SequenceLabel" type="Label" parent="Page/TopBar/TopMargin/TopRow/InfoBox"]
 layout_mode = 2
-text = "眼 / 嘴 / 眉 必填，其他可留空"
+text = "帧序列：平静 → 平静 → 平静"
 horizontal_alignment = 2
 
 [node name="BodyWrap" type="MarginContainer" parent="Page"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 24
+theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 24
+theme_override_constants/margin_bottom = 16
 
 [node name="Body" type="HBoxContainer" parent="Page/BodyWrap"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 20
 
 [node name="PreviewPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
 layout_mode = 2
@@ -112,24 +112,26 @@ size_flags_stretch_ratio = 1.3
 
 [node name="PreviewMargin" type="MarginContainer" parent="Page/BodyWrap/Body/PreviewPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 24
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
 
 [node name="PreviewBox" type="VBoxContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin"]
 layout_mode = 2
-theme_override_constants/separation = 16
 
 [node name="ViewFinder" type="PanelContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="ViewCenter" type="CenterContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder"]
+[node name="ViewCenter" type="AspectRatioContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder"]
+clip_contents = true
 layout_mode = 2
+ratio = 1.0
+stretch_mode = 2
 
 [node name="FaceCanvas" type="Control" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter"]
-custom_minimum_size = Vector2(512, 512)
+custom_minimum_size = Vector2(240, 240)
 layout_mode = 2
 
 [node name="CanvasFrame" type="Panel" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
@@ -149,7 +151,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-text = "在这块 512 × 512 的画板上拼脸
+text = "在这块方画板上拼脸
 四个部件同坐标叠加，就和成一张"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -205,43 +207,35 @@ text = "帧 1"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="EmotionStrip" type="PanelContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox"]
+[node name="TabRail" type="VBoxContainer" parent="Page/BodyWrap/Body"]
+custom_minimum_size = Vector2(60, 0)
 layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 12
 
-[node name="EmotionMargin" type="MarginContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip"]
+[node name="TabEyes" type="Button" parent="Page/BodyWrap/Body/TabRail"]
+custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 10
+tooltip_text = "眼"
+toggle_mode = true
 
-[node name="EmotionRow" type="HBoxContainer" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip/EmotionMargin"]
+[node name="TabMouth" type="Button" parent="Page/BodyWrap/Body/TabRail"]
+custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
-theme_override_constants/separation = 14
+tooltip_text = "嘴"
+toggle_mode = true
 
-[node name="EmotionCaption" type="Label" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip/EmotionMargin/EmotionRow"]
+[node name="TabBrows" type="Button" parent="Page/BodyWrap/Body/TabRail"]
+custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
-text = "当前帧情绪"
-vertical_alignment = 1
+tooltip_text = "眉"
+toggle_mode = true
 
-[node name="EmotionValue" type="Label" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip/EmotionMargin/EmotionRow"]
+[node name="TabExtra" type="Button" parent="Page/BodyWrap/Body/TabRail"]
+custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
-text = "平静"
-vertical_alignment = 1
-
-[node name="EmotionSpacer" type="Control" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip/EmotionMargin/EmotionRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="EmotionParts" type="Label" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/EmotionStrip/EmotionMargin/EmotionRow"]
-layout_mode = 2
-text = "—"
-horizontal_alignment = 2
-vertical_alignment = 1
-
-[node name="SequenceLabel" type="Label" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox"]
-layout_mode = 2
-text = "帧序列：平静 → 平静 → 平静"
+tooltip_text = "其他"
+toggle_mode = true
 
 [node name="EditPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
 layout_mode = 2
@@ -249,78 +243,76 @@ size_flags_horizontal = 3
 
 [node name="EditMargin" type="MarginContainer" parent="Page/BodyWrap/Body/EditPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 22
-theme_override_constants/margin_top = 22
-theme_override_constants/margin_right = 22
-theme_override_constants/margin_bottom = 22
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
 
 [node name="EditBox" type="VBoxContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 14
 
-[node name="TabsRow" type="HBoxContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox"]
+[node name="EmotionStrip" type="PanelContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox"]
 layout_mode = 2
-theme_override_constants/separation = 10
 
-[node name="TabEyes" type="Button" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/TabsRow"]
+[node name="EmotionMargin" type="MarginContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/EmotionStrip"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 8
+
+[node name="EmotionRow" type="HBoxContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/EmotionStrip/EmotionMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="EmotionCaption" type="Label" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/EmotionStrip/EmotionMargin/EmotionRow"]
+layout_mode = 2
+text = "当前帧情绪"
+vertical_alignment = 1
+
+[node name="EmotionValue" type="Label" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/EmotionStrip/EmotionMargin/EmotionRow"]
+layout_mode = 2
+text = "平静"
+vertical_alignment = 1
+
+[node name="EmotionSpacer" type="Control" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/EmotionStrip/EmotionMargin/EmotionRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-toggle_mode = true
-text = "眼"
 
-[node name="TabMouth" type="Button" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/TabsRow"]
+[node name="EmotionParts" type="Label" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/EmotionStrip/EmotionMargin/EmotionRow"]
 layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-text = "嘴"
+text = "—"
+horizontal_alignment = 2
+vertical_alignment = 1
 
-[node name="TabBrows" type="Button" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/TabsRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-text = "眉"
-
-[node name="TabExtra" type="Button" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/TabsRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-text = "其他"
-
-[node name="GridScroll" type="ScrollContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox"]
+[node name="ListScroll" type="ScrollContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox"]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="PageEyes" type="GridContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/GridScroll"]
+[node name="PageEyes" type="VBoxContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/ListScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/h_separation = 12
-theme_override_constants/v_separation = 6
-columns = 3
+theme_override_constants/separation = 8
 
-[node name="PageMouth" type="GridContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/GridScroll"]
+[node name="PageMouth" type="VBoxContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/ListScroll"]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/h_separation = 12
-theme_override_constants/v_separation = 6
-columns = 3
+theme_override_constants/separation = 8
 
-[node name="PageBrows" type="GridContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/GridScroll"]
+[node name="PageBrows" type="VBoxContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/ListScroll"]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/h_separation = 12
-theme_override_constants/v_separation = 6
-columns = 3
+theme_override_constants/separation = 8
 
-[node name="PageExtra" type="GridContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/GridScroll"]
+[node name="PageExtra" type="VBoxContainer" parent="Page/BodyWrap/Body/EditPanel/EditMargin/EditBox/ListScroll"]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/h_separation = 12
-theme_override_constants/v_separation = 6
-columns = 3
+theme_override_constants/separation = 8
 
 [node name="BottomBar" type="PanelContainer" parent="Page"]
 custom_minimum_size = Vector2(0, 148)
