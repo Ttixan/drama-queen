@@ -184,7 +184,7 @@ func _test_miss() -> void:
 	var s := _state()
 	s.pending_event = &"director_audition"
 	s.day = 7
-	DailyActions.miss_pending_event(s)
+	DailyActions.miss_pending_events(s)
 	_check("pending 清掉了", s.has_pending_event(), false)
 	_check("记了一笔「没理会」", int(s.event_history[0]["choice"]), -1)
 	_check("也记进「出现过」", s.has_seen_event(&"director_audition"), true)
@@ -196,7 +196,7 @@ func _test_miss() -> void:
 	s.day = 8
 	_check("第 2 周照样能排出自己的事件", EventScheduler.pick(s, 2) != null, true)
 	# 没有待处理事件时调用是安全的（每周结算都会调一次）
-	DailyActions.miss_pending_event(s)
+	DailyActions.miss_pending_events(s)
 	_check("没有挂起事件时调用不报错也不多记", s.event_history.size(), 1)
 	print("   错过也会记一笔，并挡住下一周串台")
 
@@ -225,10 +225,15 @@ func _test_save_round_trip() -> void:
 	_check("履历还原", back.event_history.size(), 1)
 	_check("行动点还原", back.ap_left_today, 0)
 	# 读档之后挑出来的必须还是同一出 —— 不然玩家会发现「上周那出戏」变了
+	# 【pick 的前提是「这一周还没排过」】存档里那条 friend_loan 正挂着，
+	# 不摘掉的话 `offered_count` 会把这一周算成已经排好、直接返回 null。
+	# pending 本身上面验过了，这里要验的是「同种子挑出同一条」。
+	s.pending_event = &""
+	back.pending_event = &""
 	# 【不能写 String(pick(...))】pick 的返回类型是 EventData，
 	# String(EventData) 在**解析阶段**就报错（不是运行时）—— 先取出来再读 .id
-	var before_pick := EventScheduler.pick(s, 2)
-	var after_pick := EventScheduler.pick(back, 2)
+	var before_pick := EventScheduler.pick(s, 3)
+	var after_pick := EventScheduler.pick(back, 3)
 	_check("两边都挑到了事件", before_pick != null and after_pick != null, true)
 	if before_pick != null and after_pick != null:
 		_check("读档后挑到的是同一条", String(after_pick.id), String(before_pick.id))

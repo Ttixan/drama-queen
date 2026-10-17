@@ -206,6 +206,16 @@ func is_hr_unlocked(code: String) -> bool:
 	return state.is_hr_unlocked(code)
 
 
+## 打开过这位 HR 的会话 = 他的未读清掉（微信在选联系人时调）
+func mark_hr_read(code: String) -> void:
+	state.mark_hr_read(code)
+
+
+## 手机上那个微信图标该亮什么数字：未处理事件 + 未读 HR
+func wechat_badge_count() -> int:
+	return state.pending_events.size() + state.unread_hrs.size()
+
+
 ## 玩家在「初次沟通」里挑的那句（第 `run` 组选项的第几句）。见 `GameState.hr_choice`
 func set_hr_choice(code: String, run: int, index: int) -> void:
 	state.set_hr_choice(code, run, index)
@@ -285,27 +295,42 @@ func take_class() -> Dictionary:
 # ============================================================
 # 周初事件（第四个动作）
 # ============================================================
-## 本周等着处理的事件。没有就返回 null —— 界面拿它决定微信里显不显示。
+## 本周等着处理的事件（最早那一条）。没有就返回 null —— 界面拿它决定微信里显不显示。
 func pending_event() -> EventData:
 	return DailyActions.pending_event(state)
 
 
+## 本周挂着的全部事件（1~2 条）。手机左栏的角标、微信名单都读它。
+func pending_events() -> Array[EventData]:
+	return DailyActions.pending_events(state)
+
+
+## 某个说话人手里还等着回话的那件事（微信按说话人分会话，一周内最多一条）
+func pending_event_for(speaker: StringName) -> EventData:
+	return DailyActions.pending_event_for(state, speaker)
+
+
 ## 这个选项现在能不能选？"" = 可以。界面拿它把按钮灰掉并写明原因。
-func event_option_block_reason(index: int) -> String:
-	return DailyActions.event_option_block_reason(state, index)
+func event_option_block_reason(index: int, event_id: StringName = &"") -> String:
+	return DailyActions.event_option_block_reason(state, index, event_id)
 
 
 ## 玩家在微信里选了第几个选项。规则在 `daily_actions.gd`，这里只把结果转成信号。
-func resolve_event(index: int) -> Dictionary:
+##
+## 【event_id 为什么必须显式传】一周可能挂着两条，index 只说明「第几个选项」——
+## 不传就是「回最早那条」，那是给旧调用方（测试、模拟器）留的默认。
+func resolve_event(index: int, event_id: StringName = &"") -> Dictionary:
 	# 状态快照要在调用**之前**取：DailyActions 会直接改 state
 	var money_before := state.money
 	var acting_before := state.acting
 	var fame_before := state.fame
 	var rep_before := state.reputation
-	# 同理，事件 id 也要先记下来 —— 处理完 `pending_event` 就被清空了
-	var event_id := state.pending_event
+	# 同理，事件 id 也要先记下来 —— 处理完它就从 pending 里被摘掉了
+	var picked_id := event_id
+	if picked_id == &"":
+		picked_id = state.pending_event
 
-	var r := DailyActions.resolve_event(state, index)
+	var r := DailyActions.resolve_event(state, index, picked_id)
 	if not r.get("ok", false):
 		return r
 
@@ -316,7 +341,7 @@ func resolve_event(index: int) -> Dictionary:
 	_notify_fame(state.fame - fame_before)
 	_notify_reputation(state.reputation - rep_before)
 	EventBus.ap_changed.emit(state.ap_left_today)
-	EventBus.week_event_resolved.emit(event_id, index)
+	EventBus.week_event_resolved.emit(picked_id, index)
 	return r
 
 
@@ -338,7 +363,7 @@ func end_day() -> Dictionary:
 		# 【为什么要在结算前先料理事件】没处理的事件若跟着状态溜进下一周，
 		# `EventScheduler.pick` 会因为它还挂着而把**上一周**那条端出来 ——
 		# 玩家会觉得事件赖着不走。所以周一到头就记一笔「没理会」再清掉。
-		DailyActions.miss_pending_event(state)
+		DailyActions.miss_pending_events(state)
 		var report := WeekCycle.settle(state, state.week())
 		EventBus.week_settled.emit(report)
 		EventBus.broadcast_published.emit(state.week(), report.get("headlines", []))
@@ -366,18 +391,22 @@ func _advance() -> void:
 	_roll_week_event()
 
 
-## 周初：新的一周开始时，把这一周的事件排进来（GDD 3.5「阶段1：周初（事件推送）」）。
+## 排事件：**每天推进后都问一次**「今天要不要出东西」。
+##
+## 【为什么不再写 `day_of_week() != 1` 就返回】一周 1~2 条、且第二条要落在
+## 第 2~5 天（10-17 定「必须分散开」），所以「今天是哪天」这条判断下沉到
+## `EventScheduler.pick` 里 —— 那里同时知道本周的计划和已经排了几条。
 ##
 ## 【为什么挂在推进之后，而不是结算之前】GDD 的阶段顺序是
 ## 周初事件 → 周中行动 → 周末结算。事件属于**新一周的第一天**，
 ## 结算是**上一周的最后一天** —— 同一次「结束今天」里，两件事分属两周。
 func _roll_week_event() -> void:
-	if state.finished or state.day_of_week() != 1:
+	if state.finished:
 		return
 	var ev := EventScheduler.pick(state, state.week())
 	if ev == null:
 		return
-	state.pending_event = ev.id
+	state.add_pending_event(ev.id)
 	EventBus.week_event_offered.emit(ev.id)
 
 

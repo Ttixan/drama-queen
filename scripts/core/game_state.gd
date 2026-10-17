@@ -60,6 +60,16 @@ var history: Array[Dictionary] = []
 ## 而且决定了「哪家公司现在能投」—— 是玩法状态，不是显示状态。
 var unlocked_hr: Array[String] = []
 
+## 微信里「有未读」的 HR 代号。
+##
+## 【为什么只有「新解锁」会未读】HR 没有任何异步来信：投递的回复是玩家点「发送」
+## 那一刻当场生成的，人就在会话里，天然已读。所以当前唯一的未读来源是
+## 「刚在简历拿来加上这个人，还没点开看过他」。以后真加了 HR 主动找你，也往这里塞。
+##
+## 【为什么不存成每条消息的已读游标】那需要一份真正的消息时间线；
+## 现在会话是**从状态重建**的（没有消息表），存游标等于凭空造一套数据。
+var unread_hrs: Array[String] = []
+
 ## 玩家在 Boss直聘 的「初次沟通」里挑过的句子：`"A#0" -> 1`（A 家第 0 组选项里的第 1 句）。
 ## 【为什么要存】第二次进同一家时那段对话**不再逐字演、直接铺完** —— 那时必须把他
 ## **当初挑的那句**铺出来，否则他会看见一句自己没说过的话。
@@ -96,8 +106,27 @@ var focus_hr: String = ""
 ## 与定角抽签同一个道理（决策：抽一次，之后谁都读同一份）：
 ## 开局抽一次（`Game.new_game`），之后每周期由它派生，模拟器也能复现同一局。
 var event_seed: int = 0
-## 本周等着处理的事件 id。空 = 这周没有事件（内容没配 / 已处理 / 条件不满足）
-var pending_event: StringName = &""
+## 本周等着处理的事件 id —— **1~2 条**（10-17 起从「一周一出」放开）。
+## 空数组 = 这周没有事件（内容没配 / 已处理 / 条件不满足）。
+##
+## 【为什么是数组】一周可能排两条，且第一条不处理时第二条照样会来。
+## 用单值的话，第二条会被第一条挡住（`has_pending_event` 恒真 → 调度器直接返回）。
+##
+## 【顺序有意义】按排进来的先后排 —— 界面「先看谁」、读档回放都照这个顺序。
+var pending_events: Array[String] = []
+
+## 兼容旧接口：单值读写。
+##   读 = 最早那条（没有就空）；
+##   写 = **整队替换**（空串 = 清空）。
+## 留它的原因是测试与界面里遍布 `state.pending_event = &"xxx"` 这种写法，
+## 而语义变了（多了「并列」这一维）—— 与其全改成数组运算，不如把单值语义钉死在这里。
+var pending_event: StringName:
+	get:
+		return StringName(pending_events[0]) if not pending_events.is_empty() else &""
+	set(value):
+		pending_events.clear()
+		if value != &"":
+			pending_events.append(String(value))
 ## 已经出现过的事件 id（**含错过的**）—— 除 `repeatable` 外不再重复出现
 var seen_events: Array[String] = []
 ## 每次处理的记录：{week, day, event, speaker, choice, label, note}
@@ -112,7 +141,23 @@ var finished: bool = false
 
 ## 本周有没有等着处理的事件
 func has_pending_event() -> bool:
-	return pending_event != &""
+	return not pending_events.is_empty()
+
+
+## 排进来一件（不查重 —— 查重在 `EventScheduler`，这里只管状态）
+func add_pending_event(id: StringName) -> void:
+	if id == &"" or pending_events.has(String(id)):
+		return
+	pending_events.append(String(id))
+
+
+## 处理掉一件。返回是否真的在队里 —— 界面据此判断「是不是点了个已经过去的事」
+func remove_pending_event(id: StringName) -> bool:
+	var key := String(id)
+	if not pending_events.has(key):
+		return false
+	pending_events.erase(key)
+	return true
 
 
 ## 这个事件出现过没有（含错过的）—— 事件表用它决定要不要再让同一条出现
@@ -125,7 +170,20 @@ func unlock_hr(code: String) -> bool:
 	if code.is_empty() or unlocked_hr.has(code):
 		return false
 	unlocked_hr.append(code)
+	# 新解锁 = 一条未读（手机上微信图标要亮起来，玩家才知道「多了个人可以聊」）
+	if not unread_hrs.has(code):
+		unread_hrs.append(code)
 	return true
+
+
+## 打开过这位 HR 的会话 = 已读
+func mark_hr_read(code: String) -> void:
+	unread_hrs.erase(code)
+
+
+## 这件事还等着回话吗
+func has_pending_event_id(id: StringName) -> bool:
+	return pending_events.has(String(id))
 
 
 func is_hr_unlocked(code: String) -> bool:
@@ -314,7 +372,9 @@ func to_save_dict() -> Dictionary:
 		# 【pending_event 存成空串而不是 null】JSON 里 StringName 落不住，
 		# 读回来一律走 StringName(...) —— 与 ending_id 同一个处理方式
 		"event_seed": event_seed,
-		"pending_event": String(pending_event),
+		# 【10-17 起是数组】老档里的单值 `pending_event` 由 `from_save_dict` 兜底转换
+		"pending_events": pending_events,
+		"unread_hrs": unread_hrs,
 		"seen_events": seen_events,
 		"event_history": event_history,
 		"ending_flags": ending_flags,
@@ -349,7 +409,17 @@ func from_save_dict(d: Dictionary) -> void:
 	reports.assign(d.get("reports", []))
 	history.assign(d.get("history", []))
 	event_seed = int(d.get("event_seed", 0))
-	pending_event = StringName(d.get("pending_event", ""))
+	# 【老存档兼容】以前存的是单值 `pending_event`（String）。读到字符串就包成一条，
+	# 否则「一周一出」时代存下来的档会丢掉那件正等着处理的事。
+	var pend: Variant = d.get("pending_events", null)
+	if typeof(pend) == TYPE_ARRAY:
+		pending_events.assign(pend)
+	else:
+		var one := String(d.get("pending_event", ""))
+		pending_events.clear()
+		if not one.is_empty():
+			pending_events.append(one)
+	unread_hrs.assign(d.get("unread_hrs", []))
 	seen_events.assign(d.get("seen_events", []))
 	event_history.assign(d.get("event_history", []))
 	ending_flags = d.get("ending_flags", {})

@@ -62,6 +62,7 @@ func _run_all() -> void:
 	_test_work_and_class()
 	_test_app_switch()
 	_test_app_jump()
+	_test_badges()
 	_test_end_day()
 	_test_week_settle()
 	_test_full_run_to_ending()
@@ -260,6 +261,76 @@ func _test_app_jump() -> void:
 	_check("「← 全部」回 App 列表", _phone.current_app_path(), "")
 	_check("左栏换回 App 列表", _phone._app_list.visible, true)
 	print("   整屏切换 + 录完回程都是通的；「返回」是上一步、「← 全部」是离开")
+
+
+## 左栏的未读角标。
+##
+## 【守两件事】1) **只有微信会亮** —— 别的 App 没有「等着你处理」的东西，硬凑数字会
+## 训练玩家忽略角标；2) **靠信号刷新** —— 微信活在右栏，它那边变了不会自己走到左栏来。
+func _test_badges() -> void:
+	print("[3c] 手机屏：左栏未读角标（只有微信 / 靠信号亮）")
+	var bus := root.get_node("EventBus")
+	_game.new_game()
+	# 【基准不写死】新开局自带那位初始联系人的未读（`unlock_hr` 会塞进 `unread_hrs`），
+	# 所以下面全部按「相对基准加减」断言，避免把开局的礼貌性未读当成回归。
+	var base := _badge_number(WECHAT_SCENE)
+	_check("角标数字就是状态里的未读数", base, _game.wechat_badge_count())
+	_check("亮着的角标只有微信一个", _badge_visible_count(), 1 if base > 0 else 0)
+	for path: String in _phone._app_badges:
+		if path != WECHAT_SCENE:
+			_check("非微信的 App 不亮（%s）" % path.get_file(), _badge_visible(path), false)
+
+	# 周初事件：微信 +1
+	_game.state.add_pending_event(&"ev_badge")
+	bus.week_event_offered.emit(&"ev_badge")
+	_check("来了件周初事件：多 1", _badge_number(WECHAT_SCENE), base + 1)
+	_check("别的 App 仍然不跟风亮", _badge_visible_count(), 1)
+
+	# 新解锁一位 HR = 一条未读
+	_game.unlock_hr("A")
+	_check("多了一位没点开过的 HR：再多 1", _badge_number(WECHAT_SCENE), base + 2)
+
+	# 【`mark_hr_read` 没有信号】玩家读完那一刻左栏可能正被二级列表盖着 ——
+	# 回到列表时必须重算，否则那个数会一直挂到下一次事件。
+	_game.mark_hr_read("A")
+	_phone.open_app(RECORDER_SCENE)
+	_phone._current.cancelled.emit()
+	_check("读过那位 HR：回到列表就少 1", _badge_number(WECHAT_SCENE), base + 1)
+
+	# 事件回完 → 退回基准（基准为 0 时角标整个隐藏，不是显示 0）
+	_game.state.remove_pending_event(&"ev_badge")
+	bus.week_event_resolved.emit(&"ev_badge", 0)
+	_check("事回完了：回到基准", _badge_number(WECHAT_SCENE), base)
+
+	# 换掉整个状态（开新局 / 读档）也不许留着上一局的数字
+	_game.state.add_pending_event(&"ev_badge")
+	bus.week_event_offered.emit(&"ev_badge")
+	_check("再排一件：又 +1", _badge_number(WECHAT_SCENE), base + 1)
+	_game.new_game()
+	_phone._show_app_list()
+	_check("开新局后回到新一局的基准", _badge_number(WECHAT_SCENE), _game.wechat_badge_count())
+	print("   只有微信亮；事件 / HR / 换局都由信号驱动，读完 HR 回列表时补算")
+
+
+## 角标上的数字。**隐藏时返回 0** —— 断言里「0」同时意味着「没亮」。
+func _badge_number(scene: String) -> int:
+	var dot: Panel = _phone._app_badges.get(scene, null)
+	if dot == null or not dot.visible:
+		return 0
+	return int((dot.get_node("Num") as Label).text)
+
+
+func _badge_visible(scene: String) -> bool:
+	var dot: Panel = _phone._app_badges.get(scene, null)
+	return dot != null and dot.visible
+
+
+func _badge_visible_count() -> int:
+	var n := 0
+	for path: String in _phone._app_badges:
+		if _badge_visible(path):
+			n += 1
+	return n
 
 
 ## 平脸表情包（A 厂的一票否决是「不许有怒」，平脸必过）——
@@ -574,8 +645,51 @@ func _test_desk_jump() -> void:
 	# 手机上返回桌面要能回到桌子
 	desk._open.cancelled.emit()
 	_check("从手机返回后桌面空了", desk.has_open_screen(), false)
+
+	# GM 控制台（只在 debug 构建里挂）：指令必须真的改到状态，而不只是打印一行
+	# 【按节点名找，不写类型】那个脚本故意没有 `class_name`（见它文件头）；
+	# 而且 `--script` 里的主脚本编译早于 autoload，引用它会连带编译失败。
+	var gm: Node = desk.get_node_or_null("GmConsole")
+	_check("调试构建里挂上了 GM 控制台", gm != null, true)
+	if gm != null:
+		_test_gm_commands(gm)
 	desk.queue_free()
 	print("   日历发请求 → 桌子切屏 → 手机开微信；返回能回桌面")
+	print("   GM：force 能塞事件、resolve 的效果真的落账、seed 能换抽签")
+
+
+## GM 指令的最小回归：**事件塞得进去、选项效果真的落账**。
+## 【为什么值得测】控制台是开发期唯一的「单条事件」入口；它悄悄坏掉的话，
+## 内容同学会以为「这条事件没效果」，其实是指令写错了。
+func _test_gm_commands(gm: Node) -> void:
+	_game.new_game()
+	# 新开局可能已经排着一条（开局即周一），所以数量都对着基准算
+	var pending_before: int = _game.state.pending_events.size()
+	gm.call("_run", "event force friend_loan")
+	_check("GM 把事件挂上了", _game.state.pending_events.has("friend_loan"), true)
+	_check("只多这一条", _game.state.pending_events.size(), pending_before + 1)
+	gm.call("_run", "event force no_such_event")
+	_check("瞎写代号不会挂上东西", _game.state.pending_events.size(), pending_before + 1)
+
+	var money_before: int = _game.money()
+	gm.call("_run", "event resolve friend_loan 0")
+	# friend_loan 的 [0] 借出 100：钱少 100，事件从待处理里摘掉
+	_check("GM 选完，钱真的少了 100", _game.money(), money_before - 100)
+	_check("事件已从待处理摘掉", _game.state.pending_events.has("friend_loan"), false)
+	_check("其它挂着的不受影响", _game.state.pending_events.size(), pending_before)
+	_check("履历里记下了这次选择",
+			String(_game.state.event_history.back().get("event", "")), "friend_loan")
+
+	gm.call("_run", "event force friend_loan")
+	gm.call("_run", "event clear")
+	_check("GM 能清空挂着的事件", _game.state.pending_events.size(), 0)
+
+	var acting_before: int = _game.acting()
+	gm.call("_run", "acting +2")
+	_check("数值指令走 add_*：演技 +2", _game.acting(), acting_before + 2)
+	# 【信号那条必须验】直接写 `state.money` 界面不会变；走 `add_money` 才会重画 HUD
+	gm.call("_run", "money 777")
+	_check("GM 改的钱已同步到手机顶栏", _phone._money_label.text, "777 元")
 
 
 func _snapshot_save() -> Dictionary:

@@ -32,6 +32,9 @@ const DEFAULT_HINT := "悬浮看每个 App 是干什么的"
 ## 在这台手机上按下去会指错地方，所以那两家的返回按钮仍然只由桌子开（`enable_back`）。
 const RECORDER_SCENE := "res://scenes/minigame/recorder.tscn"
 
+## 微信。左栏里**只有它**会有未读角标（见 `_badge_count_for`）
+const WECHAT_SCENE := "res://scenes/apps/wechat.tscn"
+
 ## 上层（桌子）离开本屏
 signal cancelled
 
@@ -51,6 +54,8 @@ var _back_button: Button
 var _back_enabled := false
 ## scene_path -> Button（判断某个 App 开着没有、要不要标成选中）
 var _app_rows: Dictionary = {}
+## scene_path -> 未读角标节点。目前只有微信会亮（事件 + 未读 HR）
+var _app_badges: Dictionary = {}
 ## 当前打开的 App（同一时刻只允许一个）
 var _current: Node
 var _current_path := ""
@@ -81,7 +86,15 @@ func _ready() -> void:
 	EventBus.state_reset.connect(_on_state_reset)
 	# 录像机点「确认」→ 把玩家送回顶开它的那个 App（表情包已由 `Game` 存进状态）
 	EventBus.recorder_finished.connect(_on_recorder_finished)
+	# 【左栏角标必须靠信号】微信活在右栏，它那边「回了件事 / 加上一个 HR」
+	# 不会有任何东西自己走到左栏来 —— 这四条就是那条通路。
+	# 信号带的那些参数（第几天 / 事件 id / 公司代号）这里一个也用不上，`unbind` 掉。
+	EventBus.week_event_offered.connect(_on_badge_source_changed.unbind(1))
+	EventBus.week_event_resolved.connect(_on_badge_source_changed.unbind(2))
+	EventBus.hr_unlocked.connect(_on_badge_source_changed.unbind(1))
+	EventBus.day_advanced.connect(_on_badge_source_changed.unbind(2))
 	_refresh_hud()
+	_refresh_app_badges()
 
 
 # ============================================================
@@ -179,6 +192,12 @@ func _make_app_row(app: Dictionary) -> Button:
 	text_box.add_theme_constant_override("separation", 2)
 	hbox.add_child(text_box)
 
+	# 未读角标（目前只有微信有）：**先建出来、默认隐藏** ——
+	# App 行只建一次，之后靠 `_refresh_app_badges()` 开关
+	var badge := _make_badge()
+	hbox.add_child(badge)
+	_app_badges[String(app["scene"])] = badge
+
 	var name_label := Label.new()
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name_label.text = String(app["name"])
@@ -200,6 +219,56 @@ func _make_app_row(app: Dictionary) -> Button:
 	b.add_theme_stylebox_override("pressed",
 			UiPalette.button(app["color"], app["color"], 2, 16, 4, 12))
 	return b
+
+
+## 未读角标：红底白字的圆点，默认隐藏。
+func _make_badge() -> Panel:
+	var dot := Panel.new()
+	dot.name = "Badge"
+	dot.custom_minimum_size = Vector2(26, 26)
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dot.add_theme_stylebox_override("panel", UiPalette.rounded(UiPalette.DANGER, 13))
+	dot.visible = false
+
+	var num := Label.new()
+	num.name = "Num"
+	num.set_anchors_preset(Control.PRESET_FULL_RECT)
+	num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	num.add_theme_font_size_override("font_size", 14)
+	num.add_theme_color_override("font_color", UiPalette.INK)
+	dot.add_child(num)
+	return dot
+
+
+## 每个 App 该亮几个未读。**只有微信有概念** —— 别的 App 没有「等着你处理」的东西，
+## 硬凑一个数字只会训练玩家忽略角标。
+func _badge_count_for(scene_path: String) -> int:
+	if scene_path != WECHAT_SCENE:
+		return 0
+	if Game.state == null:
+		return 0
+	return Game.wechat_badge_count()
+
+
+## 刷新左栏的角标。**必须由信号驱动**：微信在右栏里活着，它那边的状态变化
+## （回了件事、加了个 HR）不会自己走到左栏来。
+func _refresh_app_badges() -> void:
+	for path: String in _app_badges:
+		var dot: Panel = _app_badges[path]
+		if dot == null:
+			continue
+		var n := _badge_count_for(path)
+		dot.visible = n > 0
+		if n > 0:
+			(dot.get_node("Num") as Label).text = str(n)
+
+
+## 上面那四条信号只为了说一件事：「微信那边变了，重算一次角标」。
+func _on_badge_source_changed() -> void:
+	_refresh_app_badges()
 
 
 func _build_empty_hint() -> void:
@@ -346,6 +415,9 @@ func _close_app() -> void:
 
 
 func _show_app_list() -> void:
+	# 【回到列表就算一遍】微信里「点开某个 HR」= 他的未读清掉，但 `mark_hr_read`
+	# 没有对应信号（它只是状态）；玩家看得见列表的时机就是这一次，这就算最新的。
+	_refresh_app_badges()
 	_caption.text = "App"
 	_app_list.visible = true
 	_sidebar_host.visible = false

@@ -21,6 +21,11 @@ extends Control
 
 const PHONE_SCENE := "res://scenes/main/phone_screen.tscn"
 
+## GM 控制台脚本。**用 `preload` 而不是 `class_name`** —— 那个脚本满篇 `Game.state`，
+## 一旦它有了全局类名，`tools/*.gd`（`--script` 跑的，编译早于 autoload 注册）
+## 一引用这个类型就会把连带编译搞崩。preload 在这里是运行时才展开的。
+const GM_CONSOLE := preload("res://scripts/debug/gm_console.gd")
+
 ## 未选择时的那张底图（四张里「什么都不亮」的那张）
 @export var off_texture: Texture2D
 ## 打开的功能盖在哪个节点下。留空 = 盖在本节点下
@@ -48,6 +53,13 @@ func _ready() -> void:
 		h.hovered.connect(_on_hovered)
 		h.unhovered.connect(_on_unhovered)
 		h.activated.connect(_on_activated)
+	# 【GM 控制台只活在调试构建里】它是开发期工具，不是玩法 ——
+	# release 导出包里 `OS.is_debug_build()` 为假，这一段整个不存在。
+	# 动态 new 而不是写进 `.tscn`：桌子场景不该为了调试多一个节点。
+	if OS.is_debug_build():
+		var gm: Node = GM_CONSOLE.new()
+		gm.name = "GmConsole"
+		add_child(gm)
 
 
 func _on_hovered(h: Hotspot) -> void:

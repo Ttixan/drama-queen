@@ -180,11 +180,41 @@ static func rejected(reason: String) -> Dictionary:
 # ============================================================
 # 周初事件（第四个动作）
 # ============================================================
-## 本周等着处理的事件。没有就返回 null。
+## 本周等着处理的事件（**最早那一条**）。没有就返回 null。
+##
+## 【为什么还留着单数版】界面上大部分地方只关心「有没有事」，用不到队列；
+## 真正需要「这一条是哪位」的地方用 `pending_event_for` / `pending_event_by_id`。
 static func pending_event(state: GameState) -> EventData:
-	if not state.has_pending_event():
+	return pending_events(state)[0] if state.has_pending_event() else null
+
+
+## 本周挂着的**全部**事件（按排进来的先后）。
+static func pending_events(state: GameState) -> Array[EventData]:
+	var out: Array[EventData] = []
+	for id: String in state.pending_events:
+		var ev := EventLibrary.find(StringName(id))
+		if ev != null:
+			out.append(ev)
+	return out
+
+
+## 这个说话人手里还等着回话的那件事（一周内同一人只会来一次，所以最多一条）。
+static func pending_event_for(state: GameState, speaker: StringName) -> EventData:
+	if speaker == &"":
 		return null
-	return EventLibrary.find(state.pending_event)
+	for ev: EventData in pending_events(state):
+		if ev.speaker == speaker:
+			return ev
+	return null
+
+
+## 按 id 取挂着的那件事。`id` 为空时退回「最早那条」—— 兼容原来只传 index 的调用方。
+static func pending_event_by_id(state: GameState, id: StringName) -> EventData:
+	if id == &"":
+		return pending_event(state)
+	if not state.has_pending_event_id(id):
+		return null
+	return EventLibrary.find(id)
 
 
 ## 这个选项现在能不能选？返回 "" = 可以，否则是不能选的原因。
@@ -194,8 +224,9 @@ static func pending_event(state: GameState) -> EventData:
 ##
 ## 【事件和打工在这一点上不同】打工的门槛是「钱 / 次数 / 行动点」三条，
 ## 事件的门槛只有行动点一条：其他人都找上门了，没有「不够格谈」这回事。
-static func event_option_block_reason(state: GameState, index: int) -> String:
-	var ev := pending_event(state)
+static func event_option_block_reason(state: GameState, index: int,
+		event_id: StringName = &"") -> String:
+	var ev := pending_event_by_id(state, event_id)
 	if ev == null:
 		return "这周没有等着处理的事"
 	if index < 0 or index >= ev.options.size():
@@ -213,11 +244,15 @@ static func event_option_block_reason(state: GameState, index: int) -> String:
 
 
 ## 选一个选项。返回 {ok, event, option, choice} 或 {ok: false, reason}。
-static func resolve_event(state: GameState, index: int) -> Dictionary:
-	var ev := pending_event(state)
+##
+## 【为什么要带 event_id】一周可能挂着两条，光有 index 分不清是在回哪一条 ——
+## 不传就等于「回最早那条」，与旧行为一致。
+static func resolve_event(state: GameState, index: int,
+		event_id: StringName = &"") -> Dictionary:
+	var ev := pending_event_by_id(state, event_id)
 	if ev == null:
 		return {"ok": false, "reason": "这周没有等着处理的事"}
-	var reason := event_option_block_reason(state, index)
+	var reason := event_option_block_reason(state, index, ev.id)
 	if not reason.is_empty():
 		return {"ok": false, "reason": reason}
 
@@ -236,23 +271,21 @@ static func resolve_event(state: GameState, index: int) -> Dictionary:
 	return {"ok": true, "event": ev, "option": opt, "choice": index}
 
 
-## 周结束时还挂着的事件 —— 记一笔「没理会」，然后清掉。
+## 周结束时还挂着的**全部**事件 —— 各记一笔「没理会」，然后清空。
 ##
 ## 【为什么非清不可】不清的话，下一周的 `EventScheduler.pick` 会因为
 ## 「本周已经排好了」而把**上一周**那条原样端出来，看起来像事件赖着不走。
-static func miss_pending_event(state: GameState) -> void:
-	if not state.has_pending_event():
-		return
-	var ev := pending_event(state)
-	if not state.has_seen_event(state.pending_event):
-		state.seen_events.append(String(state.pending_event))
-	state.event_history.append({
-		"week": state.week(), "day": state.day,
-		"event": String(state.pending_event),
-		"speaker": String(ev.speaker) if ev != null else "",
-		"choice": -1, "label": "没理会", "note": "",
-	})
-	state.pending_event = &""
+static func miss_pending_events(state: GameState) -> void:
+	for ev: EventData in pending_events(state):
+		if not state.has_seen_event(ev.id):
+			state.seen_events.append(String(ev.id))
+		state.event_history.append({
+			"week": state.week(), "day": state.day,
+			"event": String(ev.id),
+			"speaker": String(ev.speaker),
+			"choice": -1, "label": "没理会", "note": "",
+		})
+	state.pending_events.clear()
 
 
 static func _record(state: GameState, ev: EventData, index: int, opt: EventOption) -> void:
@@ -263,4 +296,4 @@ static func _record(state: GameState, ev: EventData, index: int, opt: EventOptio
 		"event": String(ev.id), "speaker": String(ev.speaker),
 		"choice": index, "label": opt.label, "note": opt.note,
 	})
-	state.pending_event = &""
+	state.remove_pending_event(ev.id)

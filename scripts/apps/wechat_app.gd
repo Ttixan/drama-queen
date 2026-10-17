@@ -212,9 +212,10 @@ func _is_event_chat() -> bool:
 ## 以及底下那排二选一按钮都看它。
 ## 事情本身另有记录 —— `Game.state.event_history` 存着全过程，电子报与结局都读它。
 func _pending_speaker() -> StringName:
-	var ev := Game.pending_event()
-	if ev != null and not ev.speaker.is_empty():
-		return ev.speaker
+	# 一周可能挂着两条（10-17 起 1~2 条），这里给「先看谁」用的第一条
+	var ev := Game.pending_events()
+	if not ev.is_empty() and not ev[0].speaker.is_empty():
+		return ev[0].speaker
 	return &""
 
 
@@ -241,9 +242,11 @@ func _speaker_name(speaker: StringName) -> String:
 ## 正等着的那位排在最前 —— 他才是今天要处理的事。
 func _event_speakers() -> Array[StringName]:
 	var out: Array[StringName] = []
-	var sp := _pending_speaker()
-	if sp != &"":
-		out.append(sp)
+	# 【先把**所有**等着回话的人排前面】一周可能两位同时找上门，
+	# 只放第一位会让另一位的事件在名单上"隐身"，玩家永远看不到它。
+	for ev: EventData in Game.pending_events():
+		if ev != null and not ev.speaker.is_empty() and not out.has(ev.speaker):
+			out.append(ev.speaker)
 	for h: Dictionary in Game.state.event_history:
 		var who := StringName(h.get("speaker", ""))
 		if who != &"" and not out.has(who):
@@ -253,7 +256,8 @@ func _event_speakers() -> Array[StringName]:
 
 ## 这个人在名单上的状态字（行上那一格总得有字）
 func _speaker_state(speaker: StringName) -> String:
-	if speaker == _pending_speaker():
+	# 【按人判，不按"第一位"判】两位同时找上门时，第二位不能显示成"已回过"
+	if Game.pending_event_for(speaker) != null:
 		return "等你回话"
 	# 回过的写结果：多数是「已回过」，整周没理会的写「没理会」。
 	# 【为什么倒着找】同一个人可能被找上门不止一次，要看的是**最近**那一次
@@ -379,6 +383,11 @@ func _make_event_row(speaker: StringName) -> Button:
 			UiPalette.EVENT if state.text == "等你回话" else UiPalette.TEXT_DIM)
 	text_box.add_child(state)
 
+	# 未读角标：这位手里还压着一件没回的事
+	var badge := _make_badge(1 if Game.pending_event_for(speaker) != null else 0)
+	if badge != null:
+		hbox.add_child(badge)
+
 	var tail := Label.new()
 	tail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -453,6 +462,12 @@ func _make_contact_row(co: CompanyData) -> Button:
 	meta.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
 	text_box.add_child(meta)
 
+	# 未读角标：**先建出来、默认隐藏** —— 行是开局建一次、之后只改字，
+	# 整行重建的话选中态与滚动位置都会跳（见 `_refresh_event_contacts` 的注释）
+	var badge := _make_badge(1)
+	badge.visible = Game.state.unread_hrs.has(co.code)
+	hbox.add_child(badge)
+
 	var state := Label.new()
 	state.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	state.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -460,8 +475,43 @@ func _make_contact_row(co: CompanyData) -> Button:
 	state.add_theme_font_size_override("font_size", 15)
 	hbox.add_child(state)
 
-	_row_labels[co.code] = {"name": name_label, "state": state}
+	_row_labels[co.code] = {
+		"name": name_label, "state": state,
+		"badge": badge, "badge_num": badge.get_node("Num"),
+	}
 	return row
+
+
+## 未读角标：红底白字的小圆点。`count <= 0` 时返回 null，调用方按这个判断要不要挂。
+func _make_badge(count: int) -> Panel:
+	if count <= 0:
+		return null
+	var dot := Panel.new()
+	dot.name = "Badge"
+	dot.custom_minimum_size = Vector2(26, 26)
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dot.add_theme_stylebox_override("panel", UiPalette.rounded(UiPalette.DANGER, 13))
+	var num := Label.new()
+	num.name = "Num"
+	num.set_anchors_preset(Control.PRESET_FULL_RECT)
+	num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	num.text = str(count)
+	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	num.add_theme_font_size_override("font_size", 14)
+	num.add_theme_color_override("font_color", UiPalette.INK)
+	dot.add_child(num)
+	return dot
+
+
+## HR 行的角标开着还是关着。**只切可见性，不重建行**（重建会丢选中态）
+func _sync_hr_badge(code: String) -> void:
+	var refs: Dictionary = _row_labels.get(code, {})
+	var dot: Panel = refs.get("badge")
+	if dot == null:
+		return
+	dot.visible = Game.state.unread_hrs.has(code)
 
 
 ## 默认选中第一家**已解锁**的公司。
@@ -485,6 +535,8 @@ func _select_company(code: String) -> void:
 	_current = CompanyLibrary.by_code(code)
 	# 记进状态：本 App 被切走再建起来时，要落在同一位联系人上（见 `_ready`）
 	Game.set_focus_hr(code)
+	# 点开 = 已读（他的角标在这儿灭掉）
+	Game.mark_hr_read(code)
 	# 【两个开关必须成对】`_is_event_chat()` 只看 `_event_speaker`，
 	# 切回 HR 会话时忘了清它，界面会一直停在「事件会话」那一套上 ——
 	# 表现是 HR 的三排 composer 全不见、头部还在显示事件内容。
@@ -630,6 +682,8 @@ func _refresh_contacts() -> void:
 		var labels: Dictionary = _row_labels[co.code]
 		(labels["state"] as Label).text = "已私聊"
 		(labels["name"] as Label).add_theme_color_override("font_color", UiPalette.TEXT)
+		# 未读角标跟着状态走（新解锁 +1、点开 -1）
+		_sync_hr_badge(co.code)
 		var row: Button = _rows[co.code]
 		# 【没加上的不摆出来】五家灰着一排占满名单，玩家会以为「这些人已经在我微信里了」——
 		# 名单上只该有**真的加上了的**（提提点名）。去哪儿加人写在下面那行提示里。
@@ -807,8 +861,8 @@ func _build_event_composer() -> void:
 func _refresh_event_header() -> void:
 	_peer_name.text = _speaker_name(_event_speaker)
 	_peer_meta.text = "找你有点事"
-	var ev := Game.pending_event()
-	if ev == null or ev.speaker != _event_speaker:
+	var ev := Game.pending_event_for(_event_speaker)
+	if ev == null:
 		_requirement_label.text = "这条已经过去了"
 		return
 	var lines: Array[String] = []
@@ -818,8 +872,8 @@ func _refresh_event_header() -> void:
 
 
 func _refresh_event_composer() -> void:
-	var ev := Game.pending_event()
-	if ev == null or ev.speaker != _event_speaker:
+	var ev := Game.pending_event_for(_event_speaker)
+	if ev == null:
 		# 已经回过、或者整周没理会 —— 这段会话只剩读
 		for b: Button in _event_buttons:
 			b.visible = false
@@ -855,7 +909,9 @@ func _refresh_event_composer() -> void:
 ## 在微信里回了一句。规则全在 `DailyActions.resolve_event`，
 ## 这里只负责重画 —— 聊天记录是**从状态重建**的，所以不必手工往日志里补气泡。
 func _on_event_option(index: int) -> void:
-	var r := Game.resolve_event(index)
+	# 【必须带 id】一周挂着两条时，光有 index 分不清在回谁的事
+	var ev := Game.pending_event_for(_event_speaker)
+	var r := Game.resolve_event(index, ev.id if ev != null else &"")
 	if not r.get("ok", false):
 		_add_note("没能回话：" + String(r.get("reason", "")))
 	_rebuild_chat()
@@ -949,9 +1005,9 @@ func _rebuild_event_chat() -> void:
 		found += 1
 		_add_event_entry(h)
 
-	# 这周还没回的那条，把话摆在这儿等着
-	var ev := Game.pending_event()
-	if ev != null and ev.speaker == _event_speaker:
+	# 这周还没回的那条，把话摆在这儿等着（一周内同一个人只会来一次）
+	var ev := Game.pending_event_for(_event_speaker)
+	if ev != null:
 		_add_bubble(ev.intro, false)
 		_add_note("（在下面回一句）")
 		return
