@@ -108,7 +108,7 @@ theme_override_constants/separation = 20
 [node name="PreviewPanel" type="PanelContainer" parent="Page/BodyWrap/Body"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 1.3
+size_flags_stretch_ratio = 1.45
 
 [node name="PreviewMargin" type="MarginContainer" parent="Page/BodyWrap/Body/PreviewPanel"]
 layout_mode = 2
@@ -315,47 +315,43 @@ size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
 [node name="BottomBar" type="PanelContainer" parent="Page"]
-custom_minimum_size = Vector2(0, 148)
+custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 
 [node name="BottomMargin" type="MarginContainer" parent="Page/BottomBar"]
 layout_mode = 2
 theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 16
+theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_bottom = 10
 
 [node name="BottomRow" type="HBoxContainer" parent="Page/BottomBar/BottomMargin"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 20
 
-[node name="SlotsBox" type="VBoxContainer" parent="Page/BottomBar/BottomMargin/BottomRow"]
+[node name="SlotsBox" type="HBoxContainer" parent="Page/BottomBar/BottomMargin/BottomRow"]
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 
 [node name="SlotsCaption" type="Label" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox"]
 layout_mode = 2
-text = "帧槽"
+text = "帧"
+vertical_alignment = 1
 
 [node name="SlotsRow" type="HBoxContainer" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 
-[node name="Slot1" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox/SlotsRow"]
+[node name="FrameRemove" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox"]
+custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-toggle_mode = true
-text = "帧 1"
+text = "-"
 
-[node name="Slot2" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox/SlotsRow"]
+[node name="FrameAdd" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox"]
+custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-toggle_mode = true
-text = "帧 2"
-
-[node name="Slot3" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/SlotsBox/SlotsRow"]
-layout_mode = 2
-toggle_mode = true
-text = "帧 3"
+text = "+"
 
 [node name="BottomSpacer" type="Control" parent="Page/BottomBar/BottomMargin/BottomRow"]
 layout_mode = 2
@@ -383,16 +379,17 @@ theme_override_constants/separation = 14
 
 [node name="BackButton" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/ActionsRow"]
 visible = false
-custom_minimum_size = Vector2(160, 64)
+custom_minimum_size = Vector2(96, 56)
 layout_mode = 2
 text = "返回"
 
 [node name="ClearButton" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/ActionsRow"]
-custom_minimum_size = Vector2(180, 64)
+custom_minimum_size = Vector2(120, 56)
 layout_mode = 2
-text = "清空本帧"
+text = "清空"
 
 [node name="ConfirmButton" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/ActionsRow"]
-custom_minimum_size = Vector2(240, 64)
+custom_minimum_size = Vector2(120, 56)
 layout_mode = 2
-text = "确认 · 录好"
+tooltip_text = "确认 · 录好"
+text = "完成"

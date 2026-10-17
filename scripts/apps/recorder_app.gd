@@ -51,6 +51,10 @@ const TAB_ICONS := {
 const TAB_SIZE := 60
 const TAB_ICON_MAX := 38
 
+## 帧槽键的边长。键面上只放一个数字 —— 「帧 1」三个字要 150 宽，数字 44 就够，
+## 省下来的横向空间正好给右边的 +/-（帧数最多 5 个，5×44 + 4×8 = 252，底栏放得下）
+const SLOT_SIZE := 44
+
 ## 【取景器为什么是「等比缩放 + 不裁」】它原来是个 `CenterContainer` 包着 512×512 的画板 ——
 ## 而**容器会把子节点的最小尺寸往上带**：取景器最小 518 → 预览列 644 → 整个 Page 1001，
 ## 而手机右栏只有 952。差的那 49px 从底栏扣，最底下那排（帧槽 / 确认）就被切掉一截，
@@ -104,6 +108,9 @@ const P_TOP := "Page/TopBar/TopMargin/TopRow"
 @onready var _list_scroll: ScrollContainer = get_node(P_EDIT + "/ListScroll")
 @onready var _status_label: Label = get_node(P_BOTTOM + "/StatusBox/StatusLabel")
 @onready var _status_hint: Label = get_node(P_BOTTOM + "/StatusBox/StatusHint")
+@onready var _slots_row: HBoxContainer = get_node(P_BOTTOM + "/SlotsBox/SlotsRow")
+@onready var _frame_add: Button = get_node(P_BOTTOM + "/SlotsBox/FrameAdd")
+@onready var _frame_remove: Button = get_node(P_BOTTOM + "/SlotsBox/FrameRemove")
 @onready var _clear_button: Button = get_node(P_BOTTOM + "/ActionsRow/ClearButton")
 @onready var _back_button: Button = get_node(P_BOTTOM + "/ActionsRow/BackButton")
 @onready var _confirm_button: Button = get_node(P_BOTTOM + "/ActionsRow/ConfirmButton")
@@ -129,6 +136,7 @@ func _ready() -> void:
 
 	_collect_nodes()
 	_apply_styles()
+	_rebuild_slots()
 	_build_cards()
 	_sync_all()
 	_pulse_rec_dot()
@@ -147,11 +155,7 @@ func _collect_nodes() -> void:
 		PartData.Slot.BROWS: get_node(P_EDIT + "/ListScroll/PageBrows"),
 		PartData.Slot.EXTRA: get_node(P_EDIT + "/ListScroll/PageExtra"),
 	}
-	_slot_buttons = [
-		get_node(P_BOTTOM + "/SlotsBox/SlotsRow/Slot1"),
-		get_node(P_BOTTOM + "/SlotsBox/SlotsRow/Slot2"),
-		get_node(P_BOTTOM + "/SlotsBox/SlotsRow/Slot3"),
-	]
+	# 帧槽按钮**不在这里取** —— 帧数可以增删，它们是 _rebuild_slots() 现建的
 
 	# 页签：一个 ButtonGroup 保证只有一个亮着；键面只放图标（名字退到 tooltip）
 	var tab_group := ButtonGroup.new()
@@ -163,21 +167,51 @@ func _collect_nodes() -> void:
 		tab.tooltip_text = PartData.SLOT_NAMES[slot]
 		tab.toggled.connect(_on_tab_toggled.bind(slot))
 
-	# 帧槽：同样只亮一个
-	var slot_group := ButtonGroup.new()
-	for i in _slot_buttons.size():
-		var b := _slot_buttons[i]
-		b.button_group = slot_group
-		b.toggled.connect(_on_slot_toggled.bind(i))
-
 	_clear_button.pressed.connect(_on_clear_pressed)
 	_confirm_button.pressed.connect(_on_confirm_pressed)
 	_back_button.pressed.connect(func() -> void: cancelled.emit())
+	_frame_add.pressed.connect(_on_add_frame)
+	_frame_remove.pressed.connect(_on_remove_frame)
 
 
 ## 让调用方把录像机嵌进来时打开「返回」（见 wechat_app.gd 的「去录像机」）
 func enable_back() -> void:
 	_back_button.visible = true
+
+
+# ============================================================
+# 帧槽（按帧数现建：帧数本身可增删）
+# ============================================================
+
+## 【为什么帧槽不能像页签那样摆死在 .tscn 里】帧数会变（下面那对 +/-），
+## 而按钮数量、互斥组、按钮上写的数字都得跟着帧数走 —— 摆死的三个节点改到第四帧就没辙了。
+func _rebuild_slots() -> void:
+	for c in _slots_row.get_children():
+		# 【必须 remove_child + queue_free】只 queue_free 的话节点要等这一帧结束才真的走，
+		# 紧接着 add_child 会让新旧按钮在同一个 HBox 里并排站一帧 —— 屏幕上是 6 个槽
+		_slots_row.remove_child(c)
+		c.queue_free()
+	_slot_buttons.clear()
+
+	var group := ButtonGroup.new()
+	for i in _clip.frame_count():
+		var b := Button.new()
+		b.name = "Slot%d" % (i + 1)
+		b.toggle_mode = true
+		b.button_group = group
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(SLOT_SIZE, SLOT_SIZE)
+		b.add_theme_font_size_override("font_size", 20)
+		b.add_theme_stylebox_override("normal", _button_sb(UiPalette.PAPER_SOFT, UiPalette.PAPER_LINE, 2, 10, 0, 0))
+		b.add_theme_stylebox_override("hover", _button_sb(UiPalette.PAPER_HOVER, C_ACCENT, 2, 10, 0, 0))
+		b.add_theme_stylebox_override("pressed", _button_sb(C_INK, C_ACCENT, 3, 10, 0, 0))
+		b.add_theme_stylebox_override("focus", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 10, 0, 0))
+		b.add_theme_color_override("font_color", C_INK)
+		b.add_theme_color_override("font_hover_color", C_INK)
+		b.add_theme_color_override("font_pressed_color", C_ACCENT)
+		b.toggled.connect(_on_slot_toggled.bind(i))
+		_slots_row.add_child(b)
+		_slot_buttons.append(b)
 
 
 # ============================================================
@@ -283,6 +317,29 @@ func _on_slot_toggled(on: bool, index: int) -> void:
 	_flash_face()
 
 
+## 末尾加一帧并跳过去 —— 「多演一帧」是这个动作的全部意义，加完还停在原地很奇怪
+func _on_add_frame() -> void:
+	if _clip.add_frame() < 0:
+		return
+	_frame = _clip.frame_count() - 1
+	_after_frame_count_changed()
+
+
+## 删的是**当前这一帧**，不是末尾：玩家点着第 2 帧按减号，期待消失的就是第 2 帧
+func _on_remove_frame() -> void:
+	if not _clip.remove_frame(_frame):
+		return
+	_frame = clampi(_frame, 0, _clip.frame_count() - 1)
+	_after_frame_count_changed()
+
+
+## 帧数变了：按钮先重建（数量变了），再整体刷一遍；换帧那一下给个闪，让眼睛跟得上
+func _after_frame_count_changed() -> void:
+	_rebuild_slots()
+	_sync_all()
+	_flash_face()
+
+
 func _on_card_toggled(on: bool, slot: int, key: String) -> void:
 	if _syncing or not on:
 		return
@@ -382,8 +439,14 @@ func _sync_slots() -> void:
 	_syncing = true
 	for i in _slot_buttons.size():
 		var b := _slot_buttons[i]
-		b.text = "帧 %d\n%s" % [i + 1, _clip.frame_label(i)]
+		# 键面只留数字，情绪退到 tooltip —— 两行字在 44 的键上放不下，
+		# 而情绪本来在右边「当前帧情绪」和顶栏「帧序列」都读得到
+		b.text = str(i + 1)
+		b.tooltip_text = "帧 %d · %s" % [i + 1, _clip.frame_label(i)]
 		b.button_pressed = (i == _frame)
+	# 到头了就置灰，别让玩家点了没反应还以为是卡了
+	_frame_add.disabled = _clip.frame_count() >= Clip.MAX_FRAME_COUNT
+	_frame_remove.disabled = _clip.frame_count() <= Clip.MIN_FRAME_COUNT
 	_syncing = false
 
 
@@ -599,20 +662,23 @@ func _apply_styles() -> void:
 		tab.add_theme_color_override("icon_hover_color", C_TEXT)
 		tab.add_theme_color_override("icon_pressed_color", C_INK)
 
-	# 帧槽（选中态靠 content_margin 少 4px 实现「上浮」—— 容器会覆盖 position，动不了）
-	for b: Button in _slot_buttons:
+	# 帧槽的样式在 _rebuild_slots() 里 —— 那些按钮是现建的，这里的循环够不到
+	# 增删帧：与帧槽同一套纸面配色，但**不铺底**（次要动作不该和帧槽一样重）
+	for b: Button in [_frame_remove, _frame_add]:
 		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(150, 74)
-		b.add_theme_font_size_override("font_size", 16)
-		b.add_theme_stylebox_override("normal", _button_sb(UiPalette.PAPER_SOFT, UiPalette.PAPER_LINE, 2, 12, 0, 12))
-		b.add_theme_stylebox_override("hover", _button_sb(UiPalette.PAPER_HOVER, C_ACCENT, 2, 12, 0, 12))
-		b.add_theme_stylebox_override("pressed", _button_sb(C_INK, C_ACCENT, 3, 12, 4, 8))
-		b.add_theme_stylebox_override("focus", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 12))
+		b.add_theme_font_size_override("font_size", 26)
+		b.add_theme_stylebox_override("normal", _button_sb(Color(0, 0, 0, 0), UiPalette.PAPER_LINE, 2, 10, 0, 0))
+		b.add_theme_stylebox_override("hover", _button_sb(C_ACCENT, C_ACCENT, 2, 10, 0, 0))
+		b.add_theme_stylebox_override("pressed", _button_sb(C_INK, C_ACCENT, 2, 10, 0, 0))
+		b.add_theme_stylebox_override("focus", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 10, 0, 0))
+		b.add_theme_stylebox_override("disabled", _button_sb(Color(0, 0, 0, 0), UiPalette.PAPER_DISABLED, 2, 10, 0, 0))
 		b.add_theme_color_override("font_color", C_INK)
 		b.add_theme_color_override("font_hover_color", C_INK)
 		b.add_theme_color_override("font_pressed_color", C_ACCENT)
+		b.add_theme_color_override("font_disabled_color", UiPalette.TEXT_DISABLED)
 
-	# 底部按钮（纸面带上，用深色按钮压住）
+	# 底部按钮（纸面带上，用深色按钮压住）。两个都是文字键：
+	# 「完成」是主操作，字大一号、深底黄边；「清空」是次要的，字小一号、浅底
 	_style_button(_clear_button, UiPalette.PAPER_SOFT, C_INK, C_LINE, 20)
 	_style_button(_confirm_button, C_INK, C_ACCENT, C_ACCENT, 24)
 	_confirm_button.add_theme_stylebox_override("disabled",

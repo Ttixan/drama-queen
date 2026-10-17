@@ -152,6 +152,34 @@ func _run_all() -> void:
 	_check("同时只有一个帧槽亮", pressed_slots, 1)
 
 	print("")
+	print("[10] 帧数可增删（1..5）")
+	_check("初始 3 帧", _app._clip.frame_count(), 3)
+	_check("帧槽键面只写数字", _app._slot_buttons[0].text, "1")
+	_app._frame_add.emit_signal("pressed")
+	_check("加一帧 → 4", _app._clip.frame_count(), 4)
+	_check("加完跳到新帧", _app._frame, 3)
+	_check("帧槽按钮跟着变多", _app._slot_buttons.size(), 4)
+	_app._frame_add.emit_signal("pressed")
+	_check("再加 → 5", _app._clip.frame_count(), 5)
+	_check("到上限置灰", _app._frame_add.disabled, true)
+	_app._frame_add.emit_signal("pressed")
+	_check("满了再加不动", _app._clip.frame_count(), 5)
+	# 删的是**当前帧**，不是末尾：停在第 2 帧按减号，消失的该是它
+	_select_frame(1)
+	var kept: Clip.Frame = _app._clip.frames[0]
+	_app._frame_remove.emit_signal("pressed")
+	_check("删当前帧 → 4", _app._clip.frame_count(), 4)
+	_check("第 1 帧没被连带删掉", _app._clip.frames[0], kept)
+	_check("删除后当前帧仍是合法下标", _app._frame, 1)
+	for i in 3:
+		_app._frame_remove.emit_signal("pressed")
+	_check("删到只剩 1 帧", _app._clip.frame_count(), 1)
+	_check("只剩一帧时置灰", _app._frame_remove.disabled, true)
+	_app._frame_remove.emit_signal("pressed")
+	_check("最后一帧删不掉", _app._clip.frame_count(), 1)
+	_check("帧槽也只剩一个", _app._slot_buttons.size(), 1)
+
+	print("")
 	print("共 %d 项断言" % _checks)
 	if _failures.is_empty():
 		print("✅ 全部通过")
