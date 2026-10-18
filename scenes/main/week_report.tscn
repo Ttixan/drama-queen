@@ -20,7 +20,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.72)
+color = Color(0, 0, 0, 0.66)
 
 [node name="Center" type="CenterContainer" parent="."]
 layout_mode = 1
@@ -30,71 +30,116 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Card" type="PanelContainer" parent="Center"]
-custom_minimum_size = Vector2(1560, 950)
+[node name="Paper" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(1660, 980)
 layout_mode = 2
 
-[node name="CardMargin" type="MarginContainer" parent="Center/Card"]
+[node name="PaperMargin" type="MarginContainer" parent="Center/Paper"]
 layout_mode = 2
-theme_override_constants/margin_left = 40
-theme_override_constants/margin_top = 32
-theme_override_constants/margin_right = 40
-theme_override_constants/margin_bottom = 32
+theme_override_constants/margin_left = 38
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 38
+theme_override_constants/margin_bottom = 22
 
-[node name="CardBox" type="VBoxContainer" parent="Center/Card/CardMargin"]
+[node name="PaperBox" type="VBoxContainer" parent="Center/Paper/PaperMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Masthead" type="HBoxContainer" parent="Center/Paper/PaperMargin/PaperBox"]
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="Header" type="HBoxContainer" parent="Center/Card/CardMargin/CardBox"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="HeaderBox" type="VBoxContainer" parent="Center/Card/CardMargin/CardBox/Header"]
+[node name="Edition" type="Label" parent="Center/Paper/PaperMargin/PaperBox/Masthead"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 0
+size_flags_vertical = 4
+text = "第 1 期"
 
-[node name="ReportTitle" type="Label" parent="Center/Card/CardMargin/CardBox/Header/HeaderBox"]
+[node name="PaperName" type="Label" parent="Center/Paper/PaperMargin/PaperBox/Masthead"]
 layout_mode = 2
 text = "《有瓜有戏》"
+horizontal_alignment = 1
 
-[node name="ReportSubtitle" type="Label" parent="Center/Card/CardMargin/CardBox/Header/HeaderBox"]
+[node name="DayLabel" type="Label" parent="Center/Paper/PaperMargin/PaperBox/Masthead"]
 layout_mode = 2
-text = "本周播出的戏，都在这一版里"
-
-[node name="DayLabel" type="Label" parent="Center/Card/CardMargin/CardBox/Header"]
-layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 4
 text = "第 7 天"
 horizontal_alignment = 2
 
-[node name="Rule" type="ColorRect" parent="Center/Card/CardMargin/CardBox"]
-custom_minimum_size = Vector2(0, 3)
+[node name="Rule" type="ColorRect" parent="Center/Paper/PaperMargin/PaperBox"]
+custom_minimum_size = Vector2(0, 4)
 layout_mode = 2
-color = Color(0.956863, 0.831373, 0.278431, 1)
+color = Color(0.0901961, 0.0901961, 0.101961, 1)
 
-[node name="Scroll" type="ScrollContainer" parent="Center/Card/CardMargin/CardBox"]
+[node name="Body" type="HBoxContainer" parent="Center/Paper/PaperMargin/PaperBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 30
+
+[node name="Left" type="VBoxContainer" parent="Center/Paper/PaperMargin/PaperBox/Body"]
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="FaceCaption" type="Label" parent="Center/Paper/PaperMargin/PaperBox/Body/Left"]
+layout_mode = 2
+text = "本周高分表情"
+autowrap_mode = 3
+
+[node name="FaceFrame" type="PanelContainer" parent="Center/Paper/PaperMargin/PaperBox/Body/Left"]
+custom_minimum_size = Vector2(520, 520)
+layout_mode = 2
+
+[node name="FaceStage" type="Control" parent="Center/Paper/PaperMargin/PaperBox/Body/Left/FaceFrame"]
+layout_mode = 2
+
+[node name="FaceNote" type="Label" parent="Center/Paper/PaperMargin/PaperBox/Body/Left"]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+
+[node name="Right" type="VBoxContainer" parent="Center/Paper/PaperMargin/PaperBox/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="HeadlineBox" type="VBoxContainer" parent="Center/Paper/PaperMargin/PaperBox/Body/Right"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="RightRule" type="ColorRect" parent="Center/Paper/PaperMargin/PaperBox/Body/Right"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+color = Color(0.811765, 0.784314, 0.721569, 1)
+
+[node name="RightScroll" type="ScrollContainer" parent="Center/Paper/PaperMargin/PaperBox/Body/Right"]
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="Content" type="VBoxContainer" parent="Center/Card/CardMargin/CardBox/Scroll"]
+[node name="ContentMargin" type="MarginContainer" parent="Center/Paper/PaperMargin/PaperBox/Body/Right/RightScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 16
+theme_override_constants/margin_right = 18
 
-[node name="Footer" type="HBoxContainer" parent="Center/Card/CardMargin/CardBox"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="FootHint" type="Label" parent="Center/Card/CardMargin/CardBox/Footer"]
+[node name="Content" type="VBoxContainer" parent="Center/Paper/PaperMargin/PaperBox/Body/Right/RightScroll/ContentMargin"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/separation = 14
+
+[node name="Footer" type="HBoxContainer" parent="Center/Paper/PaperMargin/PaperBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="FootHint" type="Label" parent="Center/Paper/PaperMargin/PaperBox/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
 text = ""
 autowrap_mode = 3
-vertical_alignment = 1
 
-[node name="NextButton" type="Button" parent="Center/Card/CardMargin/CardBox/Footer"]
-custom_minimum_size = Vector2(360, 72)
+[node name="NextButton" type="Button" parent="Center/Paper/PaperMargin/PaperBox/Footer"]
+custom_minimum_size = Vector2(360, 68)
 layout_mode = 2
 text = "翻篇"

@@ -181,6 +181,10 @@ func _run(raw: String) -> void:
 			_cmd_seed(args)
 		"money", "acting", "fame", "reputation":
 			_cmd_stat(head, args)
+		"submit", "audition":
+			_cmd_submit(args)
+		"paper":
+			_cmd_paper(args)
 		"backup":
 			_cmd_backup()
 		"restore":
@@ -201,6 +205,8 @@ func _help() -> void:
 	_print("seed [n|random]            查看 / 改 event_seed（影响本周抽签）")
 	_print("money|acting|fame|reputation [n]   查看；`n` 设为 n，`+n`/-n` 增减")
 	_print("state                      当前天数 / 行动点 / 属性 / 挂着的事件")
+	_print("submit <A~E> [extra|support|lead]  求解一段适配这家公司的表情并直接投递")
+	_print("paper [ending]             弹一版《有瓜有戏》看版面（不动存档；ending 看结局页）")
 	_print("backup / restore           备份 / 还原 user://save.json")
 
 
@@ -440,6 +446,163 @@ func _stat_value(name: String) -> int:
 		"reputation":
 			return Game.reputation()
 	return 0
+
+
+# ============================================================
+# 一键试镜
+# ============================================================
+## 求解器在 `tools/` 下，导出包里没有 —— 但 GM 本身也只在 debug 构建里存在
+## （见文件头），所以两者同生共死。
+##
+## 【为什么是 `load()` 而不是 `preload`】`desk_screen` 会 preload 本脚本；
+## 一旦在编译期就把 `clip_solver.gd` / `week_report.tscn` 拖进来，
+## 里面引用的 `Game` / `PartLibrary` 会在 autoload 注册之前被解析 ——
+## `tools/*.gd` 跑测试时当场编译失败（正是文件头那条说明的坑）。运行时 load 没这个问题。
+const SOLVER_PATH := "res://tools/sim/clip_solver.gd"
+const PAPER_PATH := "res://scenes/main/week_report.tscn"
+
+
+## `submit A [档位]` —— 算一段**真正适配这家公司**的表情，然后真的走一遍投递。
+##
+## 【为什么不是伪造 passed】投递链路本身也值得验：扣行动点、写履历、发回信、
+## 周末报纸印哪张脸，全都在这条路上。伪造一个结果就等于什么都没测。
+func _cmd_submit(args: PackedStringArray) -> void:
+	if Game.state == null:
+		_print_err("Game.state 还没有")
+		return
+
+	var code := args[0].to_upper() if args.size() > 0 else "A"
+	var co := CompanyLibrary.by_code(code)
+	if co == null:
+		_print_err("没有这家公司：%s（A~E）" % code)
+		return
+
+	var tier := RoleRequirement.Tier.EXTRA
+	if args.size() > 1:
+		match args[1].to_lower():
+			"0", "extra", "龙套":
+				tier = RoleRequirement.Tier.EXTRA
+			"1", "support", "supporting", "配角":
+				tier = RoleRequirement.Tier.SUPPORTING
+			"2", "lead", "主角":
+				tier = RoleRequirement.Tier.LEAD
+			_:
+				_print_err("档位写 extra / support / lead")
+				return
+	var role: RoleRequirement = co.role_of(tier)
+	if role == null:
+		_print_err("这家公司没有「%s」档" % RoleRequirement.TIER_NAMES[tier])
+		return
+
+	# 【为什么用求解器】它内部就是 `AuditionResolver.evaluate` 的评分 ——
+	# "适合这家公司"不是排比句，是真实匹配度最高的那三帧。
+	var solver = load(SOLVER_PATH)
+	if solver == null:
+		_print_err("读不到 %s（导出包里没有 tools/）" % SOLVER_PATH)
+		return
+	var clip: Clip = solver.solve(co.conditions)
+	var rate: float = solver.rate(co.conditions)
+	_print("理想表演：%s ｜ 匹配 %.0f%%（线 %.0f%%）" % [
+			clip.summarize(), rate * 100.0, role.match_line * 100.0])
+
+	# 投递的两道前置：HR 得加上、演技得够 —— GM 里顺手补齐，省得来回敲
+	if not Game.state.is_hr_unlocked(code):
+		Game.unlock_hr(code)
+		_print("已顺手解锁 %s 的 HR" % code)
+	var need: int = maxi(co.acting_threshold, role.acting_required)
+	if Game.acting() < need:
+		var was := Game.acting()
+		Game.add_acting(need - was)
+		_print("演技 %d → %d（为过门槛自动补）" % [was, Game.acting()])
+
+	# 【行动点常是 0】玩家可能已经把今天用完了，GM 里直接补满 ——
+	# 不然「求解器都算好了却投不出去」会让人以为指令坏了。
+	if Game.state.ap_left_today <= 0:
+		Game.state.ap_left_today = GameState.AP_PER_DAY
+		EventBus.ap_changed.emit(Game.state.ap_left_today)
+		_print("行动点为 0，已补满到 %d（每天只有 %d 点；要连着投就 day 1）" % [
+				GameState.AP_PER_DAY, GameState.AP_PER_DAY])
+
+	var res: Dictionary = Game.submit_audition(clip, co, role)
+	if bool(res.get("rejected", true)):
+		_print_err("投递被拒：" + _reject_text(res))
+		return
+
+	var mail: Dictionary = res.get("mail", {})
+	_print("投出去了：%s ｜ 匹配 %.0f%% ｜ 回信「%s」" % [
+			"✅ 通过" if bool(res.get("passed", false)) else "❌ 失败",
+			float(res.get("match_rate", 0.0)) * 100.0, String(mail.get("subject", ""))])
+	_print("  表情：%s —— 已记进履历，周末报纸印的就是这张脸" % clip.summarize())
+	_print("  回信在手机的微信里；看报纸：day " + str(maxi(1, 8 - Game.state.day_of_week())))
+
+
+## 核心层拒绝时给的原因。`DailyActions.rejected()` 把话放在 `fail_reasons` 数组里，
+## 不是 `reason` —— 读错字段会永远只打印一个「?」。
+func _reject_text(res: Dictionary) -> String:
+	if res.has("reason"):
+		return String(res["reason"])
+	var parts := PackedStringArray()
+	for r: Variant in res.get("fail_reasons", []):
+		parts.append(String(r))
+	return "；".join(parts) if not parts.is_empty() else "（核心层没给原因）"
+
+
+# ============================================================
+# 报纸预演
+# ============================================================
+## `paper [ending]` —— 只造界面、不碰状态，专门用来看版面。
+func _cmd_paper(args: PackedStringArray) -> void:
+	var want_ending := args.size() > 0 and args[0].to_lower() == "ending"
+	var ui = load(PAPER_PATH).instantiate()
+	ui.set("report", _demo_report(want_ending))
+	get_tree().root.add_child(ui)
+	# 「翻篇」会发 dismissed —— 收到就把这层清掉，别让它压在桌面上
+	ui.connect("dismissed", func() -> void:
+		if is_instance_valid(ui):
+			ui.queue_free())
+	_print("报纸已弹出（%s）。点「翻篇」关掉。" % ("结局页" if want_ending else "头版"))
+	if want_ending:
+		_print("⚠ 结局页一路点到底会开新局 —— 先 backup 过就没事")
+
+
+## 一份只给眼睛看的周报：和 `WeekCycle.settle()` 的字段一一对应。
+## 【为什么不用真结算】它要推进一周、覆盖存档；这里只是看版面，不该付那个代价。
+func _demo_report(want_ending: bool) -> Dictionary:
+	var clip := Clip.new(1)
+	clip.frames[0] = Clip.Frame.new(
+			PartLibrary.by_id("eyes_02"), PartLibrary.by_id("mouth_01"),
+			PartLibrary.by_id("brows_01"), null)
+	var entry := {
+		"day": maxi(Game.day(), 1), "passed": true, "company_code": "A",
+		"role_tier": RoleRequirement.Tier.EXTRA, "match_rate": 0.82,
+		"play_title": "胡同口", "role_name": "小贩",
+		"clip": clip.save_dict(),
+	}
+	var headline := "《胡同口》连龙套都这么会演！"
+	var report := {
+		"week": Game.week(), "day": Game.day(),
+		"plays": [{
+			"grade": BalanceData.Grade.HIGH, "grade_name": "高分",
+			"match_rate": 0.82, "cast": RoleRequirement.Tier.EXTRA,
+			"unnoticed": false, "fame": 3, "rep": 2, "neg": 0,
+			"payout": 30, "acting_gain": 2,
+			"headline": headline, "entry": entry,
+		}],
+		"headlines": [headline],
+		"payout": 30, "acting_gain": 2, "fame_gain": 3, "rep_gain": 2, "neg_gain": 0,
+		"rent": 80,
+		"ps5_due": 0, "ps5_paid": 0, "ps5_overdue": false, "ps5_penalty": 0,
+		"black_fame": false,
+		"before": {"money": 200, "acting": 40, "fame": 0, "reputation": 0, "neg": 0},
+		"after": {"money": 150, "acting": 42, "fame": 3, "reputation": 2, "neg": 0},
+	}
+	if want_ending:
+		report["ending"] = {
+			"name": "平庸", "condition": "（演示）三周下来，没红也没塌",
+			"text": "三周过去了。日子勉强过得下去，你已经在想下一部戏了。",
+			"implemented": true,
+		}
+	return report
 
 
 # ============================================================

@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/apps/phone_screen.gd" id="1_phone"]
+[ext_resource type="Texture2D" path="res://assets/ui/phone/phone_body.png" id="2_body"]
+[ext_resource type="Texture2D" path="res://assets/ui/phone/phone_mask.png" id="3_mask"]
 
 [node name="PhoneScreen" type="Control"]
 layout_mode = 3
@@ -64,46 +66,87 @@ theme_override_constants/margin_bottom = 28
 layout_mode = 2
 theme_override_constants/separation = 18
 
-[node name="AppColumn" type="PanelContainer" parent="Page/BodyWrap/Body"]
-custom_minimum_size = Vector2(470, 0)
+[node name="AppColumn" type="Control" parent="Page/BodyWrap/Body"]
+clip_contents = true
+custom_minimum_size = Vector2(474, 0)
 layout_mode = 2
 
-[node name="ColumnMargin" type="MarginContainer" parent="Page/BodyWrap/Body/AppColumn"]
-layout_mode = 2
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 16
+[node name="PhoneBody" type="TextureRect" parent="Page/BodyWrap/Body/AppColumn"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_body")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="ColumnBox" type="VBoxContainer" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin"]
+[node name="ScreenMask" type="TextureRect" parent="Page/BodyWrap/Body/AppColumn"]
+clip_children = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_mask")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ScreenBg" type="ColorRect" parent="Page/BodyWrap/Body/AppColumn/ScreenMask"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.086, 0.086, 0.102, 1)
+
+[node name="ColumnMargin" type="MarginContainer" parent="Page/BodyWrap/Body/AppColumn/ScreenMask"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 80
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 40
+
+[node name="ColumnBox" type="VBoxContainer" parent="Page/BodyWrap/Body/AppColumn/ScreenMask/ColumnMargin"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="ColumnHead" type="HBoxContainer" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox"]
+[node name="ColumnHead" type="HBoxContainer" parent="Page/BodyWrap/Body/AppColumn/ScreenMask/ColumnMargin/ColumnBox"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="ColumnCaption" type="Label" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox/ColumnHead"]
+[node name="ColumnCaption" type="Label" parent="Page/BodyWrap/Body/AppColumn/ScreenMask/ColumnMargin/ColumnBox/ColumnHead"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "App"
 
-[node name="ColumnBack" type="Button" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox/ColumnHead"]
+[node name="ColumnBack" type="Button" parent="Page/BodyWrap/Body/AppColumn/ScreenMask/ColumnMargin/ColumnBox/ColumnHead"]
 visible = false
 layout_mode = 2
 text = "← 全部"
 
-[node name="ColumnHint" type="Label" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox"]
+[node name="ColumnHint" type="Label" parent="Page/BodyWrap/Body/AppColumn/ScreenMask/ColumnMargin/ColumnBox"]
 layout_mode = 2
 text = "悬浮看每个 App 是干什么的"
 autowrap_mode = 3
 
-[node name="AppList" type="VBoxContainer" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox"]
+[node name="AppList" type="VBoxContainer" parent="Page/BodyWrap/Body/AppColumn/ScreenMask/ColumnMargin/ColumnBox"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="SidebarHost" type="Control" parent="Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox"]
+[node name="SidebarHost" type="Control" parent="Page/BodyWrap/Body/AppColumn/ScreenMask/ColumnMargin/ColumnBox"]
 visible = false
 clip_contents = true
 layout_mode = 2

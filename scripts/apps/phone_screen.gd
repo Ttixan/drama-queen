@@ -21,7 +21,9 @@ extends Control
 ## `cancelled` 信号 + `enable_back()`，由桌子决定要不要露出返回入口。
 
 const P_HUD := "Page/HudBar/HudMargin/HudRow"
-const P_COLUMN := "Page/BodyWrap/Body/AppColumn/ColumnMargin/ColumnBox"
+## 左栏现在是**一台手机**：PhoneBody（外框图）在下、ScreenMask（遮罩）裁出屏幕形状，
+## 列表挂在遮罩里 —— 所以路径中间多了一层 `ScreenMask`。
+const P_COLUMN := "Page/BodyWrap/Body/AppColumn/ScreenMask/ColumnMargin/ColumnBox"
 const P_CONTENT := "Page/BodyWrap/Body/ContentPanel/ContentMargin/ContentHost"
 
 const DEFAULT_HINT := "悬浮看每个 App 是干什么的"
@@ -494,6 +496,9 @@ func _accent() -> Color:
 
 func _apply_styles() -> void:
 	get_node("Bg").color = UiPalette.BG
+	# 【屏幕要"亮着"】手机图里那块原来是中灰（像一块没通电的板）；铺一层深色底，
+	# 深色底又会被遮罩裁成圆角 + 刘海，看起来才是屏幕。
+	get_node("Page/BodyWrap/Body/AppColumn/ScreenMask/ScreenBg").color = UiPalette.BG
 	var accent := _accent()
 
 	# 状态栏只留一条亮色下边线 —— 和录像机 / 日历同一个手法
@@ -503,9 +508,8 @@ func _apply_styles() -> void:
 	bar.border_color = accent
 	get_node("Page/HudBar").add_theme_stylebox_override("panel", bar)
 
-	# 左栏 = 那台手机，右栏 = 它的屏幕：描边都跟着当前 App 的颜色
-	get_node("Page/BodyWrap/Body/AppColumn").add_theme_stylebox_override("panel",
-			UiPalette.panel(UiPalette.PANEL, 20, 2, accent))
+	# 【左栏不加描边】它现在是美术图里的手机（`phone-本体.png`）—— 描边由那张图自己带。
+	# 硬给它套一层圆角框只会在手机外面多出一圈线。右栏仍然跟着当前 App 的颜色。
 	get_node("Page/BodyWrap/Body/ContentPanel").add_theme_stylebox_override("panel",
 			UiPalette.panel(UiPalette.PANEL, 20, 2, accent))
 

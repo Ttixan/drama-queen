@@ -99,6 +99,10 @@ static func submit(state: GameState, clip: Clip, company: CompanyData,
 		# 回信原文也存进去 —— 微信的聊天记录要能完整还原，
 		# 否则读档回来只剩一条「投递过」的摘要，玩家没法回看邮件
 		"mail": result["mail"],
+		# 【报纸上要印的那张脸】每周一的《有瓜有戏》会把玩家当时拼的表情放上版面。
+		# 存**部件 id** 而不是图片：换美术不改 id，读档也能原样还原；
+		# 这不是"再存一份表情包"，而是履历的一部分 —— 那一部戏就是这张脸投的。
+		"clip": clip.save_dict(),
 	})
 
 	# 这两项由 Game 那一层转成 EventBus.clip_recorded / ap_changed
