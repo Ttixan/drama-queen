@@ -181,6 +181,9 @@ func _run_all() -> void:
 	_check("刚加上的那位被记进了状态", _game.focus_hr(), "A")
 	_rebuild_app()
 	_check("没有待办事件时，落回刚加上的那位", _app._current.code, "A")
+	# 【头一回点开会先"正在输入"一下】见 `wechat_app._start_welcome` ——
+	# 那时候聊天里只有那排点，自我介绍还没铺出来。测试不等，直接催到点。
+	await _finish_typing_now()
 	_check("两个入口都能点（没有子页面盖在上面了）", _app._go_boss_button.disabled, false)
 	_check("还没有附件", _app._pending, null)
 	_check("没有附件时发送按钮置灰", _app._send_button.disabled, true)
@@ -238,6 +241,10 @@ func _run_all() -> void:
 	# 底部那排档位 = 要一份这一档的剧本（和聊天里那三个按钮是同一件事）
 	_app._role_buttons[RoleRequirement.Tier.EXTRA].button_pressed = true
 	await _settle()
+	# 【点完档位他先"打"一会儿】我要的那句已经在，那份 .docx 还没拍过来
+	_check("点完档位先摆出「正在输入」", _find_named(_app._chat_log, "TypingRow") != null, true)
+	_check("剧本这时还没发过来", _chat_contains(".docx"), false)
+	await _finish_typing_now()
 	_check("选中了龙套", _app._role.tier, RoleRequirement.Tier.EXTRA)
 	_check("公司门槛显示正确", _app._requirement_label.text.contains("演技门槛 0"), true)
 	_check("要到了剧本：状态里记下了这一档",
@@ -251,6 +258,15 @@ func _run_all() -> void:
 	_check("附件被消耗（一次性）", _app._pending, null)
 	_check("状态里那份也清掉了（下次进微信不会又冒出来）", _game.pending_clip(), null)
 	_check("落了一条履历", _game.state.history.size(), 1)
+
+	# 【回信不再秒回】发出去那一帧只该看到自己的投递 + 对方那排点，
+	# 回信要等"打字"到点才落地（真机上是一两秒，这里直接把计时器催到点）。
+	_check("打字期间先摆出那排点", _find_named(_app._chat_log, "TypingRow") != null, true)
+	_check("回信这时还没铺出来", _chat_has(String(
+			(_game.state.history[0].get("mail", {}) as Dictionary).get("text", ""))), false)
+	_app._finish_typing()
+	await _settle()
+	_check("打完字那排点收起来", _find_named(_app._chat_log, "TypingRow"), null)
 	# 【闸门】下面每一条都要读 entry，履历为空时中断会让这一节静默变绿（还曾把整轮测试吊死）
 	if _game.state.history.is_empty():
 		print("❌ 没有履历，本节后面的断言无从谈起")
@@ -420,6 +436,9 @@ func _run_all() -> void:
 	# 【必须等一帧】重建聊天是 queue_free 旧气泡 —— 不等的话下面按下标读气泡
 	# 会读到上一轮那几条（`_settle` 的说明）
 	await _settle()
+	_check("点完档位他先「打」剧本", _find_named(_app._chat_log, "TypingRow") != null, true)
+	_check("文件名这时还没出现", _chat_contains(".docx"), false)
+	await _finish_typing_now()
 	var hand: Dictionary = _game.hr_script_of("A")
 	_check("状态里记下了这一档", int(hand.get("tier", -1)), RoleRequirement.Tier.SUPPORTING)
 	var doc := ScriptLibrary.for_play_tier(int(hand.get("play", 0)), int(hand.get("tier", -1)))
@@ -514,7 +533,8 @@ func _run_all() -> void:
 	# B 厂的门槛是 3，演技 0 时它的三个档位一个都够不着（A 厂不一样：龙套档 0 就能上）
 	_game.unlock_hr("B")
 	_app._select_company("B")
-	await _settle()   # 同上：等 A 家那几条被真的丢掉，免得下面按内容查时串台
+	# B 是刚解锁的：点开会先演一声招呼（`_start_welcome`），催到点再读聊天内容
+	await _finish_typing_now()   # 内部已经等过两帧，旧气泡真的丢掉了
 	_check("够不着任何档位时不摆选项", _app._tier_buttons.size(), 0)
 	_check("也不问「试哪类角色」", _chat_contains("试哪类角色"), false)
 	_check("但留了一句说清为什么", _chat_contains("演技"), true)
@@ -665,6 +685,13 @@ func _label_contains(node: Node, text: String) -> bool:
 func _settle() -> void:
 	await process_frame
 	await process_frame
+
+
+## 所有「对方正在输入」的等待（打招呼 / 投递回信 / 发剧本）在测试里都不真等 ——
+## 直接催到点（`_finish_typing` 就是计时器 timeout 接的那个函数），再等两帧让旧气泡真的被丢掉。
+func _finish_typing_now() -> void:
+	_app._finish_typing()
+	await _settle()
 
 
 # ============================================================

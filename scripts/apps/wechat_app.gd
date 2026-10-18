@@ -26,6 +26,23 @@ const BOSS_SCENE := "res://scenes/apps/boss.tscn"
 ## 真微信里「好」就是一个贴着边的窄条，全都拉成一样宽看着像公告栏，不像聊天
 const BUBBLE_MAX_W := 720.0
 const BUBBLE_FONT := 18
+
+## ---- 「对方正在输入…」 ----
+## 【为什么要这段假等待】判定与回信在核心层是**同一帧**出的（`Game.submit_audition`
+## 连着发 `audition_submitted` / `hr_replied`），于是点下发送的瞬间，回信就"秒回"砸在
+## 脸上 —— 读起来不像聊天，像在查表。这里只推迟**显示**：状态里那条回信早就写好了，
+## 中途切去别的 App 再回来会直接看到它（不存在"回信丢了"）。
+##
+## 时长按字数走：短的一句"好"不能也等四秒，长的回信也不能一闪而过。
+const TYPING_BASE := 0.9
+const TYPING_PER_CHAR := 0.035
+const TYPING_MAX := 4.5
+## 三个点之间的错峰（秒）。纯装饰，别调太大 —— 大了像"正在加载"
+const TYPING_STAGGER := 0.16
+## 头一回点开会话时，那两句自我介绍之前的「正在输入」时长。
+## 【为什么不复用 `_typing_seconds`】打招呼没有正文可量字数，也不该按回信那套
+## 0.9~4.5 秒 —— 玩家刚点开，一秒出头刚好。
+const WELCOME_TYPING := 1.2
 const CONTACT_AVATAR := 54
 ## 气泡旁的头像。比名单上的小一号 —— 它是「谁在说话」的标记，不是可点的行
 const CHAT_AVATAR := 40.0
@@ -102,6 +119,19 @@ var _tier_buttons: Array[Button] = []
 ## 程序化改按钮状态时会触发 toggled，用它挡住自己绕自己
 var _syncing := false
 
+## 正在"打字"的那一条：`{kind, code, index}`。空 = 没有在打字。
+## - `kind == "mail"`：投递回信，`index` 是它在 `Game.state.history` 里的下标
+## - `kind == "welcome"`：头一回点开时 HR 的打招呼（没有 `index`）
+## 【为什么不存回信文本】画的时候是从 `Game.state.history` 里取的，存一份只会
+## 在模板改了之后对不上 —— 这里只要"哪一条"。
+## `index` 是它在 `Game.state.history` 里的下标（**整份履历的下标**，不是本公司的），
+## 画聊天记录时靠它把那一条的回信暂时藏起来。
+var _typing: Dictionary = {}
+## 打字计时器。**不用 `await create_timer`**：本 App 会被手机屏销毁（去录像机 /
+## 简历拿来都是整屏切走），挂在协程上的 await 会在对象被释放后继续跑，报一堆错。
+## Timer 是子节点，跟着一起没了，干净。
+var _typing_timer: Timer
+
 ## ---- 事件会话（GDD 四、系统划分把「随机事件」归给微信的「联系其他人」）----
 ## 当前打开的是哪个事件说话人。空串 = 在看某家公司的 HR。
 ##
@@ -133,6 +163,13 @@ func _ready() -> void:
 	_apply_styles()
 	_build_contacts()
 	_build_event_composer()
+
+	# 打字计时器（见 `_typing` 的注释：不用 await，跟着 App 一起生灭）
+	_typing_timer = Timer.new()
+	_typing_timer.name = "TypingTimer"
+	_typing_timer.one_shot = true
+	_typing_timer.timeout.connect(_finish_typing)
+	add_child(_typing_timer)
 
 	EventBus.hr_unlocked.connect(_on_hr_unlocked)
 	EventBus.ap_changed.connect(_on_ap_changed)
@@ -308,6 +345,9 @@ func _on_event_toggled(on: bool, speaker: StringName) -> void:
 
 
 func _select_event_speaker(speaker: StringName) -> void:
+	# 【换会话就别再"打字"了】回信早在 state 里，切回来直接看到；
+	# 不取消的话计时器会在玩家看别的会话时到点，突然重画一遍当前界面
+	_cancel_typing()
 	_current = null
 	_event_speaker = speaker
 	_role = null
@@ -532,9 +572,14 @@ func _on_contact_toggled(on: bool, code: String) -> void:
 
 
 func _select_company(code: String) -> void:
+	# 同上：换人 / 回来重选都算离开那条会话，那排点不该跟着走
+	_cancel_typing()
 	_current = CompanyLibrary.by_code(code)
 	# 记进状态：本 App 被切走再建起来时，要落在同一位联系人上（见 `_ready`）
 	Game.set_focus_hr(code)
+	# 【第一次点开 = 他刚把你加上】这一下要演一句「正在输入」（见 `_start_welcome`）。
+	# 必须在 `mark_hr_read` **之前**读：那一句会把未读清掉。
+	var fresh := Game.state.unread_hrs.has(code)
 	# 点开 = 已读（他的角标在这儿灭掉）
 	Game.mark_hr_read(code)
 	# 【两个开关必须成对】`_is_event_chat()` 只看 `_event_speaker`，
@@ -550,8 +595,12 @@ func _select_company(code: String) -> void:
 	_syncing = false
 	_build_role_buttons()
 	_refresh_all()
-	_rebuild_chat()
-	_scroll_chat_to_bottom()
+	if fresh:
+		# 头一回点开：先"打"一会儿，那两句自我介绍才落地
+		_start_welcome(code)
+	else:
+		_rebuild_chat()
+		_scroll_chat_to_bottom()
 
 
 # ============================================================
@@ -717,7 +766,12 @@ func _refresh_header() -> void:
 		return
 	var unlocked := Game.is_hr_unlocked(_current.code)
 	_peer_name.text = "%s（%s）" % [_current.hr_name, _current.display_name]
-	_peer_meta.text = "%s · %s" % [_current.hr_title, "已私聊" if unlocked else "还没解锁"]
+	# 【「正在输入」写在头部】真微信也是这么提示的。聊天里那三个小点太容易
+	# 被当成装饰（尤其底下一堆旧气泡时）—— 这一行是要玩家抬头就看见的。
+	if not _typing.is_empty() and String(_typing.get("code", "")) == _current.code:
+		_peer_meta.text = "正在输入…"
+	else:
+		_peer_meta.text = "%s · %s" % [_current.hr_title, "已私聊" if unlocked else "还没解锁"]
 	var lines: Array[String] = []
 	lines.append("演技门槛 %d" % _current.acting_threshold)
 	for role: RoleRequirement in _current.roles:
@@ -938,6 +992,15 @@ func _rebuild_chat() -> void:
 		_add_note("你还没在简历拿来看过 %s 的招聘页，微信里加不上这位 HR" % _current.code)
 		return
 
+	# 【刚点开时也在"打字"】第一次打开这位（进来前他还有未读）—— 整段先只摆那排点：
+	# 自我介绍、口味线索、履历都等它落地再一起出现。
+	# 【为什么整段都等，而不是只藏那两句招呼】只藏招呼的话，下面的历史记录照样铺满屏，
+	# 「正在输入」就成了一句假话 —— 玩家看到的是"记录都在，还装什么打字"。
+	if String(_typing.get("kind", "")) == "welcome" \
+			and String(_typing.get("code", "")) == _current.code:
+		_add_typing_bubble()
+		return
+
 	# 【加上了就先互相报名字】「简历拿来」那一步是「跟 HR 说上话才拿到联系方式」，
 	# 所以微信里这段记录该从「我是谁」开始，而不是一上来只有系统提示。
 	# 这两句是**从既有数据拼的**（公司名与 HR 名在 `CompanyData`，主角名读内容池），
@@ -950,14 +1013,37 @@ func _rebuild_chat() -> void:
 	# 这里复述一条是**便利**，不是新增信息 —— 拼表情包时不用来回切 App。
 	_add_note("这家的偏好：" + _current.hint)
 
+	# 【正在打字的是哪一条】`mail` 用下标藏履历里的那封回信；`script` 藏「他发剧本」那一段。
+	# 下标是**整份履历**的下标，所以下面要对全部履历计数，不能只数本公司的。
+	var typing_kind := ""
+	if not _typing.is_empty() and String(_typing.get("code", "")) == _current.code:
+		typing_kind = String(_typing.get("kind", ""))
+	var typing_index := -1
+	if typing_kind == "mail":
+		typing_index = int(_typing.get("index", -1))
+
 	var found := 0
+	var index := -1
 	for entry: Dictionary in Game.state.history:
+		index += 1
 		if String(entry.get("company_code", "")) != _current.code:
 			continue
 		found += 1
-		_add_entry_bubbles(entry)
+		_add_entry_bubbles(entry, index == typing_index)
 	if found == 0:
 		_add_note("还没有投过 %s —— 拼好表情包就能发第一条" % _current.display_name)
+
+	# 正在输入时，聊天就停在那一排点上 —— 底下再追一句「试哪类角色」，
+	# 看起来像 HR 一边打字一边已经问完了，很怪。等回信落地再问。
+	if typing_index >= 0:
+		_add_typing_bubble()
+		return
+
+	# 【他在"打"剧本】只画到「我想试X」，那句发送 + 文件卡等计时器到点再补上。
+	if typing_kind == "script":
+		_add_script_turn(true)
+		_add_typing_bubble()
+		return
 
 	# 眼前这一句永远排在最后：要么是 HR 在问「试哪类角色」，要么是他刚发过来的剧本
 	_add_script_turn()
@@ -974,8 +1060,11 @@ func _player_name() -> String:
 	return who if not who.strip_edges().is_empty() else "我"
 
 
-## 把履历里的一条投递还原成「玩家气泡 + HR 回信」
-func _add_entry_bubbles(entry: Dictionary) -> void:
+## 把履历里的一条投递还原成「玩家气泡 + HR 回信」。
+##
+## `hide_mail` = 这一条正是"对方还在打字"的那条：只画我的投递，回信等计时器到点再画
+## （见 `_typing`）。**只藏回信、不藏投递** —— 玩家得先看见自己发出去了。
+func _add_entry_bubbles(entry: Dictionary, hide_mail := false) -> void:
 	var labels: Array = entry.get("labels", [])
 	_add_bubble("【投递】《%s》· %s\n表情包：%s" % [
 		entry.get("play_title", "?"),
@@ -983,6 +1072,8 @@ func _add_entry_bubbles(entry: Dictionary) -> void:
 		" → ".join(labels) if not labels.is_empty() else "—",
 	], true)
 
+	if hide_mail:
+		return
 	var mail: Dictionary = entry.get("mail", {})
 	if mail.is_empty():
 		_add_note("（这封回信是早期版本投的，没存下来）")
@@ -1152,6 +1243,139 @@ func _add_note(text: String) -> void:
 	_chat_log.add_child(label)
 
 
+# ============================================================
+# 「对方正在输入…」
+# ============================================================
+## 回信要"打"多久：按字数线性增长；短句最少 0.9 秒，再长也封顶 4.5 秒
+## （等四秒半已经像卡住了，不像人）。
+func _typing_seconds(text: String) -> float:
+	return clampf(TYPING_BASE + text.length() * TYPING_PER_CHAR, TYPING_BASE, TYPING_MAX)
+
+
+## 头一回点开这位：先"打"一会儿招呼，再把整段聊天铺出来。
+##
+## 【为什么放在点开时，而不是加好友时】加好友那一刻玩家还在 Boss直聘 里
+## （微信根本不在场上），这边演给谁看？等他真的点进这条会话，才是"对方开口了"。
+func _start_welcome(code: String) -> void:
+	_typing = {"kind": "welcome", "code": code}
+	_typing_timer.start(WELCOME_TYPING)
+	_rebuild_chat()
+	# 头部那行「正在输入…」（见 `_refresh_header`）
+	_refresh_header()
+	_scroll_chat_to_bottom()
+
+
+## 玩家点了一个档位：先把「我想试X」画出来，他那句「这是《…》的剧本」+ 文件
+## 等打字到点再出现。
+##
+## 【为什么时长按 `OFFER_SCRIPT` 算】那才是他真正要"打"的那句话 ——
+## 按档位名或文件名算都对不上长度。
+func _start_script_typing(doc: ScriptDoc) -> void:
+	if _current == null or doc == null:
+		return
+	_typing = {"kind": "script", "code": _current.code}
+	_typing_timer.start(_typing_seconds(OFFER_SCRIPT % [doc.play_title, doc.role_name]))
+	_rebuild_chat()
+	# 头部那行「正在输入…」
+	_refresh_header()
+	_scroll_chat_to_bottom()
+
+
+## 玩家刚把表情包发出去：开始"打字"，那条回信先不画。
+##
+## 【位置为什么用履历下标】同一个人投过很多次，按回信文本比对迟早撞（模板会重复）；
+## 下标由投递那一刻的 `history.size() - 1` 给出，是唯一的，也不依赖任何新字段。
+## `text` 只用来算"打"多久（见 `_typing_seconds`），不往 `_typing` 里存。
+func _start_typing(code: String, index: int, text: String) -> void:
+	_typing = {"kind": "mail", "code": code, "index": index}
+	_typing_timer.start(_typing_seconds(text))
+	_rebuild_chat()
+	# 头部那行「正在输入…」跟着一起亮（见 `_refresh_header`）
+	_refresh_header()
+	_scroll_chat_to_bottom()
+
+
+## 到点：回信落地，顺手把那声"叮"放在这一刻。
+## 【提示音为什么从 `Sfx` 挪到这儿】声音得跟着**气泡出现**走，而不是跟着核心层的
+## `hr_replied` 信号 —— 那条信号在玩家点发送的同一帧就发了，那时对方还在打字。
+func _finish_typing() -> void:
+	if _typing.is_empty():
+		return
+	_typing.clear()
+	Sfx.play(&"mail_reply")
+	_rebuild_chat()
+	_refresh_all()
+	_scroll_chat_to_bottom()
+
+
+## 离开这条会话 / 换人 / 开新局：别再画那排点了。
+## 回信本身早在 state 里，回到这条会话会直接看到 —— 只是没有"打字"这一段。
+func _cancel_typing() -> void:
+	if _typing.is_empty():
+		return
+	_typing.clear()
+	if _typing_timer != null:
+		_typing_timer.stop()
+
+
+## 三个点的灰气泡：对方头像 + 一个只有三个点的卡。
+## 点用 `Panel` + 全圆角画（项目里头像/角标都是这个画法），
+## 每个点各自一条 tween 错开起跳，才像有人在敲字。
+func _add_typing_bubble() -> void:
+	var row := HBoxContainer.new()
+	row.name = "TypingRow"
+	row.add_theme_constant_override("separation", 10)
+
+	row.add_child(_bubble_avatar(false))
+
+	var card := PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	card.add_theme_stylebox_override("panel",
+			UiPalette.panel(UiPalette.PANEL_SOFT, 16, 2, UiPalette.LINE))
+
+	var margin := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 16)
+	card.add_child(margin)
+
+	var dots := HBoxContainer.new()
+	dots.add_theme_constant_override("separation", 6)
+	margin.add_child(dots)
+	var pulses: Array[Panel] = []
+	for i in 3:
+		var dot := Panel.new()
+		# 【点要够大够亮】10px + `TEXT_DIM` + 0.3 透明在深色底上几乎看不见 ——
+		# 玩家会以为「对方根本没在打字」。这里用正文色、12px，呼吸幅度也更明显。
+		dot.custom_minimum_size = Vector2(12, 12)
+		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		dot.modulate.a = 0.4
+		dot.add_theme_stylebox_override("panel", UiPalette.rounded(UiPalette.TEXT, 6))
+		dots.add_child(dot)
+		pulses.append(dot)
+
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(card)
+	row.add_child(spacer)
+	_chat_log.add_child(row)
+
+	# 【起 tween 必须等进树之后】`create_tween()` 要求节点已在场景树里：
+	# 上面那几行只是拼装，整行到这一句才挂上聊天区 —— 早一步调就是拿 null。
+	for i in pulses.size():
+		_pulse_dot(pulses[i], i * TYPING_STAGGER)
+
+
+## 一个点的呼吸循环。**tween 绑在点上**（`dot.create_tween()`），
+## 聊天记录重建、点被释放时它自己就没了 —— 不用手动回收。
+func _pulse_dot(dot: Panel, delay: float) -> void:
+	var tw := dot.create_tween().set_loops()
+	tw.tween_interval(delay)
+	tw.tween_property(dot, "modulate:a", 1.0, 0.22)
+	tw.tween_property(dot, "modulate:a", 0.4, 0.22)
+	tw.tween_interval(0.42)
+
+
 func _scroll_chat_to_bottom() -> void:
 	# 等一帧让容器算完高度，否则拿到的是旧 max_value，滚不到底
 	await get_tree().process_frame
@@ -1166,7 +1390,9 @@ func _scroll_chat_to_bottom() -> void:
 ## 【为什么它永远在最后】聊天的顺序就是对话的顺序：自我介绍 → 口味线索 → 履历 →
 ## **眼前这一句**。投递之后剧本被清掉（见 `_on_send`），这一段自己就变回「问下一部」——
 ## 不需要任何「已经问过没有」的标记，全部从 `Game.hr_script_of` 推出来。
-func _add_script_turn() -> void:
+## `hide_offer` = 他还在"打"这份剧本：只画到「我想试X」，发送那句话、文件卡、
+## 我那句「我先看剧本」都等打字到点再补（见 `_start_script_typing`）。
+func _add_script_turn(hide_offer := false) -> void:
 	if _current == null or not Game.is_hr_unlocked(_current.code):
 		return
 	if Game.hr_script_of(_current.code).is_empty():
@@ -1192,6 +1418,9 @@ func _add_script_turn() -> void:
 	# 是玩家要了哪一档、HR 才把那一档的剧本递过来。
 	# 这一句由**手上那份剧本**推出来，所以换档时它跟着换，不用额外存。
 	_add_bubble(PICK_SCRIPT % doc.tier_name(), true)
+	# 我这句已经发出去了，剩下的等他"打完"（见 `_start_script_typing`）
+	if hide_offer:
+		return
 	_add_bubble(OFFER_SCRIPT % [doc.play_title, doc.role_name], false)
 	_add_file_card(doc)
 	_add_bubble(REPLY_SCRIPT, true)
@@ -1284,8 +1513,9 @@ func _pick_tier(tier: int) -> bool:
 	_role = _current.role_of(doc.tier)
 	_auto_pick_role()
 	_refresh_composer()
-	_rebuild_chat()
-	_scroll_chat_to_bottom()
+	# 【剧本也是"他发过来的"】点完档位不能同一帧就把 .docx 拍在脸上 ——
+	# 和投递回信一样，先让那边打一会儿字（见 `_start_script_typing`）。
+	_start_script_typing(doc)
 	return true
 
 
@@ -1417,8 +1647,11 @@ func _on_send() -> void:
 	# 手工再铺一遍等于同一件事写两处；重建还顺手把顺序摆对：回信在上、新问题在下。
 	Game.clear_hr_script(_current.code)
 	_refresh_all()
-	_rebuild_chat()
-	_scroll_chat_to_bottom()
+	# 【回信晚几秒才"打"出来】刚才那条已经从 state 里铺过了，这里只是让它先藏着：
+	# 下标用履历最后一条（`DailyActions.submit` 刚 append 的那条），
+	# 按文本比对迟早撞模板，下标是唯一的。
+	var mail: Dictionary = res.get("mail", {})
+	_start_typing(_current.code, Game.state.history.size() - 1, String(mail.get("text", "")))
 
 
 # ============================================================
@@ -1505,6 +1738,8 @@ func _on_ap_changed(_left: int) -> void:
 ## 【表情包跟着状态走】开新局时它是空的；读档时它是存档里那一段 —— 两者都是状态说了算，
 ## 所以这里不是「清成 null」，而是「重新问状态要一次」。
 func _on_state_reset() -> void:
+	# 开新局 / 读档：上一局那条"还没打完的回信"不能跟着留下来
+	_cancel_typing()
 	_current = null
 	_pending = Game.pending_clip()
 	_role = null

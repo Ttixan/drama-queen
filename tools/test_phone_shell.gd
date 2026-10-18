@@ -72,6 +72,7 @@ func _run_all() -> void:
 	_test_week_event()
 	_test_desk_jump()
 	_test_notebook()
+	_test_sfx()
 
 	print("")
 	print("共 %d 项断言" % _checks)
@@ -742,6 +743,62 @@ func _test_notebook() -> void:
 
 	book.queue_free()
 	print("   四张贴纸各开各的；× 只收三级页，不退出笔记本")
+
+
+## 音效：**按钮是自动挂的**，事件音是信号接的。
+##
+## 【为什么要测】headless 的音频驱动是 Dummy，听不见也看不出来 ——
+## 少接一条信号，或者 `STREAMS` 里写了个错路径，只有真机上才会发现"怎么没声"。
+## 这里用 `Sfx.played_log` 把「信号 → 播放」这一步钉住。
+func _test_sfx() -> void:
+	print("[13] 音效：按钮全局挂钩 + 事件音")
+	var sfx: Node = root.get_node_or_null("Sfx")
+	_check("Sfx autoload 在", sfx != null, true)
+	if sfx == null:
+		return
+	_check("7 条素材都配上了", sfx.STREAMS.size(), 7)
+	var broken := 0
+	for code: StringName in sfx.STREAMS:
+		if sfx.STREAMS[code] == null:
+			broken += 1
+	_check("没有加载失败的音", broken, 0)
+
+	# 【全局挂钩】新按钮加进树就该自动有两条音，页面作者什么都不用写
+	var b := Button.new()
+	root.add_child(b)
+	_check("按钮自动挂上点击音", b.pressed.get_connections().size(), 1)
+	_check("按钮自动挂上悬浮音", b.mouse_entered.get_connections().size(), 1)
+	b.queue_free()
+
+	var bus := root.get_node("EventBus")
+	sfx.played_log.clear()
+	bus.money_changed.emit(120, 20)
+	_check("加钱：响一声", sfx.played_log.back(), &"money_up")
+	sfx.played_log.clear()
+	bus.money_changed.emit(100, -20)
+	_check("扣钱：不响（否则像赚了）", sfx.played_log.size(), 0)
+
+	sfx.played_log.clear()
+	bus.acting_changed.emit(5, 2)
+	_check("演技涨：响一声", sfx.played_log.back(), &"skill_up")
+
+	sfx.played_log.clear()
+	bus.audition_submitted.emit({})
+	_check("投递出去：发送成功音", sfx.played_log.back(), &"mail_sent")
+
+	# 【回信音不跟信号走】它现在由微信在"打字"到位、气泡出现那一刻自己播
+	# （见 `wechat_app._finish_typing`）—— 这里钉住的是"核心层不再提前响"，
+	# 否则发给玩家的会是先一声叮、几秒后才看到回信。
+	sfx.played_log.clear()
+	bus.hr_replied.emit("A", true, {})
+	_check("HR 回信不再由信号提前响", sfx.played_log.size(), 0)
+
+	sfx.played_log.clear()
+	bus.broadcast_published.emit(1, [])
+	_check("没有头条的周报不响", sfx.played_log.size(), 0)
+	bus.broadcast_published.emit(2, [{"title": "x"}])
+	_check("有头条：围脖提示音", sfx.played_log.back(), &"weibo")
+	print("   按钮自动挂点击/悬浮；钱·演技·投递·围脖由信号触发（回信音等气泡出现）")
 
 
 func _snapshot_save() -> Dictionary:

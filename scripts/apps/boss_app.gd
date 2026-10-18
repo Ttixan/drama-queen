@@ -64,9 +64,16 @@ const TOP_SIDE_W := 220.0
 
 ## 聊天逐条播放的间隔（秒）。**设成 0 = 一次放完** —— 「跳过」按钮走那条。
 const CHAT_STEP := 0.85
-## 点「沟通」之后、第一句出现前的沉默（秒）—— 对方不可能秒回，这一拍就是「正在输入」。
-## 【测试会把它设成 0】那样 `_open_chat` 一路同步，断言才写得稳。
-const FIRST_MSG_DELAY := 1.0
+## 对方每条话之前的「正在输入」时长：按字数走，短句最少 0.6 秒、封顶 2 秒。
+## 【为什么不再是一个固定的 FIRST_MSG_DELAY】原来只有开场前沉默一秒，
+## 而**玩家点完选项之后，HR 的回复是同一帧推出来的** —— 读起来像在查表。
+##
+## 【测试会把它设成 0】`_first_msg_delay = 0` 就是总开关（关掉后整条链路同步跑）。
+const TYPING_BASE := 0.6
+const TYPING_PER_CHAR := 0.03
+const TYPING_MAX := 2.0
+## 三个点之间的错峰（秒）。纯装饰，大了像「正在加载」
+const TYPING_STAGGER := 0.16
 ## 气泡最大宽度：超了就折行。小于它时按文字实际宽度收窄（短句子不该拉成一条长条）
 const MAX_BUBBLE_W := 560.0
 const BUBBLE_FONT := 17
@@ -124,8 +131,9 @@ var _chat_index := 0
 var _chat_done := false
 ## 玩家中途退了：**不再解锁** —— 得把话说完（或点跳过）才拿得到联系方式
 var _chat_aborted := false
-## 实际生效的首句时延（测试会把它设成 0，让整条链路同步跑）
-var _first_msg_delay := FIRST_MSG_DELAY
+## 「正在输入」的总开关：> 0 时每条对方消息前都垫一段（见 `_typing_seconds`）。
+## 【测试会把它设成 0】那样 `_open_chat` 一路同步，断言才写得稳。
+var _first_msg_delay := 1.0
 ## 当前摆在界面上的那组选项（玩家点完就撤掉）
 var _choices: Node
 ## 这是本次聊天里的第几组选项（0 起）。**用它当键**去问「玩家当初挑的是第几句」——
@@ -600,9 +608,8 @@ func _open_chat() -> void:
 	# 【每次进聊天都复位播放间隔】它是「这一次」的设置，不是全局开关 ——
 	# `skip_chat()` 压下去的那个 0 必须留在这一次里（漏出去下一家就没有三选一了）。
 	_chat_step = 0.0 if _fast_forward else CHAT_STEP
-	# 给这一趟发一张票：下面那个 await 期间玩家可能已经换了一家，醒来先认票。
+	# 给这一趟发一张票：`_play_chat` 每等一次都要认票（玩家可能已经换了家）
 	_chat_token += 1
-	var token := _chat_token
 	_clear_feed()
 	_chat_name.text = _current.hr_name
 	UiBits.one_line(_chat_name, 26, 300)
@@ -628,17 +635,8 @@ func _open_chat() -> void:
 	if seen or _chat_step <= 0.0:
 		skip_chat()
 		return
-	# 【点下去先等一拍】对方不可能秒回 —— 这一秒的沉默就是「正在输入」，
-	# 期间职位卡已经摆出来了，玩家有事可看。第二次进来走 skip，不等。
-	if _first_msg_delay > 0.0:
-		await get_tree().create_timer(_first_msg_delay).timeout
-		# 【认票】这 1 秒里玩家可能已经点了别家 —— 那就别再接着播「上一家」了。
-		# 不认票的话，两家的协程会同时往同一个聊天框里推字（同样的句子出现两遍）。
-		if token != _chat_token or _chat_aborted or _current == null:
-			return
-		if _chat_step <= 0.0:
-			skip_chat()
-			return
+	# 【开场那一拍交给 `_play_chat`】它现在会给**每条**对方消息垫一段「正在输入」
+	# （按字数算，见 `_typing_seconds`），开场白也不例外 —— 这里不再单独沉默一秒。
 	_play_chat()
 
 
@@ -671,7 +669,21 @@ func _play_chat() -> void:
 			# 这几条不是「播放」，是回合切换，不该按计时器往下滚。
 			_show_choices(_choice_run_at(_chat_index))
 			return
-		_push_line(_chat_lines[_chat_index])
+		var line: ChatLine = _chat_lines[_chat_index]
+		# 【对方说每句话之前先"打"一会儿】包括玩家点完选项之后那一条 ——
+		# 原来那条是同一帧推出来的，读起来像查表而不是聊天。
+		# `_first_msg_delay <= 0` = 时延关掉（测试 / 快进），一切同步。
+		var typing: Control = null
+		if _first_msg_delay > 0.0 and not line.is_system() and not line.is_mine():
+			typing = _push_typing()
+			await get_tree().create_timer(_typing_seconds(line.display_text())).timeout
+			if is_instance_valid(typing):
+				_chat_feed.remove_child(typing)
+				typing.queue_free()
+			# 【认票】等这一秒时玩家可能已经关了聊天或换了一家 —— 别再往下推
+			if token != _chat_token or _chat_aborted:
+				return
+		_push_line(line)
 		_chat_index += 1
 		_scroll_chat()
 		# 【推完立刻看下一条是不是选项】是就马上摆出来，不再等一个间隔 ——
@@ -679,10 +691,11 @@ func _play_chat() -> void:
 		if _chat_index < _chat_lines.size() and _chat_lines[_chat_index].is_choice():
 			_show_choices(_choice_run_at(_chat_index))
 			return
-		await get_tree().create_timer(_chat_step).timeout
-		# 【认票】等这 0.85 秒时玩家可能已经关了聊天或换了一家 —— 那就别再往下推
-		if token != _chat_token or _chat_aborted:
-			return
+		# 对方那条的等待已经花在「正在输入」上了，这里只剩自己 / 系统提示要等
+		if typing == null:
+			await get_tree().create_timer(_chat_step).timeout
+			if token != _chat_token or _chat_aborted:
+				return
 	_finish_chat()
 
 
@@ -711,6 +724,64 @@ func _finish_chat() -> void:
 	_refresh_list()
 	_refresh_top()
 	_scroll_chat()
+
+
+## 对方说话之前摆出来的那排点：头像 + 一个只有三个点的卡。
+## 【为什么非要有它】`_play_chat` 的等待原来是"什么都不显示"的空白 ——
+## 玩家看不到"对面在打字"，只觉得界面卡了一下。
+func _push_typing() -> Control:
+	var row := HBoxContainer.new()
+	row.name = "TypingRow"
+	row.add_theme_constant_override("separation", 10)
+	row.add_child(_avatar_mark(_current.hr_name.substr(0, 1)))
+
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	panel.add_theme_stylebox_override("panel", UiPalette.panel(UiPalette.PANEL_SOFT, 14))
+
+	var margin := MarginContainer.new()
+	for side in ["left", "right"]:
+		margin.add_theme_constant_override("margin_" + side, 16)
+	for side in ["top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 14)
+	panel.add_child(margin)
+
+	var dots := HBoxContainer.new()
+	dots.add_theme_constant_override("separation", 6)
+	margin.add_child(dots)
+	var pulses: Array[Panel] = []
+	for i in 3:
+		var dot := Panel.new()
+		dot.custom_minimum_size = Vector2(10, 10)
+		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		dot.modulate.a = 0.35
+		dot.add_theme_stylebox_override("panel", UiPalette.rounded(UiPalette.TEXT, 5))
+		dots.add_child(dot)
+		pulses.append(dot)
+
+	row.add_child(panel)
+	row.add_child(_expander())
+	_chat_feed.add_child(row)
+	_scroll_chat()
+	# 【进树之后再起 tween】`create_tween()` 要求节点已在场景树里
+	for i in pulses.size():
+		_pulse_dot(pulses[i], i * TYPING_STAGGER)
+	return row
+
+
+## 这一句要"打"多久：按字数线性增长；短句最少 0.6 秒，再长也封顶 2 秒。
+func _typing_seconds(text: String) -> float:
+	return clampf(TYPING_BASE + text.length() * TYPING_PER_CHAR, TYPING_BASE, TYPING_MAX)
+
+
+## 一个点的呼吸循环。**tween 绑在点上**：气泡被移除时它自己就没了，不用手动回收。
+func _pulse_dot(dot: Panel, delay: float) -> void:
+	var tw := dot.create_tween().set_loops()
+	tw.tween_interval(delay)
+	tw.tween_property(dot, "modulate:a", 1.0, 0.22)
+	tw.tween_property(dot, "modulate:a", 0.35, 0.22)
+	tw.tween_interval(0.42)
 
 
 func _push_line(line: ChatLine) -> void:
@@ -952,6 +1023,10 @@ func _clear_feed() -> void:
 	for child in _chat_feed.get_children():
 		_chat_feed.remove_child(child)
 		child.queue_free()
+	# 【选项那组也要把引用一起清掉】它可能还指着上一轮那组按钮 ——
+	# 留着的话，下一次 `_send_choice` 会去 `remove_child` 一个已经不属于这里的节点
+	# （引擎报 "data.parent != this"，界面看不出来，但日志里一直有噪音）。
+	_choices = null
 
 
 ## 让最新一条露出来。**必须延后一帧**：刚 add_child 的控件还没算好高度，

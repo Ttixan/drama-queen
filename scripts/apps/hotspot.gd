@@ -36,7 +36,11 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	if mouse_default_cursor_shape == Control.CURSOR_ARROW:
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	mouse_entered.connect(func() -> void: hovered.emit(self))
+	# 【桌面热点为什么不靠 Sfx 的全局挂钩】那套只认 BaseButton，而热点是
+	# 为了"拖边框对齐底图"才做成 Control 的（见文件头）。所以这两下自己出声。
+	mouse_entered.connect(func() -> void:
+		Sfx.play(&"ui_hover")
+		hovered.emit(self))
 	mouse_exited.connect(func() -> void: unhovered.emit(self))
 	# 拖动/改尺寸时把那层淡淡的框重画 —— 不然它停在旧位置，越调越乱
 	item_rect_changed.connect(queue_redraw)
@@ -48,6 +52,7 @@ func _gui_input(event: InputEvent) -> void:
 	if click == null or not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
 		return
 	accept_event()
+	Sfx.play(&"ui_click")
 	activated.emit(self)
 
 
