@@ -10,5 +10,6 @@ display_name = "得意"
 slot = 2
 tier = 7
 texture = ExtResource("2_3f2ey")
+set_id = &"smug"
 anger = 1.0
 charm = 2.0

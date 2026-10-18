@@ -10,14 +10,18 @@ extends SceneTree
 ##   顺序、缓存、分组、以及那个最容易漏的「其他 = 留空」。
 
 const EXPECT_SLOT_COUNT := {
-	PartData.Slot.EYES: 8,
-	PartData.Slot.MOUTH: 11,
-	PartData.Slot.BROWS: 8,
+	PartData.Slot.EYES: 12,
+	PartData.Slot.MOUTH: 14,
+	PartData.Slot.BROWS: 12,
 	PartData.Slot.EXTRA: 6,
 	PartData.Slot.SKIN: 9,
 }
 
-const EXPECT_TOTAL := 42
+const EXPECT_TOTAL := 53
+
+## 按**周次**累计可用件数。三套复杂表情不在这条线上（它们靠翻牌，见 [7]）——
+## 所以第 1 / 2 周都是 47（53 − 爆缸笑脸 / 绿豆蛙 各 3 件），第 3 周 53。
+const EXPECT_UNLOCKED_BY_WEEK := {1: 47, 2: 47, 3: 53}
 
 var _failures: Array[String] = []
 var _checks := 0
@@ -124,6 +128,74 @@ func _initialize() -> void:
 	_check("reload() 后按 id 仍取得到", a3 != null, true)
 	if a3 != null:
 		_check("reload() 后内容仍然正确", a3.display_name, a1.display_name)
+
+	print("")
+	print("[7] 两种解锁门：周次（爆缸笑脸 / 绿豆蛙）与翻牌（三套复杂表情）")
+	for week: int in EXPECT_UNLOCKED_BY_WEEK:
+		var n := 0
+		for p: PartData in PartLibrary.all():
+			if p.is_unlocked_at(week):
+				n += 1
+		_check("第 %d 周可用 %d 件" % [week, EXPECT_UNLOCKED_BY_WEEK[week]], n,
+				EXPECT_UNLOCKED_BY_WEEK[week])
+	_check("eyes_04 第 1 周就有", PartLibrary.by_id("eyes_04").unlock_week, 1)
+
+	# ---- 周次门：第 3 周才进池的两套 ----
+	var week_gated := {
+		"eyes_10": 3, "mouth_12": 3, "brows_10": 3,    # 爆缸笑脸
+		"eyes_11": 3, "mouth_13": 3, "brows_11": 3,    # 绿豆蛙
+	}
+	for id: String in week_gated:
+		var p := PartLibrary.by_id(id)
+		_check("%s 第 3 周解锁" % id, p.unlock_week, week_gated[id])
+		_check("%s 第 2 周还不能用" % id, p.is_unlocked_at(2), false)
+		_check("%s 第 3 周能用" % id, p.is_unlocked_at(3), true)
+	# 每一件都得落在 1..3 里 —— 写成 0 或 4 就等于「永远不给」或「一开始就错锁」
+	var bad := 0
+	for p: PartData in PartLibrary.all():
+		if p.unlock_week < 1 or p.unlock_week > GameState.WEEKS:
+			bad += 1
+	_check("解锁周次都在 1..%d 内" % GameState.WEEKS, bad, 0)
+
+	# ---- 翻牌门：三套复杂表情 ----
+	# 【两边 id 必须一致】部件表的 `set` 与 `ExpressionSets.SETS` 是手写的两份数据，
+	# 一旦对不上，翻到「得意」却解开一张别家的脸 —— 所以逐个反查。
+	_check("ExpressionSets 有三套", ExpressionSets.SETS.size(), 3)
+	for spec: Dictionary in ExpressionSets.SETS:
+		var set_id := String(spec["id"])
+		var parts := ExpressionSets.parts_of(set_id)
+		_check("%s 有三件（眼/嘴/眉）" % set_id, parts.size(), 3)
+		var slots := {}
+		for id: String in parts:
+			var p := PartLibrary.by_id(id)
+			if p == null:
+				_failures.append("ExpressionSets 里的 %s 在部件库里不存在" % id)
+				continue
+			_check("%s 的 set_id = %s" % [id, set_id], String(p.set_id), set_id)
+			_check("%s 不走周次门" % id, p.unlock_week, 1)
+			slots[p.slot] = true
+		_check("%s 覆盖了眼/嘴/眉三个槽" % set_id, slots.size(), 3)
+	# 反过来：带 set_id 的部件必须都能在 ExpressionSets 里找到归属
+	for p: PartData in PartLibrary.all():
+		if String(p.set_id).is_empty():
+			continue
+		_check("%s 的 set 是已知的一套" % p.id, ExpressionSets.has(String(p.set_id)), true)
+
+	# 开局（真·第 1 周：周次门 + 翻牌门都算上）仍然要凑得出「正 / 负」两种效价，
+	# 否则 D/E 两关开局无解
+	for slot in [PartData.Slot.EYES, PartData.Slot.MOUTH, PartData.Slot.BROWS]:
+		var pos := 0
+		var neg := 0
+		for p: PartData in PartLibrary.by_slot(slot):
+			if not p.is_unlocked_at(1) or not String(p.set_id).is_empty():
+				continue
+			var v := Emotion.valence(p.emotion_vector())
+			if v > 0.0:
+				pos += 1
+			elif v < 0.0:
+				neg += 1
+		_check("开局的%s仍有正效价件" % PartData.SLOT_NAMES[slot], pos > 0, true)
+		_check("开局的%s仍有负效价件" % PartData.SLOT_NAMES[slot], neg > 0, true)
 
 	print("")
 	print("共 %d 项断言" % _checks)

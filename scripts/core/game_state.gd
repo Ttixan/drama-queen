@@ -87,6 +87,22 @@ var hr_choice: Dictionary = {}
 ## 一部拍完，HR 接着问下一部要试哪类角色。
 var hr_script: Dictionary = {}
 
+## ---- 复杂表情（周结算翻牌奖励）----
+## 【规则】龙套 / 配角 / 主角**各自首次**成功投递 → 各得一次翻牌机会；
+## 翻到哪套就永久拥有哪套的三件部件（牌面与部件表见 `ExpressionSets`）。
+##
+## 已经拿到的表情套 id。录像机按它决定那 9 件部件能不能点。
+var owned_sets: Array[String] = []
+## 已经发过奖励的档位（`RoleRequirement.Tier` 的整数）—— 每档一辈子一次。
+## 【为什么不靠 owned_sets 反推】三套牌 vs 三个档位，数量刚好相等只是巧合；
+## 一旦以后一套牌拆成两档、或一档给两套，反推就会重复发奖。
+var rewarded_tiers: Array[int] = []
+## 攒着还没翻的牌：每项 `{tier, set}`。第一项就是界面该翻的那一张。
+## 【为什么结算时就把 set 抽好】与定角抽签同一条口径：抽一次、存下来，
+## 读档回来还是同一张脸。玩家点哪张牌只是表演，不改变结果 ——
+## 也正因为如此，三张牌背可以长得一模一样。
+var pending_flips: Array[Dictionary] = []
+
 ## ---- 待投递的表情包 ----
 ## 录像机拼好、还没发出去的那一段。
 ## 【为什么放在状态里，而不是留在微信手上】录像机与微信是**两个各自整屏的 App**，
@@ -218,6 +234,101 @@ func set_hr_script(code: String, play_index: int, tier: int) -> void:
 ## 这一份用掉了（投出去了）—— HR 会接着问下一部
 func clear_hr_script(code: String) -> void:
 	hr_script.erase(code)
+
+
+## 这套表情拿到了没有（部件列表见 `ExpressionSets`）
+func owns_expression_set(id: String) -> bool:
+	return not id.is_empty() and owned_sets.has(id)
+
+
+## 这个档位的奖励发过没有
+func has_rewarded_tier(tier: int) -> bool:
+	return rewarded_tiers.has(tier)
+
+
+## 结算时排一张牌。**同一档只排一次**（调用方仍应先用 `has_rewarded_tier` 判）。
+func queue_flip(tier: int, set_id: String) -> void:
+	if set_id.is_empty() or has_rewarded_tier(tier):
+		return
+	rewarded_tiers.append(tier)
+	pending_flips.append({"tier": tier, "set": set_id})
+
+
+func pending_flip_count() -> int:
+	return pending_flips.size()
+
+
+## 最前面那张牌（**不消费**）—— 界面拿它显示牌面，玩家点哪张都不改变结果。
+## 没有就返回空字典。
+func peek_flip() -> Dictionary:
+	return {} if pending_flips.is_empty() else pending_flips[0]
+
+
+## 玩家点「收下」时消费：把这一套加进已拥有，返回刚翻到的那条记录。
+## 【为什么不在翻开动画一开始就消费】动画中途退出（切屏 / 杀进程）不该吞掉奖励 ——
+## 只有他说「收下」才算数。
+func claim_flip() -> Dictionary:
+	if pending_flips.is_empty():
+		return {}
+	var entry: Dictionary = pending_flips.pop_front()
+	var set_id := String(entry.get("set", ""))
+	if not set_id.is_empty() and not owned_sets.has(set_id):
+		owned_sets.append(set_id)
+	return entry
+
+
+## 该发的表情奖励排进状态，返回这次新排的牌（`{tier, set}` 列表）。
+##
+## 【什么时候调】**玩家按下「下一天」时**（`Game.end_day` 开头）—— 试镜成功的当下不弹，
+## 翻牌才是「第二天睁眼，剧组给了个回应」的仪式。
+## 【触发条件】某个档位**累计成功过至少一次**，且这个档位还没发过奖。
+## 因为 `history` 是跨周累加的，同一档不会因为"又演成一次"再发一张。
+func queue_expression_rewards(week: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for tier: int in [
+			RoleRequirement.Tier.EXTRA,
+			RoleRequirement.Tier.SUPPORTING,
+			RoleRequirement.Tier.LEAD]:
+		if has_rewarded_tier(tier):
+			continue
+		if count_success_by_tier(tier) <= 0:
+			continue
+		var set_id := roll_reward_set(tier, week)
+		if set_id.is_empty():
+			continue
+		queue_flip(tier, set_id)
+		out.append({"tier": tier, "set": set_id})
+	return out
+
+
+## 这张牌翻到哪套：只在**还没拿到 / 还没排进队列**的套里抽，尽量不重复。
+##
+## 【为什么用固定种子而不是 randi()】读档重放同一天必须翻到同一张脸 ——
+## 与定角抽签、周初事件同一条口径（随机只发生一次，之后谁都读同一份）。
+## 种子只由 (event_seed, week, tier) 派生，所以「同一份存档 + 同一个周次」
+## 在任何机器上都得到同一个结果，模拟器也能复现。
+func roll_reward_set(tier: int, week: int) -> String:
+	var taken := {}
+	for id: String in owned_sets:
+		taken[id] = true
+	for f: Dictionary in pending_flips:
+		var queued := String(f.get("set", ""))
+		if not queued.is_empty():
+			taken[queued] = true
+
+	var pool: Array[String] = []
+	for id: String in ExpressionSets.ids():
+		if not taken.has(id):
+			pool.append(id)
+	# 三套都拿过了（正常玩不到：只有三个档位）—— 兜底回全套，宁可重复也不空手
+	if pool.is_empty():
+		pool = ExpressionSets.ids()
+	if pool.is_empty():
+		return ""
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = event_seed * 7919 + week * 131 + tier * 17
+	return pool[rng.randi_range(0, pool.size() - 1)]
 
 
 func week() -> int:
@@ -363,6 +474,8 @@ func to_save_dict() -> Dictionary:
 		"black_fame_seen": black_fame_seen, "extra_star_seen": extra_star_seen,
 		"unlocked_hr": unlocked_hr, "hr_choice": hr_choice,
 		"hr_script": hr_script,
+		"owned_sets": owned_sets, "rewarded_tiers": rewarded_tiers,
+		"pending_flips": pending_flips,
 		# 待投递的表情包存成部件 id（见 `Clip.save_dict`）。没有时给一个空字典 ——
 		# JSON 里 null 落不住，`from_save_dict` 认空字典就是「没有」。
 		"pending_clip": {} if pending_clip == null else pending_clip.save_dict(),
@@ -403,6 +516,17 @@ func from_save_dict(d: Dictionary) -> void:
 	hr_choice = d.get("hr_choice", {})
 	# 旧存档没有这一项 —— 读回空字典就是「还没跟 HR 要过剧本」，界面会重新问一遍
 	hr_script = d.get("hr_script", {})
+	# 【老档没有这几项 = 一套都没拿到、也没有待翻的牌】正好是加这个功能之前的语义
+	owned_sets.assign(d.get("owned_sets", []))
+	# 【JSON 里整数会读成浮点】`Array[int].assign()` 碰到 0.0 会当场报类型错，
+	# 所以这里逐个转 —— 也顺手挡掉存档里混进来的别的类型
+	rewarded_tiers.clear()
+	for t: Variant in d.get("rewarded_tiers", []):
+		rewarded_tiers.append(int(t))
+	pending_flips.clear()
+	for f: Variant in d.get("pending_flips", []):
+		if typeof(f) == TYPE_DICTIONARY:
+			pending_flips.append(f)
 	var clip_dict: Variant = d.get("pending_clip", null)
 	pending_clip = Clip.from_save_dict(clip_dict) if typeof(clip_dict) == TYPE_DICTIONARY else null
 	focus_hr = String(d.get("focus_hr", ""))

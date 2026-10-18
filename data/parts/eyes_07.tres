@@ -9,4 +9,5 @@ id = &"eyes_07"
 display_name = "想起已故的爱人"
 tier = 7
 texture = ExtResource("2_6lmfx")
+set_id = &"late_love"
 sorrow = 4.0

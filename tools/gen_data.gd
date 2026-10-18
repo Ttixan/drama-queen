@@ -54,6 +54,9 @@ func _gen_parts() -> int:
 		d.display_name = p["name"]
 		d.slot = slot
 		d.tier = tier
+		# 表里不写 = 开局就有（见 part_catalog.gd 顶部关于 `week` / `set` 的说明）
+		d.unlock_week = int(p.get("week", 1))
+		d.set_id = StringName(p.get("set", ""))
 
 		var emo: Dictionary = p["emo"]
 		d.joy = emo.get("joy", 0.0)

@@ -34,7 +34,7 @@ signal cancelled
 
 ## 【部件卡为什么是「一行一条」】右边那栏是**单列列表**（手稿：右栏只列一行内容），
 ## 卡片 = 左边一块缩略图 + 右边名字与情绪标签，高度 76 就够。
-## 一格放不下就滚动兜住（嘴有 10 件，一屏只装得下 6 张）—— 不再按 3 列网格摊。
+## 一格放不下就滚动兜住（嘴有 14 件，一屏只装得下 6 张）—— 不再按 3 列网格摊。
 const CARD_MIN_HEIGHT := 76
 const ART_HEIGHT := 56
 
@@ -140,6 +140,10 @@ var _tabs: Array[Button] = []         ## 与 PartLibrary.TAB_ORDER 一一对应
 var _pages: Dictionary = {}           ## slot -> VBoxContainer（一页 = 一张单列部件列表）
 var _slot_buttons: Array[Button] = []
 var _cards: Dictionary = {}           ## slot -> { key -> Button }
+## "slot|key" -> {"part": PartData, "title": Label, "tags": Label}
+## 【为什么建卡时要记下这两个 Label】解锁周次会让**同一张卡**在两种文案间来回切
+## （「喜·魅」↔「第 2 周解锁」），而按节点树找 Label 又脆又长。
+var _card_meta: Dictionary = {}
 var _card_group: Dictionary = {}      ## slot -> ButtonGroup（同槽位内互斥）
 ## 程序化改按钮状态时会触发 toggled，用这个闸门防止自己把自己绕进去
 var _syncing := false
@@ -299,6 +303,8 @@ func _make_card(slot: int, part: PartData) -> Button:
 	card.add_theme_stylebox_override("hover", _button_sb(Color("35353f"), C_LINE, 2, 12, 0, 10))
 	card.add_theme_stylebox_override("pressed", _button_sb(Color("3d3d26"), C_ACCENT, 3, 12, 0, 8))
 	card.add_theme_stylebox_override("focus", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 12, 0, 10))
+	# 未解锁的卡：压暗一档、去掉描边 —— 「看得见，但现在点不了」
+	card.add_theme_stylebox_override("disabled", _button_sb(Color("26262c"), Color(0, 0, 0, 0), 0, 12, 0, 10))
 	card.toggled.connect(_on_card_toggled.bind(slot, key))
 
 	# 内容放在子节点里，子节点全部 MOUSE_FILTER_IGNORE —— 点击必须透给按钮本身，
@@ -345,6 +351,9 @@ func _make_card(slot: int, part: PartData) -> Button:
 	tags.add_theme_font_size_override("font_size", 13)
 	tags.add_theme_color_override("font_color", C_TEXT_DIM)
 	info.add_child(tags)
+
+	# 解锁状态要能改文案，所以把这两行字交给 _sync_locks() 管
+	_card_meta["%d|%s" % [slot, key]] = {"part": part, "title": title, "tags": tags}
 
 	return card
 
@@ -455,6 +464,7 @@ func _sync_all() -> void:
 	_sync_preview()
 	_sync_emotion()
 	_sync_slots()
+	_sync_locks()
 	_sync_cards()
 	_sync_status()
 	_show_tab()
@@ -507,6 +517,51 @@ func _sync_slots() -> void:
 	_syncing = false
 
 
+## 解锁状态：还没到手的部件**照常列出来，但按住不让点**。
+##
+## 【为什么不干脆不列】「看不见」和「还差一点才到手」是两种完全不同的信息。
+## 灰着摆在那里本身就是进度条：玩家第一周就能看见后面还有什么，才会为了它继续玩。
+## 【为什么每次刷新都重算】两种门都会在游戏开着的时候变：周次会推进、
+## 翻牌会在结算后把一整套点亮。重算一遍只有 53 次比较，比订阅信号简单。
+func _sync_locks() -> void:
+	for meta_key: String in _card_meta:
+		var meta: Dictionary = _card_meta[meta_key]
+		var part: PartData = meta["part"]
+		if part == null:
+			continue   # 「留空」那张永远可用
+		var hint := _lock_hint(part)
+		var locked := not hint.is_empty()
+		var card: Button = _cards[part.slot][String(part.id)]
+		var title: Label = meta["title"]
+		var tags: Label = meta["tags"]
+		card.disabled = locked
+		card.tooltip_text = hint
+		title.add_theme_color_override("font_color", C_TEXT_DIM if locked else C_TEXT)
+		tags.text = hint if locked else part.emotion_labels()
+		tags.add_theme_color_override("font_color",
+				UiPalette.TEXT_DISABLED if locked else C_TEXT_DIM)
+
+
+## 这件为什么现在点不了（空串 = 能用）。
+## 【两种门要分开写】周次门（爆缸笑脸 / 绿豆蛙）等得起，翻牌门（得意 /
+## 皮笑肉不笑 / 想起已故的爱人）得先在本周的结算里赢一张牌 ——
+## 都写成「未解锁」的话，玩家不知道该等还是该去演。
+func _lock_hint(part: PartData) -> String:
+	if Game.is_part_unlocked(part):
+		return ""
+	if not String(part.set_id).is_empty():
+		return "翻牌获得"
+	return "第 %d 周解锁" % part.unlock_week
+
+
+func _locked_count() -> int:
+	var n := 0
+	for part: PartData in PartLibrary.all():
+		if not Game.is_part_unlocked(part):
+			n += 1
+	return n
+
+
 func _sync_cards() -> void:
 	_syncing = true
 	for slot: int in _cards:
@@ -527,7 +582,11 @@ func _sync_status() -> void:
 	else:
 		_status_label.text = "还没拼完 —— " + missing
 		_status_label.add_theme_color_override("font_color", C_ACCENT)
+		# 有灰着的部件就顺带解释一句，否则玩家会以为那是坏图
+		var locked := _locked_count()
 		_status_hint.text = "眼 / 嘴 / 眉 三件必填，其他可留空"
+		if locked > 0:
+			_status_hint.text = "灰着的 %d 件随周次解锁 · 眼 / 嘴 / 眉 三件必填" % locked
 	_confirm_button.disabled = not _clip.is_complete()
 
 
@@ -666,7 +725,7 @@ func _apply_styles() -> void:
 	_panel(get_node("Page/BodyWrap/Body/EditPanel"), C_PANEL, 20, 2, C_LINE)
 	_panel(get_node("Page/BottomBar"), C_PAPER, 0, 0)
 
-	# 列表装不下就靠滚动兜住（嘴有 10 件，一屏只放 6 张 —— 必须能滚，不能靠运气）
+	# 列表装不下就靠滚动兜住（嘴有 14 件，一屏只放 6 张 —— 必须能滚，不能靠运气）
 	var bar := _list_scroll.get_v_scroll_bar()
 	bar.custom_minimum_size = Vector2(10, 0)
 	bar.add_theme_stylebox_override("scroll", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 0, 0))

@@ -24,7 +24,10 @@ func _ready() -> void:
 	# 【为什么必须在 _ready 里读】手机壳会在它自己的 `_ready()` 里读 `Game.state` 建界面，
 	# 而 autoload 的 `_ready()` 先跑 —— 存档必须在那之前就位，否则界面建的是空局，
 	# 玩家要等下一次刷新才会看到自己的进度。
-	if not load_from():
+	# 【`state` 已经有人塞好了就别动】`--script` 模式（测试 / 工具）里，autoload 的
+	# `_ready()` 排在主脚本 `_initialize()` **之后** —— 无条件读档会把测试刚造好的局面
+	# 冲掉，表现成「设了待翻的牌，界面却说没有」。正常启动时 state 一定是 null。
+	if state == null and not load_from():
 		new_game()
 
 
@@ -245,6 +248,46 @@ func clear_hr_script(code: String) -> void:
 
 
 # ============================================================
+# 复杂表情（周结算翻牌）
+# ============================================================
+# 【为什么规则在 GameState / WeekCycle，这里只有转发】
+# 「谁该得牌」是结算规则（模拟器也要跑），「哪件部件现在能不能点」是状态查询 ——
+# 这个壳只负责让界面不用摸 `state`。
+func has_pending_flip() -> bool:
+	return state.pending_flip_count() > 0
+
+
+## 最前面那张牌，**不消费**（界面翻牌时读它才知道正面是谁）
+func peek_pending_flip() -> Dictionary:
+	return state.peek_flip()
+
+
+## 玩家点「收下」：消费这张牌，表情进库
+func claim_pending_flip() -> Dictionary:
+	var entry := state.claim_flip()
+	if not entry.is_empty():
+		EventBus.expression_set_owned.emit(String(entry.get("set", "")))
+	return entry
+
+
+func owns_expression_set(id: String) -> bool:
+	return state.owns_expression_set(id)
+
+
+## 这件部件现在能不能用。
+## 两条互斥的门：带 `set_id` 的看翻牌拿没拿到；其余看周次（目前只有爆缸/绿豆蛙）。
+func is_part_unlocked(part: PartData) -> bool:
+	# `state` 还没就位（单场景调试 / 测试抢在 autoload 前建界面）时一律当锁着：
+	# 宁可多灰几张卡，也不要在 `_ready` 里抛空指针把整屏干掉
+	if part == null or state == null:
+		return false
+	var set_id := String(part.set_id)
+	if not set_id.is_empty():
+		return state.owns_expression_set(set_id)
+	return part.is_unlocked_at(state.week())
+
+
+# ============================================================
 # 投递
 # ============================================================
 ## 一次投递。
@@ -358,6 +401,12 @@ func resolve_event(index: int, event_id: StringName = &"") -> Dictionary:
 func end_day() -> Dictionary:
 	if state.finished:
 		return {"settled": false, "report": {}}
+
+	# 翻牌奖励：**按下「下一天」的这一刻**发牌，而不是试镜成功那一刻 ——
+	# 投递当下还在聊回信，奖励塞在那里会被当成回信的一部分。
+	# 【为什么放在结算之前】周末这一支会先存档再推进；牌必须先排进状态，
+	# 否则"翻到一半退出"的那张牌不在存档里，下次开局永远补不回来。
+	state.queue_expression_rewards(state.week())
 
 	if state.is_week_end():
 		# 【为什么要在结算前先料理事件】没处理的事件若跟着状态溜进下一周，

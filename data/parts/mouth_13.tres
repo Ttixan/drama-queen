@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_5n8fi"]
+[ext_resource type="Texture2D" path="res://assets/parts/mouth_13.png" id="2_q5reg"]
+
+[resource]
+script = ExtResource("1_5n8fi")
+id = &"mouth_13"
+display_name = "绿豆蛙"
+slot = 1
+tier = 13
+texture = ExtResource("2_q5reg")
+unlock_week = 3
+shock = 1.0
+awkward = 2.0

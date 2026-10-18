@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_piufd"]
+[ext_resource type="Texture2D" path="res://assets/parts/brows_11.png" id="2_35m2y"]
+
+[resource]
+script = ExtResource("1_piufd")
+id = &"brows_11"
+display_name = "绿豆蛙"
+slot = 2
+tier = 11
+texture = ExtResource("2_35m2y")
+unlock_week = 3
+awkward = 2.0

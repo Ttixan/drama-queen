@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_bsohj"]
+[ext_resource type="Texture2D" path="res://assets/parts/eyes_09.png" id="2_hl30h"]
+
+[resource]
+script = ExtResource("1_bsohj")
+id = &"eyes_09"
+display_name = "皮笑肉不笑"
+tier = 9
+texture = ExtResource("2_hl30h")
+set_id = &"smirk"
+joy = 1.0
+awkward = 2.0

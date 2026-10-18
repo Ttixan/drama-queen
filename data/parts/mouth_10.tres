@@ -10,5 +10,6 @@ display_name = "皮笑肉不笑"
 slot = 1
 tier = 10
 texture = ExtResource("2_cir6i")
+set_id = &"smirk"
 joy = 1.0
 awkward = 2.0

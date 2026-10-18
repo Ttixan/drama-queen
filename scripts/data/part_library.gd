@@ -1,6 +1,6 @@
 class_name PartLibrary
 extends RefCounted
-## 运行时部件库 —— 42 件 PartData 的**唯一读取入口**
+## 运行时部件库 —— 53 件 PartData 的**唯一读取入口**
 ##
 ## 【为什么需要它】
 ## 在这之前，只有 `tools/test_data.gd` 里的私有方法会读 `data/parts`。那是测试脚本，
@@ -8,7 +8,7 @@ extends RefCounted
 ## `DirAccess + load` 的循环 —— 而且一定会漏掉「其他可以留空」这条规则。
 ##
 ## 【为什么是 static 缓存，不是 autoload】
-## 42 个 Resource 加载一次就够，进程内复用。做成 autoload 等于往全局命名空间里
+## 53 个 Resource 加载一次就够，进程内复用。做成 autoload 等于往全局命名空间里
 ## 塞一个只有两个界面会用到的东西；`data/` 这一层本来就不该有生命周期。
 ##
 ## 【为什么放 scripts/data/ 而不是 scripts/core/】
@@ -70,7 +70,7 @@ static func by_slot(slot: int) -> Array[PartData]:
 
 ## 某个槽位在 UI 里的全部选项。
 ## 【与 by_slot 的唯一区别】EXTRA 的选项列表**首位固定是 null**（留空）。
-## 组合数 8×10×8×7 里的那个 7 = 6 件「其他」+ 1 种留空。
+## 组合数 12×14×12×7 里的那个 7 = 6 件「其他」+ 1 种留空。
 static func slot_options(slot: int) -> Array:
 	if slot == PartData.Slot.EXTRA:
 		var out: Array = [EMPTY_EXTRA]
@@ -141,7 +141,7 @@ static func _ensure() -> void:
 static func _read_dir() -> Array[PartData]:
 	var out: Array[PartData] = []
 	# 【必须走 ResourceDir】导出包里目录里躺的是 `xxx.tres.remap`，
-	# 手写 `.ends_with(".tres")` 会让 42 件部件在读成 0 件（真出过这个 bug）。
+	# 手写 `.ends_with(".tres")` 会让 53 件部件在读成 0 件（真出过这个 bug）。
 	for path: String in ResourceDir.list_tres(PART_DIR):
 		var res: Resource = load(path)
 		if res is PartData:

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_tf3lp"]
+[ext_resource type="Texture2D" path="res://assets/parts/brows_08.png" id="2_gbqw8"]
+
+[resource]
+script = ExtResource("1_tf3lp")
+id = &"brows_08"
+display_name = "皮笑肉不笑"
+slot = 2
+tier = 8
+texture = ExtResource("2_gbqw8")
+set_id = &"smirk"
+joy = 1.0
+awkward = 2.0

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_l1il4"]
+[ext_resource type="Texture2D" path="res://assets/parts/brows_09.png" id="2_irw6o"]
+
+[resource]
+script = ExtResource("1_l1il4")
+id = &"brows_09"
+display_name = "想起已故的爱人"
+slot = 2
+tier = 9
+texture = ExtResource("2_irw6o")
+set_id = &"late_love"
+sorrow = 2.0

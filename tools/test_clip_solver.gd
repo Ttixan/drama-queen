@@ -66,9 +66,9 @@ func _test_candidates() -> void:
 	var brows := PartLibrary.by_slot(PartData.Slot.BROWS).size()
 	# 「其他」的选项数要把「留空」这一种算进去
 	var extra := PartLibrary.slot_options(PartData.Slot.EXTRA).size()
-	_check("眼件数", eyes, 8)
-	_check("嘴件数", mouth, 11)
-	_check("眉件数", brows, 8)
+	_check("眼件数", eyes, 12)
+	_check("嘴件数", mouth, 14)
+	_check("眉件数", brows, 12)
 	_check("其他选项数（含留空）", extra, 7)
 	_check("单帧候选总数", ClipSolver.candidate_count(), eyes * mouth * brows * extra)
 	_check("三帧全枚举的量级是天文数字", eyes * mouth * brows * extra > 4000, true)

@@ -71,7 +71,7 @@ func _test_real_dirs() -> void:
 
 	PartLibrary.reload()
 	MailLibrary.reload()
-	_check("PartLibrary 读到 42 件", PartLibrary.count(), 42)
+	_check("PartLibrary 读到 53 件", PartLibrary.count(), 53)
 	_check("MailLibrary 读到 5 封", MailLibrary.count(), 5)
 	print("   parts=%d  mails=%d（编辑器形态）" % [PartLibrary.count(), MailLibrary.count()])
 	print("   ★打包后的形态由真机/导出包复查，见开发计划里的装机确认清单")

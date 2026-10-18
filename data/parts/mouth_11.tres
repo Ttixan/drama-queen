@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_3vv8q"]
+[ext_resource type="Texture2D" path="res://assets/parts/mouth_11.png" id="2_gemmu"]
+
+[resource]
+script = ExtResource("1_3vv8q")
+id = &"mouth_11"
+display_name = "想起已故的爱人"
+slot = 1
+tier = 11
+texture = ExtResource("2_gemmu")
+set_id = &"late_love"
+sorrow = 2.0
+charm = 1.0

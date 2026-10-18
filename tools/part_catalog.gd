@@ -1,5 +1,5 @@
 extends RefCounted
-## 42 件部件池 —— **唯一的定义源**
+## 53 件部件池 —— **唯一的定义源**
 ##
 ## `data/parts/*.tres` 由本表生成（`tools/gen_data.gd`）。
 ## 要改部件，改这里然后重跑生成脚本；**不要**在编辑器里手改 .tres，会被覆盖。
@@ -10,10 +10,20 @@ extends RefCounted
 ##   这条规则的可执行版本在 `tools/import_emoji_layers.py` 的 `title_of()`，
 ##   重跑导入脚本会把每个 id 的建议名打出来，改表时对着抄。
 ##
-## 【为什么是 42 件而不是更少】
+## 【为什么是 53 件而不是更少】
 ## 技术上，每类只要有「正效价 / 中性 / 负效价」三档就能跑通全部判定。
 ## 这个量级是为了**表达的丰富度** —— GDD 的核心卖点是「我想演成什么样」，
 ## 每类只有三个选项的话，这游戏就退化成三选一了。
+##
+## 【两种"现在还不能用"，别混】
+## 1. `week` = 第几周起可用（缺省 1）。只留给「爆缸笑脸 / 绿豆蛙」两套 ——
+##    它们第 3 周才进池子，从 `day` 派生（`PartData.is_unlocked_at`），不进存档。
+## 2. `set` = 属于哪一套"复杂表情"。那三套（得意 / 皮笑肉不笑 / 想起已故的爱人）
+##    **不再按周给**，而是周结算翻牌赢来的（见 `scripts/data/expression_sets.gd`）：
+##    玩家在龙套 / 配角 / 主角上**首次成功投递**，各得一次翻牌，
+##    翻到哪套就开哪套（`GameState.owned_sets`，进存档）。
+## 【为什么一套三件必须同门】半套可用会让玩家拼出「得意的嘴 + 皮笑肉不笑的眼睛」
+## 这种画面上说不通的组合。所以 眼/嘴/眉 的 `set` / `week` 必须一致。
 ##
 ## 【梯度是硬约束】每个**必填**槽位内必须同时存在正效价、中性、负效价部件。
 ## 缺了任何一档，玩家就拼不出「递减曲线」（D 文艺片）和「帧间反转」（E 大厂），
@@ -28,10 +38,11 @@ const BROWS := PartData.Slot.BROWS
 const EXTRA := PartData.Slot.EXTRA
 const SKIN := PartData.Slot.SKIN
 
-## slot / tier / 名字 / 情绪向量
+## slot / tier / 名字 / 情绪向量（可选 `week` = 解锁周次，缺省 1）
 ## 【效价速查】valence = (喜+魅) − (怒+哀+尬)
 const PARTS: Array[Dictionary] = [
-	# ---- 眼 8 件（原文：信任 / 惊讶 / 愤怒 / 悲伤（忧愁）/ 喜悦 / 期待 / 厌恶 / 想起已故的爱人）----
+	# ---- 眼 12 件（信任 / 惊讶 / 愤怒 / 悲伤（忧愁）/ 喜悦 / 期待 / 厌恶 / 想起已故的爱人
+	#      + 得意 / 皮笑肉不笑 / 爆缸笑脸 / 绿豆蛙）----
 	{"slot": EYES, "tier": 0, "name": "信任", "emo": {}},
 	{"slot": EYES, "tier": 1, "name": "惊讶", "emo": {"shock": 2.0}},
 	{"slot": EYES, "tier": 2, "name": "愤怒", "emo": {"anger": 3.0}},
@@ -39,9 +50,15 @@ const PARTS: Array[Dictionary] = [
 	{"slot": EYES, "tier": 4, "name": "喜悦", "emo": {"joy": 3.0, "charm": 1.0}},
 	{"slot": EYES, "tier": 5, "name": "期待", "emo": {"charm": 3.0, "joy": 1.0}},
 	{"slot": EYES, "tier": 6, "name": "厌恶", "emo": {"awkward": 3.0}},
-	{"slot": EYES, "tier": 7, "name": "想起已故的爱人", "emo": {"sorrow": 4.0}},
+	{"slot": EYES, "tier": 7, "name": "想起已故的爱人", "emo": {"sorrow": 4.0}, "set": "late_love"},
+	# 「得意」的眼是半阖着斜看 —— 与同套的嘴/眉共用一组权重
+	{"slot": EYES, "tier": 8, "name": "得意", "emo": {"charm": 2.0, "anger": 1.0}, "set": "smug"},
+	# 眼珠发直、嘴角在笑 —— 「笑得不对劲」的那一半，与 mouth_10 同源
+	{"slot": EYES, "tier": 9, "name": "皮笑肉不笑", "emo": {"joy": 1.0, "awkward": 2.0}, "set": "smirk"},
+	{"slot": EYES, "tier": 10, "name": "爆缸笑脸", "emo": {"joy": 3.0}, "week": 3},
+	{"slot": EYES, "tier": 11, "name": "绿豆蛙", "emo": {"awkward": 2.0}, "week": 3},
 
-	# ---- 嘴 11 件 ----
+	# ---- 嘴 14 件 ----
 	{"slot": MOUTH, "tier": 0, "name": "认真脸", "emo": {}},
 	{"slot": MOUTH, "tier": 1, "name": "惊讶", "emo": {"shock": 1.0}},
 	{"slot": MOUTH, "tier": 2, "name": "信任", "emo": {"joy": 2.0}},
@@ -51,12 +68,17 @@ const PARTS: Array[Dictionary] = [
 	{"slot": MOUTH, "tier": 6, "name": "恐惧", "emo": {"sorrow": 2.0, "shock": 1.0}},
 	{"slot": MOUTH, "tier": 7, "name": "愤怒", "emo": {"anger": 3.0}},
 	{"slot": MOUTH, "tier": 8, "name": "悲伤忧愁", "emo": {"sorrow": 3.0}},
-	{"slot": MOUTH, "tier": 9, "name": "得意", "emo": {"charm": 2.0, "anger": 1.0}},
+	{"slot": MOUTH, "tier": 9, "name": "得意", "emo": {"charm": 2.0, "anger": 1.0}, "set": "smug"},
 	# 「笑得不对劲」：有喜悦的外形，但读起来发毛 —— 所以喜只给一点点，尬占大头。
 	# ⚠️ 这组权重是照名字拍的，**待复核**
-	{"slot": MOUTH, "tier": 10, "name": "皮笑肉不笑", "emo": {"joy": 1.0, "awkward": 2.0}},
+	{"slot": MOUTH, "tier": 10, "name": "皮笑肉不笑", "emo": {"joy": 1.0, "awkward": 2.0}, "set": "smirk"},
+	# 苦笑的嘴：哀为主，但嘴角是往上提的 —— 所以带一点魅
+	{"slot": MOUTH, "tier": 11, "name": "想起已故的爱人", "emo": {"sorrow": 2.0, "charm": 1.0}, "set": "late_love"},
+	# 「爆缸」= 笑到引擎报废：喜 + 一点惊（笑岔气了）
+	{"slot": MOUTH, "tier": 12, "name": "爆缸笑脸", "emo": {"joy": 3.0, "shock": 1.0}, "week": 3},
+	{"slot": MOUTH, "tier": 13, "name": "绿豆蛙", "emo": {"awkward": 2.0, "shock": 1.0}, "week": 3},
 
-	# ---- 眉 8 件 ----
+	# ---- 眉 12 件 ----
 	{"slot": BROWS, "tier": 0, "name": "信任", "emo": {}},
 	{"slot": BROWS, "tier": 1, "name": "期待", "emo": {"joy": 1.0, "shock": 1.0}},
 	{"slot": BROWS, "tier": 2, "name": "惊讶", "emo": {"joy": 2.0}},
@@ -64,7 +86,11 @@ const PARTS: Array[Dictionary] = [
 	{"slot": BROWS, "tier": 4, "name": "愤怒", "emo": {"anger": 3.0}},
 	{"slot": BROWS, "tier": 5, "name": "悲伤忧愁", "emo": {"sorrow": 2.0}},
 	{"slot": BROWS, "tier": 6, "name": "恐惧", "emo": {"sorrow": 1.0, "awkward": 1.0}},
-	{"slot": BROWS, "tier": 7, "name": "得意", "emo": {"charm": 2.0, "anger": 1.0}},
+	{"slot": BROWS, "tier": 7, "name": "得意", "emo": {"charm": 2.0, "anger": 1.0}, "set": "smug"},
+	{"slot": BROWS, "tier": 8, "name": "皮笑肉不笑", "emo": {"joy": 1.0, "awkward": 2.0}, "set": "smirk"},
+	{"slot": BROWS, "tier": 9, "name": "想起已故的爱人", "emo": {"sorrow": 2.0}, "set": "late_love"},
+	{"slot": BROWS, "tier": 10, "name": "爆缸笑脸", "emo": {"joy": 2.0, "shock": 1.0}, "week": 3},
+	{"slot": BROWS, "tier": 11, "name": "绿豆蛙", "emo": {"awkward": 2.0}, "week": 3},
 
 	# ---- 其他 6 件：可留空(None)，组合数 ×7 ----
 	# 名字取自素材 `配件 - X.png` 的右边。情绪权重按名字标过一遍，

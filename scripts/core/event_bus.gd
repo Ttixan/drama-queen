@@ -34,6 +34,10 @@ signal recorder_finished(clip: Clip)
 ## 微信里新解锁了一个 HR（先在 Boss直聘 逛过该公司）
 signal hr_unlocked(company_code: String)
 
+# ---- 周结算翻牌 ----
+## 翻牌拿到一套复杂表情（`ExpressionSets` 的 id）—— 录像机据此解禁那三件部件
+signal expression_set_owned(set_id: String)
+
 # ---- 播出反馈 ----
 ## 本周末的《有瓜有戏》
 signal broadcast_published(week: int, headlines: Array)

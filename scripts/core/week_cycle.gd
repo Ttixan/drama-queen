@@ -119,6 +119,9 @@ static func settle(state: GameState, week: int) -> Dictionary:
 			report["black_fame"] = true
 			state.black_fame_seen = true
 
+	# 【复杂表情的奖励不在这里】它在「推进到新的一天」时发牌（`GameState.queue_expression_rewards`
+	# 由 `Game._advance` 调用）—— 玩家按「下一天」就看见翻牌，而不是等一周的报纸。
+
 	# ---- 5. 结局 ----
 	if week >= GameState.WEEKS:
 		report["ending"] = EndingResolver.resolve(state)

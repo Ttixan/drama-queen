@@ -215,6 +215,37 @@ func _run_all() -> void:
 	_check("帧槽也只剩一个", _app._slot_buttons.size(), 1)
 
 	print("")
+	print("[11] 两种解锁门：灰着的卡点不动，且写明为什么")
+	# 【为什么不写死「第 1 周」】录像机读的是 `Game.state` 的周次，而 headless 跑测试时
+	# 机器上可能躺着一份第 2 周的存档。这里断言的是**状态与界面一致**，不是某个具体周次。
+	# 【为什么不用 `Game` 这个标识符】`--script` 的主脚本在 autoload 注册成全局名之前
+	# 就被编译了，直接写 `Game` 会是「Identifier not found」（这个坑只在这个测试里踩得到）。
+	var game: Node = root.get_node_or_null("Game")
+	var locked_seen := 0
+	var free_seen := 0
+	for slot: int in PartLibrary.TAB_ORDER:
+		for part: PartData in PartLibrary.by_slot(slot):
+			var card := _card(slot, String(part.id))
+			var unlocked: bool = game.is_part_unlocked(part) if game != null \
+					else part.is_unlocked_at(1)
+			_check("%s 的卡可用状态与状态层一致" % part.id, card.disabled, not unlocked)
+			if not unlocked:
+				locked_seen += 1
+				# 两种门写两种话：等得起 vs 得去翻牌
+				var want := "第 %d 周解锁" % part.unlock_week
+				if not String(part.set_id).is_empty():
+					want = "翻牌获得"
+				_check("%s 的卡写明了解锁方式" % part.id, card.tooltip_text, want)
+			else:
+				free_seen += 1
+	_check("已解锁的卡都点得动（%d 件）" % free_seen, free_seen > 0, true)
+	# 真·开局：9 件翻牌（三套）+ 6 件第 3 周 = 15
+	if game != null and game.state != null and game.state.week() == 1:
+		_check("第 1 周确实有 15 件灰着", locked_seen, 15)
+	# 「留空」不是部件，永远不该被锁
+	_check("「其他」的留空卡永远可用", _card(PartData.Slot.EXTRA, "").disabled, false)
+
+	print("")
 	print("共 %d 项断言" % _checks)
 	if _failures.is_empty():
 		print("✅ 全部通过")

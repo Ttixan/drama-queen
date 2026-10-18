@@ -359,6 +359,16 @@ func _test_end_day() -> void:
 	# 从手机壳的按钮走一遍，确认路径一致
 	_app._on_end_day_pressed()
 	_check("按钮路径也推进了", _game.day(), 5)
+
+	# 「下一天」也是翻牌出现的那一刻：试镜成功只排牌，按下按钮才弹
+	_game.state.queue_flip(RoleRequirement.Tier.EXTRA, "smug")
+	_app._on_end_day_pressed()
+	_check("非周末按「下一天」也会翻牌", _app._reward != null, true)
+	_check("翻牌不耽误推进日期", _game.day(), 6)
+	_app._close_reward()
+	# 这张牌没消费 —— 清掉，别让它漏到后面几节
+	_game.state.pending_flips.clear()
+	_game.state.rewarded_tiers.clear()
 	print("   只有第 7 / 14 / 21 天才结算")
 
 
@@ -373,6 +383,9 @@ func _test_week_settle() -> void:
 				CompanyLibrary.by_code("B").role_of(RoleRequirement.Tier.LEAD)),
 		"acting_gain": 5,
 	})
+	# 真实路径里这张牌由「下一天」发（`Game._advance`）；这里直接写履历，
+	# 等于绕过了投递，所以要自己补这一步
+	_game.state.queue_expression_rewards(1)
 	_game.state.day = 7
 	_app._refresh_all()
 	_app._on_end_day_pressed()
@@ -396,6 +409,11 @@ func _test_week_settle() -> void:
 	var next_day: int = _game.day()
 	_app._report._next_button.pressed.emit()
 	_check("翻篇关掉了浮层", _app._report, null)
+	# 这一周首次演成主角 → 结算时排了一张牌，报纸关掉就该接着翻（见 expression_reward）
+	_check("报纸之后接着翻牌", _app._reward != null, true)
+	# 只验证衔接：把牌关掉，别让浮层挡住后面几节的按钮点击
+	_app._close_reward()
+	_check("翻牌浮层能关掉", _app._reward, null)
 	_check("本周投递计数清零", _game.state.submissions_this_week, 0)
 	_check("日期已进入下一周", next_day, 8)
 	print("   头条：《%s》" % String((report["headlines"] as Array)[0]))

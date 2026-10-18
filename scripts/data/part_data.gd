@@ -2,7 +2,7 @@ class_name PartData
 extends Resource
 ## 表情部件
 ##
-## 42 张图 → 8(眼) × 11(嘴) × 8(眉) × 7(其他含空) × 9(肤色) = 44352 种脸。
+## 53 张图 → 12(眼) × 14(嘴) × 12(眉) × 7(其他含空) × 9(肤色) = 127008 种脸。
 ## 拼贴法的全部价值就在这个组合爆炸上，所以部件池小完全没问题。
 ##
 ## 【美术约束】每类必须有**强度梯度**（眼：信任→惊讶→愤怒→悲伤忧愁→喜悦…），
@@ -31,6 +31,22 @@ const SLOT_NAMES := {
 
 @export var texture: Texture2D
 
+## 第几周起可用。**1 = 开局就有**；2 / 3 = 那一周开始时解锁。
+##
+## 【为什么是周次，不是天数 / 条件】整局只有 3 周，周是玩家唯一认的时间刻度；
+## 写在天数上界面还得再换算一次，写成一堆条件（钱 / 演技 / 知名度）则会让
+## 「第 2 周能演什么」变成一道隐函数，策划讲故事时说不动。
+## 【为什么不进存档】天数在存档里，周次由天数派生 —— 解锁状态跟着一起派生，
+## 于是老存档读回来不会缺任何一件（也就没有迁移表）。
+@export var unlock_week: int = 1
+
+## 属于哪一套「复杂表情」（`ExpressionSets` 的 id）。空 = 开局就有的普通部件。
+##
+## 【和 unlock_week 是两条路，别混】带 `set_id` 的部件不看周次，
+## 只看玩家有没有通过周结算翻牌拿到那一套（`GameState.owned_sets`）。
+## 一套三件（眼/嘴/眉）必须同 id —— 半套可用会拼出画面上打架的脸。
+@export var set_id: StringName = &""
+
 @export_group("情绪权重")
 ## 每个部件打 1~3 个情绪标签即可，不必每个都填。
 @export_range(0.0, 5.0, 0.1) var joy: float = 0.0
@@ -39,6 +55,11 @@ const SLOT_NAMES := {
 @export_range(0.0, 5.0, 0.1) var shock: float = 0.0
 @export_range(0.0, 5.0, 0.1) var charm: float = 0.0
 @export_range(0.0, 5.0, 0.1) var awkward: float = 0.0
+
+
+## 第 `week` 周这件能不能用。**1 起算**（第 1 周就是开局那周）。
+func is_unlocked_at(week: int) -> bool:
+	return unlock_week <= week
 
 
 func emotion_vector() -> PackedFloat32Array:

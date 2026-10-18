@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_qf4rb"]
+[ext_resource type="Texture2D" path="res://assets/parts/eyes_10.png" id="2_hj1mt"]
+
+[resource]
+script = ExtResource("1_qf4rb")
+id = &"eyes_10"
+display_name = "爆缸笑脸"
+tier = 10
+texture = ExtResource("2_hj1mt")
+unlock_week = 3
+joy = 3.0

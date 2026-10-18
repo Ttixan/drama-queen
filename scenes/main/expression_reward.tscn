@@ -1,0 +1,80 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/apps/expression_reward.gd" id="1_reward"]
+[ext_resource type="Theme" path="res://assets/ui/ui_theme.tres" id="2_theme"]
+
+[node name="ExpressionReward" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_reward")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.78)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Box" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="Title" type="Label" parent="Center/Box"]
+layout_mode = 2
+text = "复杂表情"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Center/Box"]
+layout_mode = 2
+text = "点一张牌翻开"
+horizontal_alignment = 1
+
+[node name="CardsRow" type="HBoxContainer" parent="Center/Box"]
+layout_mode = 2
+theme_override_constants/separation = 64
+alignment = 1
+
+[node name="ResultPanel" type="PanelContainer" parent="Center/Box"]
+layout_mode = 2
+
+[node name="ResultMargin" type="MarginContainer" parent="Center/Box/ResultPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 18
+
+[node name="ResultBox" type="VBoxContainer" parent="Center/Box/ResultPanel/ResultMargin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ResultCaption" type="Label" parent="Center/Box/ResultPanel/ResultMargin/ResultBox"]
+layout_mode = 2
+text = "获得表情"
+horizontal_alignment = 1
+
+[node name="ResultName" type="Label" parent="Center/Box/ResultPanel/ResultMargin/ResultBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="ClaimButton" type="Button" parent="Center/Box/ResultPanel/ResultMargin/ResultBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "收下"

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_dit6c"]
+[ext_resource type="Texture2D" path="res://assets/parts/eyes_08.png" id="2_7kojm"]
+
+[resource]
+script = ExtResource("1_dit6c")
+id = &"eyes_08"
+display_name = "得意"
+tier = 8
+texture = ExtResource("2_7kojm")
+set_id = &"smug"
+anger = 1.0
+charm = 2.0

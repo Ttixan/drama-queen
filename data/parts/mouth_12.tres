@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_bj222"]
+[ext_resource type="Texture2D" path="res://assets/parts/mouth_12.png" id="2_rdhlc"]
+
+[resource]
+script = ExtResource("1_bj222")
+id = &"mouth_12"
+display_name = "爆缸笑脸"
+slot = 1
+tier = 12
+texture = ExtResource("2_rdhlc")
+unlock_week = 3
+joy = 3.0
+shock = 1.0

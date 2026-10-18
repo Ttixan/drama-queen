@@ -34,6 +34,10 @@ signal cancelled
 signal open_app_requested(scene_path: String)
 
 const REPORT_SCENE := "res://scenes/main/week_report.tscn"
+## 周结算的第二步：翻牌拿一套复杂表情（`scripts/apps/expression_reward.gd`）。
+## 【为什么它不在周报里面】报纸是"这一周发生了什么"的**回顾**，翻牌是"你赢到了什么"的
+## **发放**。塞进报纸的翻页序列，玩家会在读账目时突然被要求做选择 —— 两件事分开更清楚。
+const REWARD_SCENE := "res://scenes/main/expression_reward.tscn"
 
 const FONT_CN := preload("res://assets/fonts/chinese.ttf")
 const FONT_EN := preload("res://assets/fonts/english.ttf")
@@ -109,6 +113,8 @@ var _back_enabled := false
 ## 动作卡：key -> {button, title, detail, state, 颜色}
 var _cards: Dictionary = {}
 var _report: Node
+## 正在翻的那张牌（`expression_reward.tscn`）。与 `_report` 一样住在 ReportLayer 里
+var _reward: Node
 ## 重开按钮的待确认时间戳（毫秒）。0 = 不在待确认状态
 var _restart_armed_at := 0
 
@@ -123,6 +129,9 @@ func _ready() -> void:
 	EventBus.state_reset.connect(_on_state_reset)
 	EventBus.ap_changed.connect(_on_ap_changed)
 	_refresh_all()
+	# 【读档 / 上次结算没翻就退出的情况】牌存在状态里，进日历就补上这一次 ——
+	# 延到本帧末尾：`_ready` 里加子节点会被本屏自己的布局再动一遍
+	call_deferred("_maybe_open_reward")
 
 
 # ============================================================
@@ -213,7 +222,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	# 【为什么要判 _report】安卓返回键的惯例是「先关掉当前弹层」。
 	# 日历里可能正开着周末结算浮层，那一层才该先吃这一下。
-	if _report != null:
+	if _report != null or _reward != null:
 		return
 	get_viewport().set_input_as_handled()
 	cancelled.emit()
@@ -669,6 +678,9 @@ func _on_end_day_pressed() -> void:
 		_open_report(res["report"])
 	else:
 		_refresh_all()
+		# 试镜成功后按「下一天」：牌在推进时已经排好，这里直接翻。
+		# 周末那一支不用管 —— 报纸先弹，关掉报纸时 `_close_report()` 会再问一次。
+		_maybe_open_reward()
 
 
 ## 桌面点下去被核心层拒绝时，把原因显示出来。
@@ -703,6 +715,48 @@ func _close_report() -> void:
 		_report = null
 	_report_layer.visible = false
 	_refresh_all()
+	# 周末这一支：报纸是在「下一天」里先弹的，牌早就排好了，等报纸翻完再让玩家翻
+	_maybe_open_reward()
+
+
+# ============================================================
+# 翻牌奖励（周结算的第二步）
+# ============================================================
+## 有牌就开一张。**一次只开一张**：连着拿到两三个档位时，
+## 玩家收下一张之后由 `_on_reward_finished` 再问一次 —— 而不是一屏摆三张。
+func _maybe_open_reward() -> void:
+	if _reward != null or _report != null:
+		return
+	if not Game.has_pending_flip():
+		return
+	_reward = load(REWARD_SCENE).instantiate()
+	# 【先连信号再 add_child】场景的 `_ready()` 里可能马上翻完（没有牌时它会立刻发
+	# `finished`）；连晚了就会漏掉那一次，浮层留在屏幕上关不掉。
+	_reward.connect("finished", _on_reward_finished)
+	_report_layer.add_child(_reward)
+	_report_layer.visible = true
+
+
+func _on_reward_finished() -> void:
+	if _reward == null:
+		return
+	# 【先摘引用再 queue_free】`finished` 是从它自己的「收下」按钮回调里发出来的，
+	# 此刻还在它的调用栈上 —— 立即 free 会把栈拆掉
+	var node := _reward
+	_reward = null
+	node.queue_free()
+	_report_layer.visible = false
+	_refresh_all()
+	# 一周里可能连拿两三个档位：这张收下了就接着问下一张
+	_maybe_open_reward()
+
+
+func _close_reward() -> void:
+	if _reward == null:
+		return
+	_reward.queue_free()
+	_reward = null
+	_report_layer.visible = false
 
 
 # ============================================================
@@ -759,5 +813,8 @@ func _on_ap_changed(_left: int) -> void:
 
 ## 状态被整个换掉（开新局 / 读档）
 func _on_state_reset() -> void:
+	# 状态整个换了：上一局的牌 / 报纸都不该留着。关掉之后
+	# `_close_report()` 会按**新**状态再问一次有没有牌要翻（读档读到一半的局面）
+	_close_reward()
 	_close_report()
 	_refresh_all()
