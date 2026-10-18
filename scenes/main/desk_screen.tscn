@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/desk/desk_notebook.jpg" id="6_note"]
 [ext_resource type="PackedScene" path="res://scenes/main/phone_screen.tscn" id="7_shell"]
 [ext_resource type="PackedScene" path="res://scenes/main/calendar_screen.tscn" id="8_cal"]
+[ext_resource type="PackedScene" path="res://scenes/main/notebook_screen.tscn" id="9_book"]
 
 [node name="DeskScreen" type="Control"]
 layout_mode = 3
@@ -78,3 +79,4 @@ mouse_default_cursor_shape = 2
 script = ExtResource("3_hot")
 active_texture = ExtResource("6_note")
 label = "抄录手册"
+target_scene = ExtResource("9_book")

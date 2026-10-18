@@ -71,6 +71,7 @@ func _run_all() -> void:
 	_test_restart_button()
 	_test_week_event()
 	_test_desk_jump()
+	_test_notebook()
 
 	print("")
 	print("共 %d 项断言" % _checks)
@@ -102,23 +103,23 @@ func _card_state(key: String) -> String:
 
 # ============================================================
 func _test_desktop() -> void:
-	print("[1] 日历：状态栏 + 今日安排 ｜ 手机：左栏 App 列表")
+	print("[1] 台历：第 N 天 + 今日安排 ｜ 手机：左栏 App 列表")
 	_check("四张动作卡都在", _app._cards.size(), 4)
 	_check("手机左栏列着四个 App", _phone._app_list.get_child_count(), 4)
 	_check("开局没有打开的 App", _phone.current_app_path(), "")
 	_check("结算层是隐藏的", _app._report_layer.visible, false)
-	_check("日历上能看到属性（这是做决定的地方）",
+	_check("台历上能看到属性（这是做决定的地方）",
 			_app._ps5_label.text.is_empty(), false)
 	_check("手机栏是窄的：只有天数 / 行动点 / 钱", _phone._money_label.text.is_empty(), false)
 
 	var bal := BalanceLibrary.data()
-	_check("状态栏·金钱 == 数值表的初始金钱", _app._money_label.text,
-			"%d 元" % bal.init_money)
-	_check("状态栏·行动点", _app._ap_label.text, "行动点 %d" % GameState.AP_PER_DAY)
-	_check("状态栏·天数", _app._day_label.text,
-			"第 1 天 / %d ｜ 第 1 周" % GameState.TOTAL_DAYS)
-	_check("状态栏·PS5 进度", _app._ps5_label.text,
-			"PS5 0 / %d 期" % bal.ps5_installments)
+	# 【版面改版后这些 Label 只写数字】单位（元 / 点 / 期）是旁边一个独立小字，
+	# 混进同一个 Label 就没法让数字走 BubbleDub、中文走 Lemi。
+	_check("状态·金钱 == 数值表的初始金钱", _app._money_label.text, str(bal.init_money))
+	_check("状态·行动点", _app._ap_label.text, str(GameState.AP_PER_DAY))
+	# 抬头是「第 {BubbleDub 数字} 天」：`_day_label` 只放那个数字
+	_check("状态·天数", _app._day_label.text, "1")
+	_check("状态·PS5 进度", _app._ps5_label.text, "0 / %d" % bal.ps5_installments)
 
 	_check("投递卡可用", _card("submit").disabled, false)
 	_check("打工卡可用", _card("work").disabled, false)
@@ -519,8 +520,8 @@ func _test_save_load() -> void:
 	_check("读回了已解锁的 HR", _game.is_hr_unlocked("C"), true)
 
 	# 读档对界面来说和开新局一样：状态整个换了，界面必须照着重画
-	_check("读档后状态栏跟着变", _app._money_label.text, "777 元")
-	_check("读档后天数跟着变", _app._day_label.text.contains("第 12 天"), true)
+	_check("读档后状态跟着变", _app._money_label.text, "777")
+	_check("读档后天数跟着变", _app._day_label.text, "12")
 
 	# 【这一条守的是"开机读档"那条路径】`Game._ready()` 在 `new_game()` **之前**调
 	# `load_from()`，那一刻 `state` 还是 null。往 null 上调 `from_save_dict()` 会报错，
@@ -632,6 +633,12 @@ func _test_desk_jump() -> void:
 	print("[11] 桌子：跨屏跳转（日历「去投递」→ 手机的微信）")
 	var desk: Node = load("res://scenes/main/desk_screen.tscn").instantiate()
 	root.add_child(desk)
+	# 笔记本热区必须接上抄录手册 —— 它曾经是 `target_scene = null`（点了没反应），
+	# 而三个二级页各自的测试都是绿的，谁也不会发现
+	var book_hot: Node = desk.get_node("Hotspots/HotspotNotebook")
+	_check("笔记本热区接上了抄录手册",
+			String(book_hot.target_scene.resource_path), "res://scenes/main/notebook_screen.tscn")
+
 	desk._on_activated(desk.get_node("Hotspots/HotspotCalendar"))
 	_check("先打开了日历", desk._open.name, "CalendarScreen")
 	# 日历自己**不该**开微信（App 归手机屏管），它只发请求
@@ -645,6 +652,13 @@ func _test_desk_jump() -> void:
 	# 手机上返回桌面要能回到桌子
 	desk._open.cancelled.emit()
 	_check("从手机返回后桌面空了", desk.has_open_screen(), false)
+
+	# 笔记本走同一条路：桌子打开 → 露出返回 → 回去
+	desk._on_activated(book_hot)
+	_check("打开抄录手册", desk._open.name, "NotebookScreen")
+	_check("二级页露出了返回桌面", desk._open._back_button.visible, true)
+	desk._open.cancelled.emit()
+	_check("从抄录手册返回后桌面空了", desk.has_open_screen(), false)
 
 	# GM 控制台（只在 debug 构建里挂）：指令必须真的改到状态，而不只是打印一行
 	# 【按节点名找，不写类型】那个脚本故意没有 `class_name`（见它文件头）；
@@ -690,6 +704,44 @@ func _test_gm_commands(gm: Node) -> void:
 	# 【信号那条必须验】直接写 `state.money` 界面不会变；走 `add_money` 才会重画 HUD
 	gm.call("_run", "money 777")
 	_check("GM 改的钱已同步到手机顶栏", _phone._money_label.text, "777 元")
+
+
+## 抄录手册：二级页（贴纸）→ 三级页（单页笔记）→ × 回来。
+##
+## 【为什么要测】三级页是所有便签共用的一个壳：`_open_note(index)` 少填一行，
+## 玩家点第二张贴纸看到的还是第一篇 —— 这种错肉眼要连点四次才发现。
+func _test_notebook() -> void:
+	print("[12] 抄录手册：贴纸 → 单页笔记 → × 回本子")
+	var book: Node = load("res://scenes/main/notebook_screen.tscn").instantiate()
+	root.add_child(book)
+
+	var stickers := 0
+	for child: Node in book.get_node("Page").get_children():
+		if String(child.name).begins_with("Sticker_"):
+			stickers += 1
+	_check("贴纸数量 == 便签条数", stickers, NoteLibrary.count())
+	_check("一进来笔记页是关着的", book._note_layer.visible, false)
+
+	# 走真实按钮：贴纸就是 Button，`pressed` 通了才算接上
+	book.get_node("Page/Sticker_0").pressed.emit()
+	_check("点第一张贴纸：笔记页开了", book._note_layer.visible, true)
+	_check("标题是第一条", book._note_title.text, String(NoteLibrary.NOTES[0]["title"]))
+	_check("正文按行排好（8 行）", book._note_body.text.split("\n").size(), 8)
+
+	# × 是三级页唯一的出口（手机上没 Esc）
+	book._close_button.pressed.emit()
+	_check("× 之后回到笔记本", book._note_layer.visible, false)
+	_check("关掉后记的索引也清了", book._note_index, -1)
+
+	book.get_node("Page/Sticker_3").pressed.emit()
+	_check("点第四张：换的是第四篇", book._note_title.text, String(NoteLibrary.NOTES[3]["title"]))
+	book._close_button.pressed.emit()
+	_check("再按 × 又收回本子", book._note_layer.visible, false)
+	book.call("_open_note", 99)
+	_check("越界不崩、也不亮", book._note_layer.visible, false)
+
+	book.queue_free()
+	print("   四张贴纸各开各的；× 只收三级页，不退出笔记本")
 
 
 func _snapshot_save() -> Dictionary:

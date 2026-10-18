@@ -26,6 +26,20 @@ const PAPER_DISABLED := Color("ddd6c8")
 const PAPER_LINE := Color("cfc8b8")
 const INK := Color("16161a")
 
+## —— 二级页面（台历 / 笔记本）的纸面 ——
+## 【为什么和上面的 PAPER 系分开】那套是奶白色的剪纸层，配深色底；
+## 台历与笔记本的纸是**青色插画**，字必须压深蓝墨，套奶白纸的色号会糊成一片。
+## 两页共用这几个值 —— 以后调"纸上的墨色"只改这里。
+const PAGE_INK := Color("1d3446")
+const PAGE_INK_SOFT := Color("4e6678")
+const PAGE_INK_FAINT := Color("8199a8")
+const PAGE_CARD := Color(1, 1, 1, 0.55)
+const PAGE_CARD_HOVER := Color(1, 1, 1, 0.92)
+const PAGE_CARD_PRESSED := Color(0.92, 0.97, 1, 0.95)
+## 纸面上卡片的描边：墨色半透明，压在插画上不抢线稿
+const PAGE_LINE := Color(0.11, 0.2, 0.27, 0.35)
+const PAGE_LINE_OFF := Color(0.11, 0.2, 0.27, 0.14)
+
 ## —— 文字 ——
 const TEXT := Color("f5f1e8")
 const TEXT_DIM := Color("a0a0aa")
