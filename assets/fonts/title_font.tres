@@ -1,0 +1,23 @@
+[gd_resource type="FontVariation" load_steps=3 format=3]
+
+; 全局标题字体
+;
+; 【和正文的关系】正文 `main_font.tres` 用同族的 **Light**（便于阅读），
+; 标题用这支 **Bold** —— 字号大、字重也撑得住，不会在米色纸面上发虚。
+; 两支都来自美术给的「獅尾半月字體」，项目实际用到的 1745 个汉字 **0 缺字**。
+;
+; 【只给标题用】正文别顺手换成这支：长段落会显得太重，和「便于阅读」的正文分工冲突。
+; 代码里统一走 `UiPalette.title(label, size, color)`，不要各写各的。
+;
+; 【源文件】`.document/字体/标题字体-便于阅读/獅尾半月字體tc-Bold.ttf`
+; 复制进 `assets/fonts/` 时改成 ASCII 名，避免 Android 导出链对中文文件名出问题。
+
+[ext_resource type="FontFile" path="res://assets/fonts/ShiweiBanyue-Bold.ttf" id="1_title"]
+
+[sub_resource type="SystemFont" id="SystemFont_fallback"]
+font_names = PackedStringArray("Source Han Sans SC", "思源黑体", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "SimHei")
+allow_system_fallback = true
+
+[resource]
+base_font = ExtResource("1_title")
+fallbacks = Array[Font]([SubResource("SystemFont_fallback")])

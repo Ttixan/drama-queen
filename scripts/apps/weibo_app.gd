@@ -85,7 +85,7 @@ func _issue_card(report: Dictionary) -> PanelContainer:
 	var title := Label.new()
 	title.text = "《有瓜有戏》第 %d 期" % week
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UiPalette.text(title, 26, UiPalette.TEXT)
+	UiPalette.title(title, 26, UiPalette.TEXT)
 	head.add_child(title)
 
 	var day := Label.new()
@@ -136,8 +136,8 @@ func _apply_styles() -> void:
 	chip.set_corner_radius_all(12)
 	get_node(P_TOP + "/BrandRow/BrandChip").add_theme_stylebox_override("panel", chip)
 
-	UiPalette.text(get_node(P_TOP + "/BrandRow/BrandText"), 26, UiPalette.WEIBO)
-	UiPalette.text(get_node(P_TOP + "/TopCenter/Title"), 40, UiPalette.TEXT)
+	UiPalette.title(get_node(P_TOP + "/BrandRow/BrandText"), 26, UiPalette.WEIBO)
+	UiPalette.title(get_node(P_TOP + "/TopCenter/Title"), 40, UiPalette.TEXT)
 	UiPalette.text(get_node(P_TOP + "/TopCenter/Subtitle"), 15, UiPalette.TEXT_DIM)
 	UiPalette.text(_status_label, 20, UiPalette.ACCENT)
 	UiPalette.text(_pending_label, 15, UiPalette.TEXT_DIM)

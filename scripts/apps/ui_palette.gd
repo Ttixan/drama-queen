@@ -13,13 +13,15 @@ extends RefCounted
 
 
 ## —— 字体 ——
-## 全局正文/标题都用这一支：「獅尾半月字體 tc-Light」+ 系统字体兜底
+## 正文：「獅尾半月字體 tc-Light」+ 系统字体兜底
 ## （本体在 `assets/fonts/main_font.tres`，全局主题也指向它）。
+## 标题：同族 tc-Bold（`title_font.tres`），只给标题用，走 `title()`。
 ## 【为什么不是 Kaisei 了】那套是日文字体，项目用字缺 590 个；这套 0 缺字。
 ## 【为什么代码里还要存一份】需要**量字宽**的地方（聊天气泡、标题截断）必须和
 ## 真正渲染的字体用同一套度量 —— 拿 `ThemeDB.fallback_font` 量、拿这支画，
 ## 气泡就会算窄或算宽。那几处都不是 Label 节点，拿不到"主题字体重画"的时机。
 const FONT := preload("res://assets/fonts/main_font.tres")
+const TITLE_FONT := preload("res://assets/fonts/title_font.tres")
 
 ## —— 底色 ——
 const BG := Color("16161a")
@@ -164,3 +166,14 @@ static func text(node: Node, size: int, color: Color) -> void:
 		return
 	c.add_theme_font_size_override("font_size", size)
 	c.add_theme_color_override("font_color", color)
+
+
+## 标题：字号 + 颜色 + **Bold 字重**。
+## 【为什么单独一个函数】标题和正文现在是同族的两支字（Bold / Light）；
+## 如果只在调用处写 `add_theme_font_override`，下一个新界面很容易忘记，
+## 又变回「大字号但很细」的正文体。标题一律走这里。
+static func title(node: Node, size: int, color: Color) -> void:
+	text(node, size, color)
+	var c := node as Control
+	if c != null:
+		c.add_theme_font_override("font", TITLE_FONT)

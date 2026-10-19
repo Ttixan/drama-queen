@@ -53,6 +53,9 @@ mouse_default_cursor_shape = 2
 script = ExtResource("3_hot")
 active_texture = ExtResource("4_cal")
 label = "日历"
+hint = "安排今日行动"
+hint_rect = Rect2(700, 110, 900, 220)
+hint_font_size = 44
 target_scene = ExtResource("8_cal")
 
 [node name="HotspotPhone" type="Control" parent="Hotspots"]
@@ -66,6 +69,9 @@ mouse_default_cursor_shape = 2
 script = ExtResource("3_hot")
 active_texture = ExtResource("5_phone")
 label = "手机"
+hint = "查看消息和投递试镜"
+hint_rect = Rect2(680, 170, 940, 270)
+hint_font_size = 44
 target_scene = ExtResource("7_shell")
 
 [node name="HotspotNotebook" type="Control" parent="Hotspots"]
@@ -79,4 +85,7 @@ mouse_default_cursor_shape = 2
 script = ExtResource("3_hot")
 active_texture = ExtResource("6_note")
 label = "抄录手册"
+hint = "检阅重要的笔记"
+hint_rect = Rect2(300, 150, 1150, 300)
+hint_font_size = 44
 target_scene = ExtResource("9_book")

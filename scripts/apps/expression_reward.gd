@@ -198,7 +198,7 @@ func _fill_headline() -> void:
 
 func _apply_styles() -> void:
 	get_node("Dim").color = Color(C_BG, 0.86)
-	UiPalette.text(_title, 44, C_TEXT)
+	UiPalette.title(_title, 44, C_TEXT)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UiPalette.text(_subtitle, 19, C_TEXT_DIM)
 	_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -207,7 +207,7 @@ func _apply_styles() -> void:
 			UiPalette.panel(C_PANEL, 18, 3, C_ACCENT))
 	UiPalette.text(_result_caption, 18, C_TEXT_DIM)
 	_result_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	UiPalette.text(_result_name, 34, C_ACCENT)
+	UiPalette.title(_result_name, 34, C_ACCENT)
 	_result_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 	_claim_button.focus_mode = Control.FOCUS_NONE

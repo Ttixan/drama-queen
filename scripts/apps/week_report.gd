@@ -202,7 +202,10 @@ func _build_headlines() -> void:
 		var l := Label.new()
 		l.text = String(heads[i])
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		UiPalette.text(l, 42 if i == 0 else 23, NEWS_RED if i == 0 else UiPalette.INK)
+		if i == 0:
+			UiPalette.title(l, 42, NEWS_RED)
+		else:
+			UiPalette.text(l, 23, UiPalette.INK)
 		_headline_box.add_child(l)
 
 
@@ -465,7 +468,7 @@ func _apply_styles() -> void:
 	# 纸面：米白底 + 深墨描边 + 几乎不收角（报纸是方的）
 	get_node("Center/Paper").add_theme_stylebox_override("panel",
 			UiPalette.panel(UiPalette.PAPER, 2, 3, UiPalette.INK))
-	UiPalette.text(_title, 46, UiPalette.INK)
+	UiPalette.title(_title, 46, UiPalette.INK)
 	UiPalette.text(_edition, 17, UiPalette.PAGE_INK_SOFT)
 	UiPalette.text(_day_label, 17, UiPalette.PAGE_INK_SOFT)
 	UiPalette.text(_face_caption, 22, UiPalette.INK)

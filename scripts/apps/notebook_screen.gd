@@ -13,13 +13,15 @@ extends Control
 ## 【贴纸不是四张图】素材只有一张 `stickers.png`（四张横排），
 ## 这里用 `AtlasTexture` 切出区域 —— **不落四份 PNG**，美术改图时只换一张。
 ##
-## 【字体】与全局一致：`assets/fonts/main_font.tres`（獅尾半月字體 tc-Light
-## + 系统字体兜底）。`×` / `✕` 这类符号本体缺字时由兜底层补上，不会再出豆腐块。
+## 【字体】正文走 `main_font.tres`（tc-Light），贴纸标题与单页标题走
+## `title_font.tres`（同族 tc-Bold）。`×` / `✕` 这类符号本体缺字时由兜底层补上。
 
 ## 回到桌子（上层把本场景当子页面打开时）
 signal cancelled
 
 const FONT_CN := preload("res://assets/fonts/main_font.tres")
+## 标题：贴纸上的笔记名、单页笔记的标题。正文仍是 FONT_CN。
+const TITLE_FONT := UiPalette.TITLE_FONT
 
 const STICKER_SHEET := preload("res://assets/ui/notebook/stickers.png")
 const NOTE_TEXTURE := preload("res://assets/ui/notebook/note.png")
@@ -84,12 +86,13 @@ func _ready() -> void:
 # ============================================================
 # 小工具
 # ============================================================
-func _label(parent: Node, text: String, size: int, color: Color) -> Label:
+func _label(parent: Node, text: String, size: int, color: Color,
+		font: Font = FONT_CN) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UiPalette.text(l, size, color)
-	l.add_theme_font_override("font", FONT_CN)
+	l.add_theme_font_override("font", font)
 	parent.add_child(l)
 	return l
 
@@ -157,7 +160,7 @@ func _build_stickers() -> void:
 
 		# 标题写在卡片上（图钉下面那块空白）：380×420 的纸片只放得下标题，
 		# 正文进三级页面 —— 挤在一起就没人读了
-		var title := _label(b, String(note["title"]), 26, INK)
+		var title := _label(b, String(note["title"]), 26, INK, TITLE_FONT)
 		title.position = Vector2(28, 96)
 		title.size = Vector2(rect.size.x - 56, 140)
 		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -202,7 +205,7 @@ func _build_note_layer() -> void:
 	paper.mouse_filter = Control.MOUSE_FILTER_STOP
 	_note_layer.add_child(paper)
 
-	_note_title = _label(_note_layer, "", 44, INK)
+	_note_title = _label(_note_layer, "", 44, INK, TITLE_FONT)
 	_note_title.position = NOTE_TITLE_RECT.position
 	_note_title.size = NOTE_TITLE_RECT.size
 	_note_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

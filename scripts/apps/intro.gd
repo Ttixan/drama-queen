@@ -76,7 +76,9 @@ func _ready() -> void:
 # ============================================================
 func _build_paper() -> void:
 	# 报头 / 版次
-	_label(_paper_text, data.masthead, 46, UiPalette.INK, Rect2(240, 70, 700, 64))
+	_label(_paper_text, data.masthead, 46, UiPalette.INK,
+			Rect2(240, 70, 700, 64), HORIZONTAL_ALIGNMENT_LEFT, false,
+			UiPalette.TITLE_FONT)
 	# 版次放在报头右侧的空白纸面上 —— 模板右上角有灰条，小字压上去读不清
 	_label(_paper_text, data.edition, 22, UiPalette.PAGE_INK_SOFT,
 			Rect2(560, 76, 620, 44))
@@ -93,16 +95,20 @@ func _build_paper() -> void:
 	tag_style.content_margin_bottom = 4
 	tag.add_theme_stylebox_override("panel", tag_style)
 	_paper_text.add_child(tag)
-	_vlabel(tag, "广告", 20, UiPalette.PAPER, false)
+	_vlabel(tag, "广告", 20, UiPalette.PAPER, false, UiPalette.TITLE_FONT)
 
 	# 两条深色栏目条（模板里本来就是深灰，只往上压白字）
-	_label(_paper_text, "整版广告", 24, UiPalette.PAPER, Rect2(270, 250, 520, 40))
+	_label(_paper_text, "整版广告", 24, UiPalette.PAPER,
+			Rect2(270, 250, 520, 40), HORIZONTAL_ALIGNMENT_LEFT, false,
+			UiPalette.TITLE_FONT)
 	_label(_paper_text, "%s · 首发预热" % data.product, 24, UiPalette.PAPER,
-			Rect2(895, 250, 700, 40))
+			Rect2(895, 250, 700, 40), HORIZONTAL_ALIGNMENT_LEFT, false,
+			UiPalette.TITLE_FONT)
 
 	# 左栏主视觉
 	_label(_paper_text, data.title, 70, UiPalette.PAPER,
-			Rect2(285, 350, 510, 170), HORIZONTAL_ALIGNMENT_LEFT, true)
+			Rect2(285, 350, 510, 170), HORIZONTAL_ALIGNMENT_LEFT, true,
+			UiPalette.TITLE_FONT)
 	var rule := ColorRect.new()
 	rule.position = Vector2(287, 540)
 	rule.size = Vector2(120, 8)
@@ -111,7 +117,8 @@ func _build_paper() -> void:
 	_paper_text.add_child(rule)
 
 	_label(_paper_text, data.product, 52, UiPalette.ACCENT,
-			Rect2(285, 570, 520, 80), HORIZONTAL_ALIGNMENT_LEFT, true)
+			Rect2(285, 570, 520, 80), HORIZONTAL_ALIGNMENT_LEFT, true,
+			UiPalette.TITLE_FONT)
 	var subtitle := _label(_paper_text, data.subtitle, 26, UiPalette.PAPER,
 			Rect2(285, 665, 500, 130), HORIZONTAL_ALIGNMENT_LEFT, true)
 	subtitle.add_theme_constant_override("line_spacing", 8)
@@ -122,7 +129,8 @@ func _build_paper() -> void:
 		_label(_paper_text, parts[0], 22, UiPalette.PAPER,
 				Rect2(287, 838, 500, 36))
 		_label(_paper_text, parts[1], 64, UiPalette.DANGER,
-				Rect2(285, 872, 500, 96))
+				Rect2(285, 872, 500, 96), HORIZONTAL_ALIGNMENT_LEFT, false,
+				UiPalette.TITLE_FONT)
 	else:
 		_label(_paper_text, data.countdown, 44, UiPalette.DANGER,
 				Rect2(287, 860, 500, 90))
@@ -256,7 +264,7 @@ func _build_name_layer() -> void:
 	box.add_theme_constant_override("separation", 16)
 	margin.add_child(box)
 
-	_vlabel(box, "演员登记表", 42, UiPalette.INK, false)
+	_vlabel(box, "演员登记表", 42, UiPalette.INK, false, UiPalette.TITLE_FONT)
 	_vlabel(box, "签下名字，明天开机。", 20, UiPalette.PAGE_INK_SOFT, false)
 
 	var rule := ColorRect.new()
@@ -374,7 +382,8 @@ func _abort() -> void:
 # ============================================================
 ## 绝对定位的 Label（报纸纸面上的元素都按模板坐标摆）
 func _label(parent: Node, text: String, font_size: int, color: Color,
-		rect: Rect2, align := HORIZONTAL_ALIGNMENT_LEFT, wrap := false) -> Label:
+		rect: Rect2, align := HORIZONTAL_ALIGNMENT_LEFT, wrap := false,
+		font: Font = FONT_CN) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.position = rect.position
@@ -383,7 +392,7 @@ func _label(parent: Node, text: String, font_size: int, color: Color,
 	l.horizontal_alignment = align
 	l.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	UiPalette.text(l, font_size, color)
-	l.add_theme_font_override("font", FONT_CN)
+	l.add_theme_font_override("font", font)
 	if wrap:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(l)
@@ -392,13 +401,13 @@ func _label(parent: Node, text: String, font_size: int, color: Color,
 
 ## 容器里的 Label（宽度由父容器给，必须开自动换行）
 func _vlabel(parent: Node, text: String, font_size: int, color: Color,
-		wrap := true) -> Label:
+		wrap := true, font: Font = FONT_CN) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	UiPalette.text(l, font_size, color)
-	l.add_theme_font_override("font", FONT_CN)
+	l.add_theme_font_override("font", font)
 	if wrap:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(l)

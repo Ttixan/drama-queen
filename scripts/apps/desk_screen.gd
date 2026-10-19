@@ -5,7 +5,7 @@ extends Control
 ##   「日历」→ `calendar_screen`：**你的日程与进度**（状态栏 + 今日安排 + 本周进度 +
 ##            结算浮层 + 重开一局）—— 今天该做什么在这儿决定
 ##   「手机」→ `phone_screen`：那 4 个 App（左栏列表 / 右栏内容）
-##   「抄录手册」→ 还没定（热点上留空，点了没反应）
+##   「抄录手册」→ `notebook_screen`：检阅重要的笔记（贴纸笔记 / 单页全文）
 ## 两屏都支持「返回桌面」（`cancelled` + `enable_back()`），与录像机 / 微信 /
 ## Boss直聘 被嵌进手机时用的是同一套约定。
 ##
@@ -64,6 +64,13 @@ func _ready() -> void:
 
 func _on_hovered(h: Hotspot) -> void:
 	_current = h
+	# 【提示文字也只能留一条】鼠标从 A 滑到 B 时 entered / exited 的先后不保证；
+	# 不先收掉其它热点的话，两句话会同时压进同一个气泡。
+	for node: Node in _hotspots.get_children():
+		var other := node as Hotspot
+		if other != null and other != h:
+			other.hide_hint()
+	h.show_hint()
 	if h.active_texture != null:
 		_bg.texture = h.active_texture
 
@@ -75,6 +82,7 @@ func _on_unhovered(h: Hotspot) -> void:
 	if _current != h:
 		return
 	_current = null
+	h.hide_hint()
 	if off_texture != null:
 		_bg.texture = off_texture
 
@@ -82,6 +90,8 @@ func _on_unhovered(h: Hotspot) -> void:
 func _on_activated(h: Hotspot) -> void:
 	if h.target_scene == null or _open != null:
 		return
+	# 功能盖上来之后气泡会被挡住；先把提示收掉，回来后不会留一条悬空文案
+	h.hide_hint()
 	_open = h.target_scene.instantiate()
 	var host: Node = overlay_parent if overlay_parent != null else self
 	host.add_child(_open)
@@ -127,6 +137,8 @@ func _close_open() -> void:
 		return
 	_open.queue_free()
 	_open = null
+	if _current != null:
+		_current.hide_hint()
 	_current = null
 	if off_texture != null:
 		_bg.texture = off_texture

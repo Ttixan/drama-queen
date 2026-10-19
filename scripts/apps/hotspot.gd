@@ -15,7 +15,8 @@ extends Control
 ## 【悬浮换的是整张底图，不是叠一层高亮】四张图是**同一张桌子的四个状态**
 ## （未选择 / 日历 / 手机 / 抄录手册），尺寸都是 1920×1080、物件位置也一致，
 ## 所以「选中」= 把底图换掉，热点只需要按「未选择」那张摆一次。
-## 提示气泡画在那四张图里，等于白送。
+## 提示气泡形状画在那四张图里，等于白送；气泡里的**说明文案**由 `hint` 在运行时压上去
+## （见 `hint_rect` 的注释：用桌面坐标，因为气泡在热点矩形外）。
 
 ## 悬浮时替换上去的整张底图。留空 = 悬浮不变图（热点照样能点）
 @export var active_texture: Texture2D
@@ -26,9 +27,19 @@ extends Control
 ## 运行时是否画出这块区域（平时关着；调位置时可以开）
 @export var show_rect_at_runtime: bool = false
 
+## 悬浮时显示在底图黄色气泡里的说明。留空 = 不显示
+@export_multiline var hint: String = ""
+## 说明文字在 **1920×1080 桌面坐标** 里的位置。不是热点局部坐标 ——
+## 日历/手机的气泡其实画在热点矩形外面，用局部坐标会得到负数，
+## 所以文案标签挂在全屏的 `Hotspots` 下，和底图共用一套坐标。
+@export var hint_rect: Rect2 = Rect2(0, 0, 320, 80)
+@export var hint_font_size: int = 44
+
 signal hovered(hotspot: Hotspot)
 signal unhovered(hotspot: Hotspot)
 signal activated(hotspot: Hotspot)
+
+var _hint_label: Label
 
 
 func _ready() -> void:
@@ -36,15 +47,55 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	if mouse_default_cursor_shape == Control.CURSOR_ARROW:
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_build_hint()
 	# 【桌面热点为什么不靠 Sfx 的全局挂钩】那套只认 BaseButton，而热点是
 	# 为了"拖边框对齐底图"才做成 Control 的（见文件头）。所以这两下自己出声。
 	mouse_entered.connect(func() -> void:
 		Sfx.play(&"ui_hover")
+		show_hint()
 		hovered.emit(self))
-	mouse_exited.connect(func() -> void: unhovered.emit(self))
+	mouse_exited.connect(func() -> void:
+		hide_hint()
+		unhovered.emit(self))
 	# 拖动/改尺寸时把那层淡淡的框重画 —— 不然它停在旧位置，越调越乱
 	item_rect_changed.connect(queue_redraw)
 	queue_redraw()
+
+
+## 黄色气泡里的说明文字。用标题字重 —— 它是「这个热点能干什么」的一句话标题，
+## 不是正文；气泡本身只有 200 多像素高，Light 在那个尺寸下发虚。
+func _build_hint() -> void:
+	if hint.strip_edges().is_empty():
+		return
+	var host := get_parent()
+	if host == null:
+		return
+	_hint_label = Label.new()
+	_hint_label.text = hint
+	_hint_label.position = hint_rect.position
+	_hint_label.size = hint_rect.size
+	_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	UiPalette.title(_hint_label, hint_font_size, UiPalette.INK)
+	_hint_label.visible = false
+	# 【为什么 deferred】热点 `_ready` 时父节点还在装子节点，立即 add_child 会被拒
+	# （"Parent node is busy setting up children"）。挂到帧末，坐标仍按桌面算。
+	host.add_child.call_deferred(_hint_label)
+
+
+## 提示的显示 / 隐藏由桌子统一调度（见 `desk_screen._on_hovered`）：
+## 鼠标从 A 滑到 B 时 entered / exited 的先后不保证，热点自己各显各的
+## 会让两句话同时压在同一个气泡里。桌子收到 hovered 后先收掉其它热点，再开这一个。
+func show_hint() -> void:
+	if _hint_label != null:
+		_hint_label.visible = true
+
+
+func hide_hint() -> void:
+	if _hint_label != null:
+		_hint_label.visible = false
 
 
 func _gui_input(event: InputEvent) -> void:

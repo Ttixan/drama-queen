@@ -1790,8 +1790,8 @@ func _apply_styles() -> void:
 	chip.set_corner_radius_all(12)
 	get_node(P_TOP + "/BrandRow/BrandChip").add_theme_stylebox_override("panel", chip)
 
-	UiPalette.text(get_node(P_TOP + "/BrandRow/BrandText"), 26, UiPalette.WECHAT)
-	UiPalette.text(_title, 40, UiPalette.TEXT)
+	UiPalette.title(get_node(P_TOP + "/BrandRow/BrandText"), 26, UiPalette.WECHAT)
+	UiPalette.title(_title, 40, UiPalette.TEXT)
 	UiPalette.text(_subtitle, 15, UiPalette.TEXT_DIM)
 	UiPalette.text(_status_label, 20, UiPalette.WECHAT)
 	UiPalette.text(_channel_label, 15, UiPalette.TEXT_DIM)

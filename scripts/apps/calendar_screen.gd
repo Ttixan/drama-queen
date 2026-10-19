@@ -13,10 +13,10 @@ extends Control
 ## 所以这里的 Rect2 用的是**设计坐标**：换图、换窗口大小都不用改。
 ## 反过来说：插画挪了位置，这几个常量得跟着改（和桌子的 Hotspot 同一个约定）。
 ##
-## 【字体：全局一套】`assets/fonts/main_font.tres` —— 獅尾半月字體 tc-Light，
-## 缺字落到系统字体兜底（见该文件与 `ui_theme.tres` 的说明）。
-## 以前中文和数字各用一张字体（数字是另一支手写体），现在统一成一支 ——
-## 两支字的基线不一样，同一行里数字会"浮"起来。旧的两张 ttf 已删除。
+## 【字体：正文 Light / 标题 Bold】同族两支字：
+##   正文 `main_font.tres`（tc-Light），标题 `title_font.tres`（tc-Bold）。
+## 抬头、展示数字与卡片标题走 `TITLE_FONT`；长句、说明、按钮走正文。
+## 两支都 0 缺字；缺字仍由 `main_font` / `title_font` 里的系统字体兜底。
 ## 【为什么还留着 FONT_EN 这个名字】只为了让 `_label()` 的默认参数与调用处不用改，
 ## 它和 FONT_CN 已经是同一支字体。
 ##
@@ -42,6 +42,8 @@ const REWARD_SCENE := "res://scenes/main/expression_reward.tscn"
 
 const FONT_CN := preload("res://assets/fonts/main_font.tres")
 const FONT_EN := FONT_CN
+## 标题：同族 Bold。只给「第 N 天」「本周进度」「今日状态」这类抬头与展示数字用。
+const TITLE_FONT := UiPalette.TITLE_FONT
 
 # ============================================================
 # 版面（设计坐标，1920×1080；纸面 = 234,94 → 1686,1023）
@@ -243,13 +245,13 @@ func _build_title() -> void:
 	_page.add_child(row)
 	_place(row, TITLE_RECT)
 
-	var left := _label(row, "第", 38, INK)
+	var left := _label(row, "第", 38, INK, TITLE_FONT)
 	left.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	left.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_day_label = _label(row, "1", 80, INK, FONT_EN)
+	_day_label = _label(row, "1", 80, INK, TITLE_FONT)
 	_day_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_day_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var right := _label(row, "天", 38, INK)
+	var right := _label(row, "天", 38, INK, TITLE_FONT)
 	right.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
@@ -307,7 +309,7 @@ func _make_card(key: String, title: String, detail: String, pos: Vector2) -> Dic
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	margin.add_child(box)
 
-	var title_label := _label(box, title, 32, INK)
+	var title_label := _label(box, title, 32, INK, TITLE_FONT)
 	var detail_label := _label(box, detail, 16, INK_SOFT)
 	detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var state_label := _label(box, "", 16, OK_INK)
@@ -338,7 +340,7 @@ func _build_week_card(pos: Vector2) -> void:
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	margin.add_child(box)
 
-	_label(box, "本周进度", 32, INK)
+	_label(box, "本周进度", 32, INK, TITLE_FONT)
 
 	_week_list = VBoxContainer.new()
 	_week_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -356,7 +358,7 @@ func _week_row(key: String, value: String, unit: String) -> void:
 	k.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	k.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
-	var v := _label(row, value, 26, INK, FONT_EN)
+	var v := _label(row, value, 26, INK, TITLE_FONT)
 	v.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if not unit.is_empty():
 		var u := _label(row, unit, 14, INK_FAINT)
@@ -380,7 +382,7 @@ func _build_side() -> void:
 	box.add_theme_constant_override("separation", 4)
 	margin.add_child(box)
 
-	_label(box, "今日状态", 32, INK)
+	_label(box, "今日状态", 32, INK, TITLE_FONT)
 
 	_ap_label = _stat_row(box, "行动点", "点")
 	_money_label = _stat_row(box, "金钱", "元")
@@ -439,7 +441,7 @@ func _stat_row(parent: Node, key: String, unit: String) -> Label:
 	k.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	k.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
-	var v := _label(row, "0", 30, INK, FONT_EN)
+	var v := _label(row, "0", 30, INK, TITLE_FONT)
 	v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	v.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
@@ -492,7 +494,7 @@ func _build_cta() -> void:
 	box.add_theme_constant_override("separation", 2)
 	margin.add_child(box)
 
-	var title := _label(box, "确认安排（下一天）", 30, CTA_TEXT)
+	var title := _label(box, "确认安排（下一天）", 30, CTA_TEXT, TITLE_FONT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var detail := _label(box, "", 15, CTA_TEXT_SOFT)
 	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

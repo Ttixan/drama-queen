@@ -12,14 +12,15 @@ extends RefCounted
 ## 【为什么必须自己算宽度】`Label` 在横向容器里会按文字全宽展开。
 ## 长文案因此会把同一行的其它东西挤走（甚至换行）。这里给一个宽度上限：
 ## 短文本贴着文字宽（不该拉成一条长条），长文本到上限就省略号。
-static func one_line(l: Label, font_size: int, max_width: float = 9999.0) -> Label:
+static func one_line(l: Label, font_size: int, max_width: float = 9999.0,
+		font: Font = UiPalette.FONT) -> Label:
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
 	l.clip_text = true
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	# 【为什么量的是 `UiPalette.FONT`】以前拿 `ThemeDB.fallback_font` 量，那支不含中文，
+	# 【为什么量的是渲染用的那支字】以前拿 `ThemeDB.fallback_font` 量，那支不含中文，
 	# 宽度全靠回退字体估 —— 「陈女士 · 人事」被截成「陈女士 · 人事…」。
-	# 现在量的是**真正渲染**的那支字；余量仍留着，省略号本身也要占位。
-	var font := UiPalette.FONT
+	# 【font 参数】标题走 Bold，比正文宽；不传标题字就会按 Light 估窄，末尾溢出。
+	# 标题标签调本函数时**必须**把 `UiPalette.TITLE_FONT` 一起传进来。
 	var w := font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	l.custom_minimum_size.x = minf(max_width, w * 1.15 + 12.0)
 	return l

@@ -190,8 +190,8 @@ func _apply_styles() -> void:
 	tag_style.content_margin_bottom = 6
 	_speaker_tag.add_theme_stylebox_override("panel", tag_style)
 
-	_speaker.add_theme_font_override("font", FONT_CN)
-	UiPalette.text(_speaker, 24, UiPalette.INK)
+	# 名字牌是「谁在说话」的标题，走同族 Bold；台词正文仍是 Light
+	UiPalette.title(_speaker, 24, UiPalette.INK)
 
 	_text.add_theme_font_override("font", FONT_CN)
 	UiPalette.text(_text, 30, UiPalette.INK)

@@ -2,8 +2,10 @@
 
 ; 全局 UI 主题
 ;
-; 【现在用什么字体】`assets/fonts/main_font.tres` —— 本体是「獅尾半月字體 tc-Light」
+; 【现在用什么字体】正文 `assets/fonts/main_font.tres` —— 本体是「獅尾半月字體 tc-Light」
 ; （美术给的「正文字体-便于阅读」），外面包了一层 FontVariation，挂一串系统字体兜底。
+; 标题用同族 `assets/fonts/title_font.tres`（tc-Bold）；代码里统一走
+; `UiPalette.title(label, size, color)`，不要在调用处各写各的字体覆盖。
 ;
 ; 【为什么换掉 Kaisei】之前那套是**日文字体**，项目实际用到的 1745 个汉字里缺 590 个
 ; （你、剧、试、镜、赚、换……）。缺字会落到系统黑体，正文里突然换一套字形；

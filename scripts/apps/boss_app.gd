@@ -612,7 +612,7 @@ func _open_chat() -> void:
 	_chat_token += 1
 	_clear_feed()
 	_chat_name.text = _current.hr_name
-	UiBits.one_line(_chat_name, 26, 300)
+	UiBits.one_line(_chat_name, 26, 300, UiPalette.TITLE_FONT)
 	_chat_title.text = _current.hr_title
 	UiBits.one_line(_chat_title, 15, 300)
 	_chat_online.text = _current.hr_status
@@ -1126,13 +1126,14 @@ func _apply_styles() -> void:
 	chip.set_corner_radius_all(12)
 	get_node(P_TOP + "/BrandRow/BrandChip").add_theme_stylebox_override("panel", chip)
 
-	UiPalette.text(get_node(P_TOP + "/BrandRow/BrandText"), 26, UiPalette.BOSS)
-	UiPalette.text(get_node(P_TOP + "/TopCenter/Title"), 40, UiPalette.TEXT)
+	UiPalette.title(get_node(P_TOP + "/BrandRow/BrandText"), 26, UiPalette.BOSS)
+	UiPalette.title(get_node(P_TOP + "/TopCenter/Title"), 40, UiPalette.TEXT)
 	UiPalette.text(get_node(P_TOP + "/TopCenter/Subtitle"), 15, UiPalette.TEXT_DIM)
 	UiPalette.text(_status_label, 20, UiPalette.BOSS)
 	UiPalette.text(_channel_label, 15, UiPalette.TEXT_DIM)
 	# 顶栏也一律单行省略 —— 它是「本 App 最小宽度」的最大贡献者
-	UiBits.one_line(get_node(P_TOP + "/TopCenter/Title"), 40, TOP_TITLE_W)
+	UiBits.one_line(get_node(P_TOP + "/TopCenter/Title"), 40, TOP_TITLE_W,
+			UiPalette.TITLE_FONT)
 	UiBits.one_line(get_node(P_TOP + "/TopCenter/Subtitle"), 15, TOP_SUB_W)
 	UiBits.one_line(_status_label, 20, TOP_SIDE_W)
 	UiBits.one_line(_channel_label, 15, TOP_SIDE_W)
@@ -1141,9 +1142,9 @@ func _apply_styles() -> void:
 	UiPalette.text(_list_hint, 14, UiPalette.TEXT_DIM)
 
 	UiPalette.text(_company_name, 26, UiPalette.TEXT_DIM)
-	UiPalette.text(_company_tagline, 32, UiPalette.TEXT)
+	UiPalette.title(_company_tagline, 32, UiPalette.TEXT)
 	UiPalette.text(_lock_state, 16, UiPalette.TEXT_DIM)
-	UiPalette.text(_job_title, 26, UiPalette.TEXT)
+	UiPalette.title(_job_title, 26, UiPalette.TEXT)
 	UiPalette.text(_job_salary, 22, UiPalette.BOSS)
 	UiPalette.text(_job_experience, 16, UiPalette.TEXT_DIM)
 	UiPalette.text(_detail_caption, 18, UiPalette.TEXT_DIM)
@@ -1165,7 +1166,7 @@ func _apply_styles() -> void:
 	_hr_card.add_theme_stylebox_override("pressed",
 			UiPalette.button(Color("3d3d26"), UiPalette.BOSS, 3, 16, 3))
 
-	UiPalette.text(_chat_name, 26, UiPalette.TEXT)
+	UiPalette.title(_chat_name, 26, UiPalette.TEXT)
 	UiPalette.text(_chat_title, 15, UiPalette.TEXT_DIM)
 	UiPalette.text(_chat_online, 15, UiPalette.BOSS)
 

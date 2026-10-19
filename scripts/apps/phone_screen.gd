@@ -203,8 +203,8 @@ func _make_app_row(app: Dictionary) -> Button:
 	var name_label := Label.new()
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name_label.text = String(app["name"])
-	UiPalette.text(name_label, 20, UiPalette.TEXT)
-	UiBits.one_line(name_label, 20, 220)
+	UiPalette.title(name_label, 20, UiPalette.TEXT)
+	UiBits.one_line(name_label, 20, 220, UiPalette.TITLE_FONT)
 	text_box.add_child(name_label)
 
 	var sub := Label.new()
@@ -527,7 +527,7 @@ func _apply_styles() -> void:
 	_back_button.add_theme_stylebox_override("pressed",
 			UiPalette.button(UiPalette.PANEL_SOFT, accent, 3, 12, 0, 12))
 
-	UiPalette.text(_caption, 26, accent)
+	UiPalette.title(_caption, 26, accent)
 	UiPalette.text(_column_hint, 15, UiPalette.TEXT_DIM)
 
 	_column_back.focus_mode = Control.FOCUS_NONE
