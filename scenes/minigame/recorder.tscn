@@ -1,8 +1,15 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/apps/recorder_app.gd" id="1_recorder"]
 [ext_resource type="Theme" path="res://assets/ui/ui_theme.tres" id="2_theme"]
 [ext_resource type="FontVariation" path="res://assets/fonts/title_font.tres" id="3_title"]
+[ext_resource type="Texture2D" path="res://assets/ui/recorder/top_bar.png" id="4_bar"]
+[ext_resource type="Texture2D" path="res://assets/ui/recorder/back_button.png" id="5_back"]
+[ext_resource type="Texture2D" path="res://assets/ui/recorder/back_button_hover.png" id="6_back_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/recorder/stat_ap.png" id="7_ap"]
+[ext_resource type="Texture2D" path="res://assets/ui/recorder/stat_acting.png" id="8_acting"]
+[ext_resource type="Texture2D" path="res://assets/ui/recorder/stat_fame.png" id="9_fame"]
+[ext_resource type="Texture2D" path="res://assets/ui/recorder/stat_money.png" id="10_money"]
 
 [node name="RecorderApp" type="Control"]
 layout_mode = 3
@@ -32,68 +39,103 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="TopBar" type="PanelContainer" parent="Page"]
+[node name="TopBar" type="Control" parent="Page"]
 custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 
-[node name="TopMargin" type="MarginContainer" parent="Page/TopBar"]
-layout_mode = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 12
+[node name="Bar" type="NinePatchRect" parent="Page/TopBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_bar")
+patch_margin_left = 110
+patch_margin_right = 110
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
 
-[node name="TopRow" type="HBoxContainer" parent="Page/TopBar/TopMargin"]
-layout_mode = 2
-theme_override_constants/separation = 16
+[node name="BackButton" type="TextureButton" parent="Page/TopBar"]
+visible = false
+layout_mode = 0
+offset_left = 12.0
+offset_top = 7.0
+offset_right = 249.0
+offset_bottom = 89.0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("5_back")
+texture_hover = ExtResource("6_back_hover")
+ignore_texture_size = true
+stretch_mode = 5
 
-[node name="RecGroup" type="HBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
-custom_minimum_size = Vector2(320, 0)
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="RecDot" type="Panel" parent="Page/TopBar/TopMargin/TopRow/RecGroup"]
-custom_minimum_size = Vector2(18, 18)
-layout_mode = 2
-size_flags_vertical = 4
-
-[node name="RecText" type="Label" parent="Page/TopBar/TopMargin/TopRow/RecGroup"]
-layout_mode = 2
-text = "REC"
-vertical_alignment = 1
-
-[node name="TitleBox" type="VBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 0
-
-[node name="Title" type="Label" parent="Page/TopBar/TopMargin/TopRow/TitleBox"]
-layout_mode = 2
+[node name="Title" type="Label" parent="Page/TopBar"]
+layout_mode = 0
+offset_left = 272.0
+offset_top = 20.0
+offset_right = 572.0
+offset_bottom = 76.0
 theme_override_fonts/font = ExtResource("3_title")
 text = "录像机"
-horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Subtitle" type="Label" parent="Page/TopBar/TopMargin/TopRow/TitleBox"]
-layout_mode = 2
-text = "拼好 3 帧表情包，拿去投稿"
-horizontal_alignment = 1
+[node name="Stats" type="Control" parent="Page/TopBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
-[node name="InfoBox" type="VBoxContainer" parent="Page/TopBar/TopMargin/TopRow"]
-custom_minimum_size = Vector2(320, 0)
-layout_mode = 2
-theme_override_constants/separation = 0
+[node name="IconAP" type="TextureRect" parent="Page/TopBar/Stats"]
+layout_mode = 0
+texture = ExtResource("7_ap")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
 
-[node name="FrameIndicator" type="Label" parent="Page/TopBar/TopMargin/TopRow/InfoBox"]
-layout_mode = 2
-text = "正在编辑：帧 1 / 3"
-horizontal_alignment = 2
+[node name="IconActing" type="TextureRect" parent="Page/TopBar/Stats"]
+layout_mode = 0
+texture = ExtResource("8_acting")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+[node name="IconFame" type="TextureRect" parent="Page/TopBar/Stats"]
+layout_mode = 0
+texture = ExtResource("9_fame")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+[node name="IconMoney" type="TextureRect" parent="Page/TopBar/Stats"]
+layout_mode = 0
+texture = ExtResource("10_money")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+[node name="ValueAP" type="Label" parent="Page/TopBar/Stats"]
+layout_mode = 0
+text = "-"
 vertical_alignment = 1
 
-[node name="SequenceLabel" type="Label" parent="Page/TopBar/TopMargin/TopRow/InfoBox"]
-layout_mode = 2
-text = "帧序列：平静 → 平静 → 平静"
-horizontal_alignment = 2
+[node name="ValueActing" type="Label" parent="Page/TopBar/Stats"]
+layout_mode = 0
+text = "-"
+vertical_alignment = 1
+
+[node name="ValueFame" type="Label" parent="Page/TopBar/Stats"]
+layout_mode = 0
+text = "-"
+vertical_alignment = 1
+
+[node name="ValueMoney" type="Label" parent="Page/TopBar/Stats"]
+layout_mode = 0
+text = "-"
+vertical_alignment = 1
 
 [node name="BodyWrap" type="MarginContainer" parent="Page"]
 layout_mode = 2
@@ -405,6 +447,11 @@ layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 4
 
+[node name="FrameInfo" type="Label" parent="Page/BottomBar/BottomMargin/BottomRow/StatusBox"]
+layout_mode = 2
+text = "帧 1 / 3 · 平静 → 平静 → 平静"
+horizontal_alignment = 2
+
 [node name="StatusLabel" type="Label" parent="Page/BottomBar/BottomMargin/BottomRow/StatusBox"]
 layout_mode = 2
 text = "还没拼完"
@@ -419,12 +466,6 @@ horizontal_alignment = 2
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_constants/separation = 14
-
-[node name="BackButton" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/ActionsRow"]
-visible = false
-custom_minimum_size = Vector2(96, 56)
-layout_mode = 2
-text = "返回"
 
 [node name="ClearButton" type="Button" parent="Page/BottomBar/BottomMargin/BottomRow/ActionsRow"]
 custom_minimum_size = Vector2(120, 56)

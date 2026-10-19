@@ -17,8 +17,8 @@ const P_HEADER := P_CHAT + "/ChatHeader/HeaderMargin/HeaderBox"
 const P_COMPOSER := P_CHAT + "/Composer/ComposerMargin/ComposerBox"
 ## 剧本页 —— 盖在**聊天区**上的一层（不是第三栏，也不是独立的 App）。
 ## 它在 `BodyWrap` 里排在 `Body` 后面，所以天然画在聊天之上；关掉它还回原来的聊天记录。
-const P_SCRIPT := "Page/BodyWrap/ScriptOverlay"
-const P_SCRIPT_SHEET := P_SCRIPT + "/ScriptMargin/ScriptBox"
+## 铺满右侧聊天区（纸就是聊天区本身），返回键压在纸顶那条绿页框上
+const P_SCRIPT := "Page/BodyWrap/Body/ChatPanel/ScriptOverlay"
 
 const RECORDER_SCENE := "res://scenes/minigame/recorder.tscn"
 const BOSS_SCENE := "res://scenes/apps/boss.tscn"
@@ -26,6 +26,28 @@ const BOSS_SCENE := "res://scenes/apps/boss.tscn"
 ## 真微信里「好」就是一个贴着边的窄条，全都拉成一样宽看着像公告栏，不像聊天
 const BUBBLE_MAX_W := 720.0
 const BUBBLE_FONT := 18
+
+## ---- 浅色皮肤 ----
+## 真微信是浅底，这一屏原来那套深色面板（#16161a）整体换掉。
+## **只属于微信**：其它 App 仍是深色桌面那套，共用色板会把它们一起改掉。
+const W_BG := Color("ededed")
+const W_PANEL := Color("ffffff")
+const W_SOFT := Color("f4f4f4")
+const W_LINE := Color("e3e3e3")
+const W_INK := Color("1f1f1f")
+const W_DIM := Color("8c8c8c")
+## 品牌绿压深一档：`WECHAT` 的 #4caf6e 当大色块没问题，当 16~20px 的文字
+## 压在 #ededed 上会发虚（对比度不够）
+const W_GREEN := Color("38985a")
+
+## ---- 美术给的贴图 ----
+## 都在 `assets/ui/wechat/`：从 `.document/second/微信界面-*.png`（1920×1080）
+## 按 alpha 包围盒裁下来，气泡是左右各一张（对方米色 / 自己青绿）。
+const TEX_BUBBLE_PEER := preload("res://assets/ui/wechat/bubble_peer.png")
+const TEX_BUBBLE_ME := preload("res://assets/ui/wechat/bubble_me.png")
+const TEX_FILE_DOC := preload("res://assets/ui/wechat/file_doc.png")
+const TEX_BACK_CHAT := preload("res://assets/ui/wechat/btn_back_chat.png")
+const TEX_SCRIPT_PAPER := preload("res://assets/ui/wechat/script_paper.png")
 
 ## ---- 「对方正在输入…」 ----
 ## 【为什么要这段假等待】判定与回信在核心层是**同一帧**出的（`Game.submit_audition`
@@ -99,12 +121,13 @@ const TIER_COLORS := UiPalette.COMPANY_TIER_COLORS
 @onready var _status_line: Label = get_node(P_COMPOSER + "/SendRow/StatusLine")
 @onready var _send_button: Button = get_node(P_COMPOSER + "/SendRow/SendButton")
 @onready var _back_button: Button = get_node("Page/BackButton")
-@onready var _script_overlay: PanelContainer = get_node(P_SCRIPT)
-@onready var _script_title: Label = get_node(P_SCRIPT_SHEET + "/ScriptHeader/ScriptTitleBox/ScriptTitle")
-@onready var _script_subtitle: Label = get_node(P_SCRIPT_SHEET + "/ScriptHeader/ScriptTitleBox/ScriptSubtitle")
-@onready var _script_back_button: Button = get_node(P_SCRIPT_SHEET + "/ScriptHeader/ScriptBackButton")
-@onready var _script_scroll: ScrollContainer = get_node(P_SCRIPT_SHEET + "/ScriptScroll")
-@onready var _script_text: Label = get_node(P_SCRIPT_SHEET + "/ScriptScroll/ScriptText")
+@onready var _script_overlay: Control = get_node(P_SCRIPT)
+@onready var _script_paper: TextureRect = get_node(P_SCRIPT + "/Paper")
+@onready var _script_title: Label = get_node(P_SCRIPT + "/ScriptTitle")
+@onready var _script_subtitle: Label = get_node(P_SCRIPT + "/ScriptSubtitle")
+@onready var _script_back_button: Button = get_node(P_SCRIPT + "/BackButton")
+@onready var _script_scroll: ScrollContainer = get_node(P_SCRIPT + "/ScriptScroll")
+@onready var _script_text: Label = get_node(P_SCRIPT + "/ScriptScroll/ScriptText")
 
 var _companies: Array[CompanyData] = []
 var _current: CompanyData
@@ -420,7 +443,7 @@ func _make_event_row(speaker: StringName) -> Button:
 	state.text = _speaker_state(speaker)
 	state.add_theme_font_size_override("font_size", 15)
 	state.add_theme_color_override("font_color",
-			UiPalette.EVENT if state.text == "等你回话" else UiPalette.TEXT_DIM)
+			UiPalette.EVENT.darkened(0.35) if state.text == "等你回话" else W_DIM)
 	text_box.add_child(state)
 
 	# 未读角标：这位手里还压着一件没回的事
@@ -432,16 +455,16 @@ func _make_event_row(speaker: StringName) -> Button:
 	tail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tail.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	tail.add_theme_font_size_override("font_size", 15)
-	tail.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+	tail.add_theme_color_override("font_color", W_DIM)
 	hbox.add_child(tail)
 
 	row.add_theme_stylebox_override("normal",
-			UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 1, 14))
+			UiPalette.button(W_SOFT, W_LINE, 1, 14))
 	row.add_theme_stylebox_override("hover",
-			UiPalette.button(Color("35353f"), UiPalette.LINE, 2, 14))
+			UiPalette.button(Color("fff6ec"), W_LINE, 2, 14))
 	row.add_theme_stylebox_override("pressed",
-			UiPalette.button(Color("26343a"), UiPalette.EVENT, 3, 14, 3))
-	UiPalette.text(name_label, 18, UiPalette.TEXT)
+			UiPalette.button(Color("e2f5f3"), UiPalette.EVENT, 3, 14, 3))
+	UiPalette.text(name_label, 18, W_INK)
 	return row
 
 
@@ -471,7 +494,7 @@ func _make_contact_row(co: CompanyData) -> Button:
 	avatar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	avatar.add_theme_stylebox_override("panel",
-			UiPalette.rounded(TIER_COLORS.get(co.tier, UiPalette.LINE), 12))
+			UiPalette.rounded(TIER_COLORS.get(co.tier, W_LINE), 12))
 	hbox.add_child(avatar)
 
 	var initial := Label.new()
@@ -499,7 +522,7 @@ func _make_contact_row(co: CompanyData) -> Button:
 	meta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	meta.text = "%s · %s" % [co.display_name, co.hr_title]
 	meta.add_theme_font_size_override("font_size", 15)
-	meta.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+	meta.add_theme_color_override("font_color", W_DIM)
 	text_box.add_child(meta)
 
 	# 未读角标：**先建出来、默认隐藏** —— 行是开局建一次、之后只改字，
@@ -626,16 +649,16 @@ func _build_role_buttons() -> void:
 			role.tier_name(), _required_acting(role), role.match_line * 100.0]
 		b.add_theme_font_size_override("font_size", 16)
 		b.add_theme_stylebox_override("normal",
-				UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 12, 0, 8))
+				UiPalette.button(W_SOFT, W_LINE, 2, 12, 0, 8))
 		b.add_theme_stylebox_override("hover",
-				UiPalette.button(Color("35353f"), UiPalette.WECHAT, 2, 12, 0, 8))
+				UiPalette.button(Color("fff6ec"), UiPalette.WECHAT, 2, 12, 0, 8))
 		b.add_theme_stylebox_override("pressed",
 				UiPalette.button(UiPalette.WECHAT, UiPalette.WECHAT, 2, 12, 3, 8))
 		b.add_theme_stylebox_override("disabled",
-				UiPalette.button(Color("1c1c22"), UiPalette.LINE, 1, 12, 0, 8))
-		b.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+				UiPalette.button(Color("ececec"), W_LINE, 1, 12, 0, 8))
+		b.add_theme_color_override("font_color", W_DIM)
 		b.add_theme_color_override("font_pressed_color", UiPalette.INK)
-		b.add_theme_color_override("font_disabled_color", Color("5a5a63"))
+		b.add_theme_color_override("font_disabled_color", Color("9a9a9a"))
 		b.toggled.connect(_on_role_toggled.bind(role.tier))
 		_role_buttons_row.add_child(b)
 		_role_buttons[role.tier] = b
@@ -730,7 +753,7 @@ func _refresh_contacts() -> void:
 			locked += 1
 		var labels: Dictionary = _row_labels[co.code]
 		(labels["state"] as Label).text = "已私聊"
-		(labels["name"] as Label).add_theme_color_override("font_color", UiPalette.TEXT)
+		(labels["name"] as Label).add_theme_color_override("font_color", W_INK)
 		# 未读角标跟着状态走（新解锁 +1、点开 -1）
 		_sync_hr_badge(co.code)
 		var row: Button = _rows[co.code]
@@ -738,9 +761,9 @@ func _refresh_contacts() -> void:
 		# 名单上只该有**真的加上了的**（提提点名）。去哪儿加人写在下面那行提示里。
 		row.visible = unlocked
 		row.add_theme_stylebox_override("normal",
-				UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 1, 14))
+				UiPalette.button(W_SOFT, W_LINE, 1, 14))
 		row.add_theme_stylebox_override("hover",
-				UiPalette.button(Color("35353f"), UiPalette.LINE, 2, 14))
+				UiPalette.button(Color("fff6ec"), W_LINE, 2, 14))
 		row.add_theme_stylebox_override("pressed",
 				UiPalette.button(UiPalette.WECHAT.darkened(0.6), UiPalette.WECHAT, 3, 14, 3))
 
@@ -838,15 +861,15 @@ func _refresh_hr_composer() -> void:
 	# 附件卡
 	if _pending == null:
 		_attach_title.text = "还没有表情包"
-		_attach_title.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+		_attach_title.add_theme_color_override("font_color", W_DIM)
 		_attach_detail.text = "点右边「去录像机」拼一段 3 帧的 —— 每投一次都要重新拼"
 	else:
 		_attach_title.text = "待投递：%s" % " → ".join(_pending.all_labels())
-		_attach_title.add_theme_color_override("font_color", UiPalette.TEXT)
+		_attach_title.add_theme_color_override("font_color", W_INK)
 		_attach_detail.text = _pending.summarize()
 	_attach_card.add_theme_stylebox_override("panel",
-			UiPalette.panel(UiPalette.PANEL_SOFT, 14, 2,
-					UiPalette.WECHAT if _pending != null else UiPalette.LINE))
+			UiPalette.panel(W_SOFT, 14, 2,
+					UiPalette.WECHAT if _pending != null else W_LINE))
 
 	var reason := _block_reason()
 	_send_button.disabled = reason != ""
@@ -890,15 +913,17 @@ func _build_event_composer() -> void:
 		b.add_theme_color_override("font_color", UiPalette.INK)
 		b.add_theme_color_override("font_hover_color", UiPalette.INK)
 		b.add_theme_color_override("font_pressed_color", UiPalette.INK)
+		# 浅底上「整块青底」太扎眼（原来深底时是唯一的亮色，现在整屏都亮）——
+		# 改成白底 + 青描边，青留给出事的那个会话本身
 		b.add_theme_stylebox_override("normal",
-				UiPalette.button(UiPalette.EVENT, UiPalette.EVENT, 2, 14))
+				UiPalette.button(W_PANEL, UiPalette.EVENT, 2, 14))
 		b.add_theme_stylebox_override("hover",
-				UiPalette.button(UiPalette.EVENT.lightened(0.12), UiPalette.EVENT, 3, 14))
+				UiPalette.button(Color("eafafc"), UiPalette.EVENT, 3, 14))
 		b.add_theme_stylebox_override("pressed",
-				UiPalette.button(UiPalette.EVENT.darkened(0.15), UiPalette.EVENT, 3, 14))
+				UiPalette.button(Color("d4f1f6"), UiPalette.EVENT.darkened(0.15), 3, 14))
 		b.add_theme_stylebox_override("disabled",
-				UiPalette.button(Color("2a2a30"), UiPalette.LINE, 1, 14))
-		b.add_theme_color_override("font_disabled_color", Color("5a5a63"))
+				UiPalette.button(Color("dcdcdc"), W_LINE, 1, 14))
+		b.add_theme_color_override("font_disabled_color", Color("9a9a9a"))
 		_event_buttons_row.add_child(b)
 		_event_buttons.append(b)
 
@@ -906,7 +931,7 @@ func _build_event_composer() -> void:
 	_event_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	# 【事件那一段有它自己的色】用它的青（`EVENT`），不是 App 的品牌绿 ——
 	# 找上门的人不是「微信自己」，和 HR 那一套分开看
-	UiPalette.text(_event_status, 16, UiPalette.EVENT)
+	UiPalette.text(_event_status, 16, UiPalette.EVENT.darkened(0.35))
 	box.add_child(_event_status)
 
 
@@ -932,7 +957,7 @@ func _refresh_event_composer() -> void:
 		for b: Button in _event_buttons:
 			b.visible = false
 		_event_status.text = "这条已经过去了"
-		_event_status.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+		_event_status.add_theme_color_override("font_color", W_DIM)
 		return
 
 	# 【逐条给原因，而不是笼统说一句「不能选」】两个选项的代价不一样，
@@ -1153,11 +1178,6 @@ func _add_bubble(text: String, mine: bool) -> void:
 	card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
-	var margin := MarginContainer.new()
-	for side in ["left", "top", "right", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 16)
-	card.add_child(margin)
-
 	var label := Label.new()
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1166,14 +1186,13 @@ func _add_bubble(text: String, mine: bool) -> void:
 	# 短句子会被压成一条竖条。按文字实际宽度给个下限，才能既收窄又折行
 	# （「简历拿来」那条气泡同一个道理）。
 	label.custom_minimum_size = Vector2(_bubble_width(text), 0)
-	# 压在品牌绿上的字要用深色（`INK`）：绿底白字发虚，这也是真微信的做法
-	label.add_theme_color_override("font_color",
-			UiPalette.INK if mine else UiPalette.TEXT)
-	margin.add_child(label)
+	# 两张气泡纸都是浅底（米色 / 青绿），字一律用深墨
+	label.add_theme_color_override("font_color", Color("2b2b2b"))
+	# 留白交给 StyleBoxTexture 的 content_margin —— 再套一个 16px 的 MarginContainer
+	# 就是双层内边距，气泡会胖一圈
+	card.add_child(label)
 
-	var bg := UiPalette.WECHAT if mine else UiPalette.PANEL_SOFT
-	card.add_theme_stylebox_override("panel", UiPalette.panel(bg, 16, 2,
-			UiPalette.WECHAT.lightened(0.18) if mine else UiPalette.LINE))
+	card.add_theme_stylebox_override("panel", _bubble_style(mine))
 
 	# 【气泡本身一定要进来】上面那一支只放了头像，货在这儿 ——
 	# 漏了它就是「左边只有个头像、话不见了」（这一版踩过）。
@@ -1183,6 +1202,33 @@ func _add_bubble(text: String, mine: bool) -> void:
 	else:
 		row.add_child(spacer)
 	_chat_log.add_child(row)
+
+
+## 气泡底：美术给的是两张带尾巴和点阵的纸片，圆角矩形画不出那个形状，
+## 所以走 `StyleBoxTexture` 九宫格拉伸。
+## 【边距为什么不对称】尾巴在各自外侧，那一侧要留够（56）—— 留少了拉伸会把尾巴
+## 扯成一条横线；文字则往反方向让开，免得压在点阵装饰上。
+func _bubble_style(mine: bool) -> StyleBoxTexture:
+	var sb := StyleBoxTexture.new()
+	sb.texture = TEX_BUBBLE_ME if mine else TEX_BUBBLE_PEER
+	sb.texture_margin_top = 28
+	sb.texture_margin_bottom = 28
+	# 【215 是怎么来的】贴图里那条点阵装饰横跨左（右）侧约 200px。九宫格只认
+	# 四条边距，把点阵留进可拉伸的中间区，它会被拉成一串长条（第一版就踩了）。
+	# 所以把「尾巴 + 点阵」整块当边格钉死，气泡变宽时只拉伸空白那一段。
+	if mine:
+		sb.texture_margin_left = 34
+		sb.texture_margin_right = 215
+		sb.content_margin_left = 36
+		sb.content_margin_right = 222
+	else:
+		sb.texture_margin_left = 215
+		sb.texture_margin_right = 34
+		sb.content_margin_left = 222
+		sb.content_margin_right = 36
+	sb.content_margin_top = 14
+	sb.content_margin_bottom = 14
+	return sb
 
 
 ## 气泡宽度：按文字实际宽度算（超了 `BUBBLE_MAX_W` 就在那儿折行）。
@@ -1213,7 +1259,7 @@ func _bubble_avatar(mine: bool) -> Panel:
 	var mark := ME_MARK
 	if not mine:
 		if _current != null:
-			bg = TIER_COLORS.get(_current.tier, UiPalette.LINE)
+			bg = TIER_COLORS.get(_current.tier, W_LINE)
 			mark = _current.code
 		else:
 			bg = UiPalette.EVENT
@@ -1240,7 +1286,7 @@ func _add_note(text: String) -> void:
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 15)
-	label.add_theme_color_override("font_color", UiPalette.TEXT_DIM)
+	label.add_theme_color_override("font_color", W_DIM)
 	_chat_log.add_child(label)
 
 
@@ -1332,17 +1378,12 @@ func _add_typing_bubble() -> void:
 	var card := PanelContainer.new()
 	card.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	card.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	card.add_theme_stylebox_override("panel",
-			UiPalette.panel(UiPalette.PANEL_SOFT, 16, 2, UiPalette.LINE))
-
-	var margin := MarginContainer.new()
-	for side in ["left", "top", "right", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 16)
-	card.add_child(margin)
+	# 用「对方」那张米色气泡纸：正在打字的是 HR 那边
+	card.add_theme_stylebox_override("panel", _bubble_style(false))
 
 	var dots := HBoxContainer.new()
 	dots.add_theme_constant_override("separation", 6)
-	margin.add_child(dots)
+	card.add_child(dots)
 	var pulses: Array[Panel] = []
 	for i in 3:
 		var dot := Panel.new()
@@ -1351,7 +1392,7 @@ func _add_typing_bubble() -> void:
 		dot.custom_minimum_size = Vector2(12, 12)
 		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		dot.modulate.a = 0.4
-		dot.add_theme_stylebox_override("panel", UiPalette.rounded(UiPalette.TEXT, 6))
+		dot.add_theme_stylebox_override("panel", UiPalette.rounded(W_INK, 6))
 		dots.add_child(dot)
 		pulses.append(dot)
 
@@ -1475,17 +1516,17 @@ func _add_tier_buttons() -> void:
 				role.tier_name(), _required_acting(role), Game.acting()]
 			b.disabled = true
 		b.add_theme_stylebox_override("normal",
-				UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.SCRIPT, 2, 14, 0, 12))
+				UiPalette.button(W_SOFT, UiPalette.SCRIPT, 2, 14, 0, 12))
 		b.add_theme_stylebox_override("hover",
-				UiPalette.button(Color("35353f"), UiPalette.SCRIPT, 2, 14, 0, 12))
+				UiPalette.button(Color("fff6ec"), UiPalette.SCRIPT, 2, 14, 0, 12))
 		b.add_theme_stylebox_override("pressed",
-				UiPalette.button(Color("3a2c1c"), UiPalette.SCRIPT, 3, 14, 3, 12))
+				UiPalette.button(Color("ffe9d6"), UiPalette.SCRIPT, 3, 14, 3, 12))
 		b.add_theme_stylebox_override("disabled",
-				UiPalette.button(Color("1c1c22"), UiPalette.LINE, 1, 14, 0, 12))
+				UiPalette.button(Color("ececec"), W_LINE, 1, 14, 0, 12))
 		b.add_theme_color_override("font_color", UiPalette.SCRIPT)
 		b.add_theme_color_override("font_hover_color", UiPalette.SCRIPT)
 		b.add_theme_color_override("font_pressed_color", UiPalette.SCRIPT)
-		b.add_theme_color_override("font_disabled_color", Color("5a5a63"))
+		b.add_theme_color_override("font_disabled_color", Color("9a9a9a"))
 		b.add_theme_font_size_override("font_size", 18)
 		b.pressed.connect(_on_tier_pressed.bind(role.tier))
 		box.add_child(b)
@@ -1538,11 +1579,11 @@ func _file_card(doc: ScriptDoc) -> Button:
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(360, 96)
 	b.add_theme_stylebox_override("normal",
-			UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 16))
+			UiPalette.button(W_SOFT, W_LINE, 2, 16))
 	b.add_theme_stylebox_override("hover",
-			UiPalette.button(Color("35353f"), UiPalette.SCRIPT, 2, 16))
+			UiPalette.button(Color("fff6ec"), UiPalette.SCRIPT, 2, 16))
 	b.add_theme_stylebox_override("pressed",
-			UiPalette.button(Color("2a2622"), UiPalette.SCRIPT, 3, 16, 3))
+			UiPalette.button(Color("ffe9d6"), UiPalette.SCRIPT, 3, 16, 3))
 	b.pressed.connect(_open_script)
 
 	# 内容全部 MOUSE_FILTER_IGNORE —— 点击要透给按钮本身，否则 hover / pressed 失灵
@@ -1560,27 +1601,17 @@ func _file_card(doc: ScriptDoc) -> Button:
 	hbox.add_theme_constant_override("separation", 14)
 	margin.add_child(hbox)
 
-	# 那个「W」：真 Word 图标的蓝底白字，玩家一眼认出是文档。
-	# 【为什么是 PanelContainer 而不是 Panel】Panel 不是容器 —— 塞在里面的 Label
-	# 得自己摆锚点，于是字会飘（提提一眼看出来的那个「偏」）。PanelContainer 会把
-	# 子节点铺满自己的内容区，Label 靠两个 alignment 居中，尺寸怎么变都不会偏。
-	var icon := PanelContainer.new()
-	icon.name = "WordIcon"
-	icon.custom_minimum_size = Vector2(56, 56)
+	# 文件图标：美术给的纸页图形（`微信界面-文件图标.png` 裁出来的 81×90），
+	# 比原来那个蓝底「W」更像「HR 递过来的一张纸」。
+	var icon := TextureRect.new()
+	icon.name = "FileIcon"
+	icon.texture = TEX_FILE_DOC
+	icon.custom_minimum_size = Vector2(46, 51)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	icon.add_theme_stylebox_override("panel", UiPalette.rounded(UiPalette.DOCX, 10))
 	hbox.add_child(icon)
-
-	var w := Label.new()
-	w.name = "WordMark"
-	w.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	w.text = "W"
-	w.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	w.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	w.add_theme_font_size_override("font_size", 28)
-	w.add_theme_color_override("font_color", UiPalette.PAPER)
-	icon.add_child(w)
 
 	var text_box := VBoxContainer.new()
 	text_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1593,13 +1624,13 @@ func _file_card(doc: ScriptDoc) -> Button:
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	name_label.text = doc.file_name()
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UiPalette.text(name_label, 20, UiPalette.TEXT)
+	UiPalette.text(name_label, 20, W_INK)
 	text_box.add_child(name_label)
 
 	var size_label := Label.new()
 	size_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	size_label.text = doc.size_text()
-	UiPalette.text(size_label, 15, UiPalette.TEXT_DIM)
+	UiPalette.text(size_label, 15, W_DIM)
 	text_box.add_child(size_label)
 
 	return b
@@ -1769,21 +1800,19 @@ func _on_state_reset() -> void:
 # 样式
 # ============================================================
 func _apply_styles() -> void:
-	get_node("Bg").color = UiPalette.BG
+	get_node("Bg").color = W_BG
 
 	var top_sb := StyleBoxFlat.new()
-	top_sb.bg_color = UiPalette.PANEL
-	top_sb.border_width_bottom = 3
-	# 【顶上两个角要圆】右栏底图是圆角 20，顶栏直角会从圆角外露出尖角
-	top_sb.corner_radius_top_left = 20
-	top_sb.corner_radius_top_right = 20
-	top_sb.border_color = UiPalette.WECHAT
+	top_sb.bg_color = W_PANEL
+	top_sb.border_width_bottom = 2
+	top_sb.border_color = W_LINE
 	get_node("Page/TopBar").add_theme_stylebox_override("panel", top_sb)
 
-	_node_panel(get_node("Page/BodyWrap/Body/ContactsPanel"), UiPalette.PANEL, 20, 2, UiPalette.LINE)
-	_node_panel(get_node("Page/BodyWrap/Body/ChatPanel"), UiPalette.PANEL, 20, 2, UiPalette.LINE)
-	_node_panel(get_node(P_CHAT + "/ChatHeader"), UiPalette.PANEL_SOFT, 16, 0)
-	_node_panel(get_node(P_CHAT + "/Composer"), UiPalette.PANEL_SOFT, 18, 2, UiPalette.LINE)
+	# 浅底上 2px 的深描边会显脏，统一压到 1px 的浅灰
+	_node_panel(get_node("Page/BodyWrap/Body/ContactsPanel"), W_PANEL, 16, 1, W_LINE)
+	_node_panel(get_node("Page/BodyWrap/Body/ChatPanel"), W_PANEL, 16, 1, W_LINE)
+	_node_panel(get_node(P_CHAT + "/ChatHeader"), W_SOFT, 12, 0)
+	_node_panel(get_node(P_CHAT + "/Composer"), W_SOFT, 14, 1, W_LINE)
 
 	var chip := StyleBoxFlat.new()
 	chip.bg_color = UiPalette.WECHAT
@@ -1791,33 +1820,33 @@ func _apply_styles() -> void:
 	get_node(P_TOP + "/BrandRow/BrandChip").add_theme_stylebox_override("panel", chip)
 
 	UiPalette.title(get_node(P_TOP + "/BrandRow/BrandText"), 26, UiPalette.WECHAT)
-	UiPalette.title(_title, 40, UiPalette.TEXT)
-	UiPalette.text(_subtitle, 15, UiPalette.TEXT_DIM)
-	UiPalette.text(_status_label, 20, UiPalette.WECHAT)
-	UiPalette.text(_channel_label, 15, UiPalette.TEXT_DIM)
+	UiPalette.title(_title, 40, W_INK)
+	UiPalette.text(_subtitle, 15, W_DIM)
+	UiPalette.text(_status_label, 20, W_GREEN)
+	UiPalette.text(_channel_label, 15, W_DIM)
 
-	UiPalette.text(get_node(P_CONTACTS + "/ContactsCaption"), 22, UiPalette.TEXT)
-	UiPalette.text(_contacts_hint, 14, UiPalette.TEXT_DIM)
+	UiPalette.text(get_node(P_CONTACTS + "/ContactsCaption"), 22, W_INK)
+	UiPalette.text(_contacts_hint, 14, W_DIM)
 	# 联系人列表里那两行分组标题（事件在上、公司在下）
-	UiPalette.text(_event_caption, 16, UiPalette.EVENT)
-	UiPalette.text(_hr_caption, 16, UiPalette.TEXT_DIM)
+	UiPalette.text(_event_caption, 16, UiPalette.EVENT.darkened(0.35))
+	UiPalette.text(_hr_caption, 16, W_DIM)
 
-	UiPalette.text(_peer_name, 24, UiPalette.TEXT)
-	UiPalette.text(_peer_meta, 15, UiPalette.TEXT_DIM)
-	UiPalette.text(_requirement_label, 16, UiPalette.WECHAT)
+	UiPalette.text(_peer_name, 24, W_INK)
+	UiPalette.text(_peer_meta, 15, W_DIM)
+	UiPalette.text(_requirement_label, 16, W_GREEN)
 
-	UiPalette.text(get_node(P_COMPOSER + "/RoleRow/RoleCaption"), 16, UiPalette.TEXT_DIM)
-	UiPalette.text(_attach_title, 20, UiPalette.TEXT)
-	UiPalette.text(_attach_detail, 15, UiPalette.TEXT_DIM)
-	UiPalette.text(_status_line, 16, UiPalette.WECHAT)
+	UiPalette.text(get_node(P_COMPOSER + "/RoleRow/RoleCaption"), 16, W_DIM)
+	UiPalette.text(_attach_title, 20, W_INK)
+	UiPalette.text(_attach_detail, 15, W_DIM)
+	UiPalette.text(_status_line, 16, W_GREEN)
 
-	_style_action(_back_button, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.LINE, 20)
-	_style_action(_go_boss_button, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.WECHAT, 18)
-	_style_action(_open_recorder_button, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.LINE, 20)
+	_style_action(_back_button, W_SOFT, W_INK, W_LINE, 20)
+	_style_action(_go_boss_button, W_SOFT, W_INK, UiPalette.WECHAT, 18)
+	_style_action(_open_recorder_button, W_SOFT, W_INK, W_LINE, 20)
 	_style_action(_send_button, UiPalette.WECHAT, UiPalette.INK, UiPalette.WECHAT, 24)
 	_send_button.add_theme_stylebox_override("disabled",
-			UiPalette.button(Color("2a2a30"), UiPalette.LINE, 1, 14))
-	_send_button.add_theme_color_override("font_disabled_color", Color("5a5a63"))
+			UiPalette.button(Color("dcdcdc"), W_LINE, 1, 14))
+	_send_button.add_theme_color_override("font_disabled_color", Color("9a9a9a"))
 
 	# 滚动条（联系人 + 聊天 + 剧本）
 	for bar: VScrollBar in [
@@ -1827,22 +1856,30 @@ func _apply_styles() -> void:
 		bar.custom_minimum_size = Vector2(10, 0)
 		bar.add_theme_stylebox_override("scroll",
 				UiPalette.button(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, 0, 0))
-		bar.add_theme_stylebox_override("grabber", UiPalette.rounded(UiPalette.LINE, 5))
+		bar.add_theme_stylebox_override("grabber", UiPalette.rounded(W_LINE, 5))
 		bar.add_theme_stylebox_override("grabber_highlight", UiPalette.rounded(UiPalette.WECHAT, 5))
 
 	# ---- 剧本页 ----
-	# 【纸的比方】这页是「打印出来的剧本」，所以整体离开微信那套绿灰，改用剧本橘 ——
-	# 一眼就知道自己不在聊天里了，而是在看一样东西（关掉就回去）。
-	_node_panel(_script_overlay, Color("1f1b17"), 18, 2, UiPalette.SCRIPT)
-	UiPalette.text(_script_title, 24, UiPalette.SCRIPT)
-	UiPalette.text(_script_subtitle, 15, UiPalette.TEXT_DIM)
-	UiPalette.text(_script_text, 18, UiPalette.SCRIPT)
-	_script_text.add_theme_constant_override("line_spacing", 6)
-	_style_action(_script_back_button, UiPalette.PANEL_SOFT, UiPalette.TEXT, UiPalette.SCRIPT, 20)
+	# 整屏铺美术给的「纸上剧本」：纸在右半，左上那片留白正好放返回按钮。
+	# 【为什么不再走 _node_panel】它现在是 Control + TextureRect，不是 PanelContainer。
+	_script_paper.texture = TEX_SCRIPT_PAPER
+	UiPalette.title(_script_title, 26, W_INK)
+	UiPalette.text(_script_subtitle, 15, W_DIM)
+	UiPalette.text(_script_text, 18, W_INK)
+	_script_text.add_theme_constant_override("line_spacing", 8)
+	# 返回聊天：直接就是那张图 —— 按钮底框全部清空，图当 icon 铺进去。
+	# 【为什么不再用 StyleBoxTexture】手绘描边被九宫格一拉就细得看不见，
+	# 圆角也对不上素材的方角，缩到页框高度就变成一块「圆角蓝灰胶囊」。
+	for state in ["normal", "hover", "pressed"]:
+		_script_back_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	_script_back_button.add_theme_color_override("font_color", Color(0, 0, 0, 0))
+	_script_back_button.icon = TEX_BACK_CHAT
+	_script_back_button.expand_icon = true
+	_script_back_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
 func _node_panel(node: Node, bg: Color, radius: int, border: int,
-		border_color: Color = UiPalette.LINE) -> void:
+		border_color: Color = W_LINE) -> void:
 	node.add_theme_stylebox_override("panel", UiPalette.panel(bg, radius, border, border_color))
 
 
@@ -1853,5 +1890,6 @@ func _style_action(b: Button, bg: Color, fg: Color, border: Color, font_size: in
 	b.add_theme_color_override("font_hover_color", fg)
 	b.add_theme_color_override("font_pressed_color", fg)
 	b.add_theme_stylebox_override("normal", UiPalette.button(bg, border, 2, 14))
-	b.add_theme_stylebox_override("hover", UiPalette.button(bg.lightened(0.08), border, 3, 14))
+	# 浅底上 lighten 看不出来（白再亮还是白），悬停改成压深一点
+	b.add_theme_stylebox_override("hover", UiPalette.button(bg.darkened(0.05), border, 2, 14))
 	b.add_theme_stylebox_override("pressed", UiPalette.button(bg.darkened(0.1), border, 3, 14))

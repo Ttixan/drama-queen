@@ -33,6 +33,22 @@ const RIGHT_PANEL := Rect2(874, 305, 740, 670)
 const CARD_RECT := Rect2(550, 285, 820, 510)
 const NAME_MAX_LEN := 6
 
+## 「剧照」：录像机那套五官合成出来的相框卡片，压在报纸角上 / 摆在登记表两侧。
+## 位置按 1920×1080 绝对坐标摆 —— 报纸右下的 × 按钮（1622,915）必须留空，
+## 否则玩家会觉得按钮被照片挡住了（虽然照片不吃点击）。
+const PHOTO_NEWS := [
+	{"path": "res://assets/ui/intro/card_smug.png",
+			"pos": Vector2(24, 100), "height": 262.0, "angle": -8.0, "delay": 0.55},
+	{"path": "res://assets/ui/intro/card_sorrow.png",
+			"pos": Vector2(1622, 512), "height": 300.0, "angle": 7.0, "delay": 0.7},
+]
+const PHOTO_NAME := [
+	{"path": "res://assets/ui/intro/card_surprise.png",
+			"pos": Vector2(248, 320), "height": 306.0, "angle": -8.0, "delay": 0.0},
+	{"path": "res://assets/ui/intro/card_smug.png",
+			"pos": Vector2(1412, 348), "height": 300.0, "angle": 6.0, "delay": 0.12},
+]
+
 @onready var _paper_layer: Control = $PaperLayer
 @onready var _paper_text: Control = $PaperLayer/PaperText
 @onready var _fade: ColorRect = $Fade
@@ -188,6 +204,10 @@ func _build_paper() -> void:
 	_close_button.pressed.connect(_on_close_ad)
 	_paper_layer.add_child(_close_button)
 
+	# 照片最后加，压在报纸上；层序在 Fade 之下，淡入时会跟着一起亮起来
+	for spec: Dictionary in PHOTO_NEWS:
+		_add_photo(_paper_layer, spec)
+
 
 func _on_fade_in_done() -> void:
 	if _finished:
@@ -241,6 +261,10 @@ func _build_name_layer() -> void:
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_name_layer.add_child(dim)
+
+	# 照片挂在压暗层之上、登记表之下：不遮输入框，也不被暗罩压灰
+	for spec: Dictionary in PHOTO_NAME:
+		_add_photo(_name_layer, spec)
 
 	var card := PanelContainer.new()
 	card.position = CARD_RECT.position
@@ -375,6 +399,41 @@ func _abort() -> void:
 	_finished = true
 	finished.emit()
 	queue_free()
+
+
+# ============================================================
+# 剧照
+# ============================================================
+## 按高度定尺寸（卡片比例各不相同，按宽定会把欧式框压扁）。
+## 锚点给中心：rotation 绕中心转，不然会绕着左上角甩出去。
+func _add_photo(parent: Node, spec: Dictionary) -> void:
+	var tex := load(spec["path"]) as Texture2D
+	if tex == null:
+		push_warning("[Intro] 缺剧照 %s —— 先跑合成脚本" % spec["path"])
+		return
+
+	var h: float = spec["height"]
+	var r := TextureRect.new()
+	r.texture = tex
+	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	r.size = Vector2(h * tex.get_width() / tex.get_height(), h)
+	r.position = spec["pos"]
+	r.pivot_offset = r.size * 0.5
+	r.rotation = deg_to_rad(spec["angle"])
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.modulate.a = 0.0
+	parent.add_child(r)
+
+	var fade := create_tween()
+	fade.tween_property(r, "modulate:a", 1.0, 0.45).set_delay(spec["delay"])
+
+	# 照片落桌后还会晃一下：幅度压到 4px、周期 2.2s，只当呼吸，不抢正文
+	var bob := create_tween().set_loops()
+	bob.tween_property(r, "position:y", r.position.y - 4.0, 2.2) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	bob.tween_property(r, "position:y", r.position.y, 2.2) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 # ============================================================

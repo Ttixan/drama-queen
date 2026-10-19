@@ -98,10 +98,36 @@ const P_FACE := P_PREVIEW + "/ViewFinder/ViewCenter/FaceCanvas"
 const P_TABS := "Page/BodyWrap/Body/TabRail"
 const P_EDIT := "Page/BodyWrap/Body/EditPanel/EditMargin/EditBox"
 const P_BOTTOM := "Page/BottomBar/BottomMargin/BottomRow"
-const P_TOP := "Page/TopBar/TopMargin/TopRow"
+const P_TOP := "Page/TopBar"
+const P_STATS := P_TOP + "/Stats"
 
-@onready var _rec_dot: Panel = get_node(P_TOP + "/RecGroup/RecDot")
-@onready var _frame_indicator: Label = get_node(P_TOP + "/InfoBox/FrameIndicator")
+## 顶栏四个状态图标的中心位置 —— **按条子宽度的比例**给，与美术稿一致
+## （43.4% / 57.9% / 71.6% / 87.2%）。条子走九宫格横向拉伸，写死像素换个宿主宽度就错位。
+## 顺序 = 闪电 / 面具 / 星星 / 金币，含义照主界面便利贴：行动点 / 演技 / 知名度 / 金钱。
+const STAT_ANCHORS := [0.434, 0.579, 0.716, 0.872]
+## 图标高度：条子原高 107，顶栏 96 —— 同比例缩到 68，四个图标都不变形
+const STAT_ICON_H := 68.0
+const STAT_VALUE_SIZE := 28
+## 数字与图标之间的空隙。图标本身的底就是条子的灰，叠回去看不出边界
+const STAT_GAP := 10.0
+## 标题左边距：返回按钮的右沿（12 + 237）之后再留一段
+const TITLE_X := 272.0
+
+@onready var _back_button: TextureButton = get_node(P_TOP + "/BackButton")
+@onready var _title: Label = get_node(P_TOP + "/Title")
+@onready var _stat_icons: Array[TextureRect] = [
+	get_node(P_STATS + "/IconAP"),
+	get_node(P_STATS + "/IconActing"),
+	get_node(P_STATS + "/IconFame"),
+	get_node(P_STATS + "/IconMoney"),
+]
+@onready var _stat_values: Array[Label] = [
+	get_node(P_STATS + "/ValueAP"),
+	get_node(P_STATS + "/ValueActing"),
+	get_node(P_STATS + "/ValueFame"),
+	get_node(P_STATS + "/ValueMoney"),
+]
+@onready var _frame_info: Label = get_node(P_BOTTOM + "/StatusBox/FrameInfo")
 @onready var _face_canvas: Control = get_node(P_FACE)
 @onready var _frame_badge: Label = get_node(P_FACE + "/FrameBadge")
 ## 底图三层（纸 / 肤色 / 空白脸）—— .tscn 里的节点顺序就是绘制顺序，代码只负责填图
@@ -116,7 +142,6 @@ const P_TOP := "Page/TopBar/TopMargin/TopRow"
 		P_EDIT + "/EmotionStrip/EmotionMargin/EmotionRow/EmotionValue")
 @onready var _emotion_parts: Label = get_node(
 		P_EDIT + "/EmotionStrip/EmotionMargin/EmotionRow/EmotionParts")
-@onready var _sequence_label: Label = get_node(P_TOP + "/InfoBox/SequenceLabel")
 @onready var _canvas_frame: Panel = get_node(P_FACE + "/CanvasFrame")
 @onready var _face_hint: Label = get_node(P_FACE + "/FaceHint")
 @onready var _list_scroll: ScrollContainer = get_node(P_EDIT + "/ListScroll")
@@ -126,7 +151,6 @@ const P_TOP := "Page/TopBar/TopMargin/TopRow"
 @onready var _frame_add: Button = get_node(P_BOTTOM + "/SlotsBox/FrameAdd")
 @onready var _frame_remove: Button = get_node(P_BOTTOM + "/SlotsBox/FrameRemove")
 @onready var _clear_button: Button = get_node(P_BOTTOM + "/ActionsRow/ClearButton")
-@onready var _back_button: Button = get_node(P_BOTTOM + "/ActionsRow/BackButton")
 @onready var _confirm_button: Button = get_node(P_BOTTOM + "/ActionsRow/ConfirmButton")
 
 # ============================================================
@@ -156,10 +180,22 @@ func _ready() -> void:
 	_load_base_art()
 	_apply_blend_modes()
 	_apply_styles()
+	_layout_stats()
 	_rebuild_slots()
 	_build_cards()
 	_sync_all()
-	_pulse_rec_dot()
+	_refresh_stats()
+
+	# 顶栏四项状态：数值的写入口有打工 / 上课 / 结算 / 事件四五条路径，
+	# 与便利贴同一条口径 —— **每次都全量重读**，增量信号漏接一条就会留个旧数字。
+	EventBus.ap_changed.connect(_on_counter_changed)
+	EventBus.money_changed.connect(_on_value_changed)
+	EventBus.acting_changed.connect(_on_value_changed)
+	EventBus.fame_changed.connect(_on_value_changed)
+	EventBus.day_advanced.connect(_on_day_changed)
+	EventBus.state_reset.connect(_refresh_stats)
+	# 顶栏宽度由宿主（手机右栏 / 整屏）决定，第一次布局完才量得准
+	resized.connect(_layout_stats)
 
 
 ## 纸底与空白脸是**场景资源**，不随帧变 —— 建一次就够，不用每帧重设
@@ -457,6 +493,68 @@ func _on_confirm_pressed() -> void:
 
 
 # ============================================================
+# 顶栏状态（四项数值 + 图标布局）
+# ============================================================
+
+## 图标按**条子宽度的比例**定位，数字紧贴图标右侧。
+## 每次 resized 都重算 —— 录像机既能整屏跑，也会被塞进手机右栏（≈1372 宽）。
+func _layout_stats() -> void:
+	var w := size.x
+	var h := size.y
+	if w <= 1.0 or h <= 1.0:
+		return
+
+	for i in _stat_icons.size():
+		var icon := _stat_icons[i]
+		var tex := icon.texture
+		if tex == null:
+			continue
+		# 高度定死、宽度按原图比例 —— 图标不跟着条子的横向拉伸变形
+		var iw := STAT_ICON_H * tex.get_width() / tex.get_height()
+		var cx: float = STAT_ANCHORS[i] * w
+		icon.size = Vector2(iw, STAT_ICON_H)
+		icon.position = Vector2(cx - iw * 0.5, (h - STAT_ICON_H) * 0.5)
+
+		var value := _stat_values[i]
+		var vx := cx + iw * 0.5 + STAT_GAP
+		value.position = Vector2(vx, 0.0)
+		value.size = Vector2(maxf(80.0, w - vx), h)
+		value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+
+## 顶栏四项状态。单独跑录像机时 `Game.state` 可能为空
+## （`godot --path . res://scenes/minigame/recorder.tscn`），那时显示 "-"，不抛空指针。
+func _refresh_stats() -> void:
+	if Game.state == null:
+		for value in _stat_values:
+			value.text = "-"
+		return
+
+	var texts := [
+		str(Game.ap_left()),
+		str(Game.acting()),
+		str(Game.fame()),
+		str(Game.money()),
+	]
+	for i in _stat_values.size():
+		_stat_values[i].text = texts[i]
+
+
+## 行动点：`ap_changed(left)` —— 只带剩余量
+func _on_counter_changed(_left: int) -> void:
+	_refresh_stats()
+
+
+## 金钱 / 演技 / 知名度：`xxx_changed(value, delta)`
+func _on_value_changed(_value: int, _delta: int) -> void:
+	_refresh_stats()
+
+
+func _on_day_changed(_day: int, _week: int) -> void:
+	_refresh_stats()
+
+
+# ============================================================
 # 刷新（只在状态变化时调用，不做 _process 轮询）
 # ============================================================
 
@@ -481,7 +579,6 @@ func _sync_preview() -> void:
 	_layer_mouth.texture = null if f.mouth == null else f.mouth.texture
 	_layer_extra.texture = null if f.extra == null else f.extra.texture
 	_frame_badge.text = "帧 %d" % (_frame + 1)
-	_frame_indicator.text = "正在编辑：帧 %d / %d" % [_frame + 1, _clip.frame_count()]
 	# 空帧时给一句提示，否则取景框是一整块黑，看起来像坏了
 	_face_hint.visible = f.parts().is_empty()
 
@@ -499,7 +596,10 @@ func _sync_emotion() -> void:
 		names.append(part.display_name)
 	_emotion_parts.text = "—" if names.is_empty() else " · ".join(names)
 
-	_sequence_label.text = "帧序列：%s" % " → ".join(_clip.all_labels())
+	# 帧号 + 帧序列总览。原先在顶栏右端（那栏现在整条让给状态图标了），
+	# 落在底栏状态区 —— 它描述的是「整段表演」，和底栏的完成度提示是同一件事。
+	_frame_info.text = "帧 %d / %d · %s" % [
+			_frame + 1, _clip.frame_count(), " → ".join(_clip.all_labels())]
 
 
 func _sync_slots() -> void:
@@ -695,13 +795,6 @@ func _fade_in(node: Control) -> void:
 	tw.tween_property(node, "modulate:a", 1.0, 0.12)
 
 
-## 走带指示灯呼吸 —— 廉价器械感全靠这种小动静
-func _pulse_rec_dot() -> void:
-	var tw := create_tween().set_loops()
-	tw.tween_property(_rec_dot, "modulate:a", 0.25, 0.9)
-	tw.tween_property(_rec_dot, "modulate:a", 1.0, 0.9)
-
-
 # ============================================================
 # 样式（全部集中在代码里：静态骨架留在 .tscn，外观一处可改）
 # ============================================================
@@ -709,15 +802,7 @@ func _pulse_rec_dot() -> void:
 func _apply_styles() -> void:
 	get_node("Bg").color = C_BG
 
-	# 顶栏只留一条亮色下边线 —— 整圈黄框太吵，机器丝印感来自「一条线」
-	var top_sb := StyleBoxFlat.new()
-	top_sb.bg_color = C_PANEL
-	top_sb.border_width_bottom = 3
-	# 【顶上两个角要圆】右栏底图是圆角 20，顶栏直角会从圆角外露出尖角
-	top_sb.corner_radius_top_left = 20
-	top_sb.corner_radius_top_right = 20
-	top_sb.border_color = C_ACCENT
-	get_node("Page/TopBar").add_theme_stylebox_override("panel", top_sb)
+	# 顶栏整条是美术给的手绘纸（NinePatchRect 走九宫格横向拉伸，两端卷角不动）。
 
 	_panel(get_node("Page/BodyWrap/Body/PreviewPanel"), C_PANEL, 20, 2, C_LINE)
 	_panel(get_node(P_PREVIEW + "/ViewFinder"), Color("0f0f13"), 24, 3, C_LINE)
@@ -735,12 +820,6 @@ func _apply_styles() -> void:
 	bar.add_theme_stylebox_override("grabber", grabber)
 	bar.add_theme_stylebox_override("grabber_highlight", _rounded(C_ACCENT))
 	bar.add_theme_stylebox_override("grabber_pressed", _rounded(C_ACCENT))
-
-	# REC 红点
-	var dot := StyleBoxFlat.new()
-	dot.bg_color = C_DANGER
-	dot.set_corner_radius_all(9)
-	_rec_dot.add_theme_stylebox_override("panel", dot)
 
 	# 画板虚位框 + 空帧提示
 	var canvas_sb := StyleBoxFlat.new()
@@ -769,14 +848,13 @@ func _apply_styles() -> void:
 	_frame_badge.add_theme_font_size_override("font_size", 18)
 	_frame_badge.add_theme_color_override("font_color", C_ACCENT)
 
-	# 顶栏文字
-	_txt(get_node(P_TOP + "/RecGroup/RecText"), 18, C_DANGER)
-	_txt(get_node(P_TOP + "/TitleBox/Title"), 40, C_TEXT)
-	_txt(get_node(P_TOP + "/TitleBox/Subtitle"), 15, C_TEXT_DIM)
-	_txt(_frame_indicator, 20, C_ACCENT)
-	# 「帧序列」从取景框下方搬到顶栏（帧槽按钮上已经有每帧的情绪，这里是总览）
-	_txt(_sequence_label, 15, C_TEXT_DIM)
-	_sequence_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	# 顶栏：条子是浅灰纸，字一律压墨色（C_TEXT 是奶白，在纸上看不见）
+	UiPalette.title(_title, 34, C_INK)
+	for value in _stat_values:
+		UiPalette.title(value, STAT_VALUE_SIZE, C_INK)
+
+	# 帧号 + 帧序列：底栏第三行，比「还没拼完」淡一档，不抢主提示
+	_txt(_frame_info, 15, UiPalette.TEXT_ON_PAPER_DIM)
 
 	# 情绪条（现在挂在部件列顶部，紧挨着它描述的那张列表）
 	_txt(_emotion_value, 30, C_TEXT)

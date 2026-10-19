@@ -8,6 +8,12 @@ extends Node
 
 var state: GameState
 
+## 这次启动有没有**真的读到**存档。开始界面的「继续游戏」按它亮灭。
+## 【为什么不让菜单自己去看文件】「文件在」和「读得出来」是两件事 ——
+## 存档损坏时 `load_from()` 会静默开新局，菜单若只看文件存在，就会给玩家一个
+## 点下去落到新局的「继续游戏」。
+var loaded_from_save := false
+
 ## 定角池里的**出厂名字**。玩家没取名（或老存档没有名字）时回退到它。
 ## 【为什么在启动时抄一份】`_apply_player_name` 会把玩家名写回定角池；
 ## 开新局时要把池子还原成出厂值，而不是留着上一局的名字。
@@ -49,6 +55,8 @@ func _ready() -> void:
 func new_game(init_money: int = -1, init_acting: int = -1) -> void:
 	var bal := BalanceLibrary.data()
 	state = GameState.new()
+	# 开了新局就不再是「继续」—— 开始界面据此把「继续游戏」灰掉
+	loaded_from_save = false
 	state.money = bal.init_money if init_money < 0 else init_money
 	state.acting = bal.init_acting if init_acting < 0 else init_acting
 	# 【为什么随机种子在开局抽、之后再也不抽】事件每周要挑一次，而挑出来的
@@ -564,6 +572,7 @@ func load_from(path: String = "user://save.json") -> bool:
 	#    后者会留下没被覆盖到的字段（上一局的残留）。
 	state = GameState.new()
 	state.from_save_dict(parsed)
+	loaded_from_save = true
 	# 名字跟着存档走：老档没有名字 → 回退到定角池的出厂名
 	_apply_player_name()
 	EventBus.ap_changed.emit(state.ap_left_today)

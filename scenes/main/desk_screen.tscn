@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/apps/desk_screen.gd" id="1_desk"]
 [ext_resource type="Texture2D" path="res://assets/ui/desk/desk_off.jpg" id="2_off"]
@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" path="res://scenes/main/phone_screen.tscn" id="7_shell"]
 [ext_resource type="PackedScene" path="res://scenes/main/calendar_screen.tscn" id="8_cal"]
 [ext_resource type="PackedScene" path="res://scenes/main/notebook_screen.tscn" id="9_book"]
+[ext_resource type="PackedScene" path="res://scenes/ui/sticky_stats.tscn" id="10_sticky"]
 
 [node name="DeskScreen" type="Control"]
 layout_mode = 3
@@ -32,6 +33,8 @@ mouse_filter = 2
 texture = ExtResource("2_off")
 expand_mode = 1
 stretch_mode = 0
+
+[node name="StickyStats" parent="." instance=ExtResource("10_sticky")]
 
 [node name="Hotspots" type="Control" parent="."]
 layout_mode = 1

@@ -292,49 +292,71 @@ custom_minimum_size = Vector2(0, 76)
 layout_mode = 2
 text = "← 返回桌面"
 
-[node name="ScriptOverlay" type="PanelContainer" parent="Page/BodyWrap"]
+[node name="ScriptOverlay" type="Control" parent="Page/BodyWrap/Body/ChatPanel"]
 visible = false
 layout_mode = 2
 
-[node name="ScriptMargin" type="MarginContainer" parent="Page/BodyWrap/ScriptOverlay"]
-layout_mode = 2
-theme_override_constants/margin_left = 22
-theme_override_constants/margin_top = 18
-theme_override_constants/margin_right = 22
-theme_override_constants/margin_bottom = 18
+[node name="Paper" type="TextureRect" parent="Page/BodyWrap/Body/ChatPanel/ScriptOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 0
 
-[node name="ScriptBox" type="VBoxContainer" parent="Page/BodyWrap/ScriptOverlay/ScriptMargin"]
-layout_mode = 2
-theme_override_constants/separation = 14
+[node name="BackButton" type="Button" parent="Page/BodyWrap/Body/ChatPanel/ScriptOverlay"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -294.0
+offset_top = 8.0
+offset_right = -34.0
+offset_bottom = 60.0
+grow_horizontal = 0
+focus_mode = 0
+text = ""
 
-[node name="ScriptHeader" type="HBoxContainer" parent="Page/BodyWrap/ScriptOverlay/ScriptMargin/ScriptBox"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="ScriptBackButton" type="Button" parent="Page/BodyWrap/ScriptOverlay/ScriptMargin/ScriptBox/ScriptHeader"]
-custom_minimum_size = Vector2(200, 62)
-layout_mode = 2
-text = "← 返回聊天"
-
-[node name="ScriptTitleBox" type="VBoxContainer" parent="Page/BodyWrap/ScriptOverlay/ScriptMargin/ScriptBox/ScriptHeader"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-
-[node name="ScriptTitle" type="Label" parent="Page/BodyWrap/ScriptOverlay/ScriptMargin/ScriptBox/ScriptHeader/ScriptTitleBox"]
-layout_mode = 2
+[node name="ScriptTitle" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ScriptOverlay"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 28.0
+offset_top = 4.0
+offset_right = -306.0
+offset_bottom = 60.0
+grow_horizontal = 2
 text = "剧本.docx"
+vertical_alignment = 1
 
-[node name="ScriptSubtitle" type="Label" parent="Page/BodyWrap/ScriptOverlay/ScriptMargin/ScriptBox/ScriptHeader/ScriptTitleBox"]
-layout_mode = 2
+[node name="ScriptSubtitle" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ScriptOverlay"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 64.0
+offset_top = 74.0
+offset_right = -64.0
+offset_bottom = 102.0
+grow_horizontal = 2
 text = "—"
 
-[node name="ScriptScroll" type="ScrollContainer" parent="Page/BodyWrap/ScriptOverlay/ScriptMargin/ScriptBox"]
-layout_mode = 2
-size_flags_vertical = 3
+[node name="ScriptScroll" type="ScrollContainer" parent="Page/BodyWrap/Body/ChatPanel/ScriptOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 64.0
+offset_top = 118.0
+offset_right = -64.0
+offset_bottom = -26.0
+grow_horizontal = 2
+grow_vertical = 2
 horizontal_scroll_mode = 0
 
-[node name="ScriptText" type="Label" parent="Page/BodyWrap/ScriptOverlay/ScriptMargin/ScriptBox/ScriptScroll"]
+[node name="ScriptText" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ScriptOverlay/ScriptScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = ""
