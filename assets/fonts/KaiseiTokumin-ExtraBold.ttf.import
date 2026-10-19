@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://ba7i1qygmdvc6"
-path="res://.godot/imported/chinese.ttf-5dd0816379c61bbb585120ab72b23c24.fontdata"
+uid="uid://c1anc5senbm4c"
+path="res://.godot/imported/KaiseiTokumin-ExtraBold.ttf-f44c7e741f3753d8c5de84ebbc11d411.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/chinese.ttf"
-dest_files=["res://.godot/imported/chinese.ttf-5dd0816379c61bbb585120ab72b23c24.fontdata"]
+source_file="res://assets/fonts/KaiseiTokumin-ExtraBold.ttf"
+dest_files=["res://.godot/imported/KaiseiTokumin-ExtraBold.ttf-f44c7e741f3753d8c5de84ebbc11d411.fontdata"]
 
 [params]
 

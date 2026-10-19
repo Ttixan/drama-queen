@@ -1190,7 +1190,8 @@ func _add_bubble(text: String, mine: bool) -> void:
 ## 【为什么按行取最大】正文里有换行（投递回执、回信正文都是多行的），
 ## 直接量整串会把所有行当成一行加起来，于是每条都顶到最宽 —— 短消息就又变成通栏了。
 func _bubble_width(text: String) -> float:
-	var font := ThemeDB.fallback_font
+	# 用真正渲染的那支字体量（见 `UiPalette.FONT` 的注释）
+	var font := UiPalette.FONT
 	var w := 0.0
 	for line: String in text.split("\n"):
 		w = maxf(w, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, BUBBLE_FONT).x)

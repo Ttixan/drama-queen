@@ -926,7 +926,8 @@ func _remembered_choice(run: Array[ChatLine]) -> int:
 
 
 func _bubble_width(text: String) -> float:
-	var font := ThemeDB.fallback_font
+	# 用真正渲染的那支字体量（见 `UiPalette.FONT` 的注释）
+	var font := UiPalette.FONT
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, BUBBLE_FONT).x
 	return minf(MAX_BUBBLE_W, w + 4.0)
 

@@ -13,11 +13,12 @@ extends Control
 ## 所以这里的 Rect2 用的是**设计坐标**：换图、换窗口大小都不用改。
 ## 反过来说：插画挪了位置，这几个常量得跟着改（和桌子的 Hotspot 同一个约定）。
 ##
-## 【字体是美术给的两张】
-##   `chinese.ttf`（LemiXiaoXiongRiJiTi）：所有中文。**它没有 `→` `｜` `·` 之外的一堆符号**
-##      （实测 `→` 与 `｜` 缺字形，`·` 有）—— 所以文案里不许写箭头和竖线。
-##   `english.ttf`（BubbleDub）：只用于**纯数字**（行动点 / 钱 / PS5 进度 / 计数）。
-##     它没有中文字形，混排会出豆腐块。
+## 【字体：全局一套】`assets/fonts/main_font.tres` —— Kaisei Tokumin ExtraBold，
+## 缺字落到系统字体兜底（见该文件与 `ui_theme.tres` 的说明）。
+## 以前中文和数字各用一张字体（数字是另一支手写体），现在统一成一支 ——
+## 两支字的基线不一样，同一行里数字会"浮"起来。旧的两张 ttf 已删除。
+## 【为什么还留着 FONT_EN 这个名字】只为了让 `_label()` 的默认参数与调用处不用改，
+## 它和 FONT_CN 已经是同一支字体。
 ##
 ## 【职责】状态 + 今日安排 + 本周进度，外加周末结算浮层与重开一局。
 ## **它自己不含任何玩法逻辑**：打工、上课、结束今天全是在调 `Game` 上的方法。
@@ -39,8 +40,8 @@ const REPORT_SCENE := "res://scenes/main/week_report.tscn"
 ## **发放**。塞进报纸的翻页序列，玩家会在读账目时突然被要求做选择 —— 两件事分开更清楚。
 const REWARD_SCENE := "res://scenes/main/expression_reward.tscn"
 
-const FONT_CN := preload("res://assets/fonts/chinese.ttf")
-const FONT_EN := preload("res://assets/fonts/english.ttf")
+const FONT_CN := preload("res://assets/fonts/main_font.tres")
+const FONT_EN := FONT_CN
 
 # ============================================================
 # 版面（设计坐标，1920×1080；纸面 = 234,94 → 1686,1023）

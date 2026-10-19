@@ -12,6 +12,14 @@ extends RefCounted
 ## 否则开发期「标签颜色对不上缩略图」，向量对不对就看不出来了。
 
 
+## —— 字体 ——
+## 全局正文/标题都用这一支：Kaisei Tokumin ExtraBold + 系统字体兜底
+## （本体在 `assets/fonts/main_font.tres`，全局主题也指向它）。
+## 【为什么代码里还要存一份】需要**量字宽**的地方（聊天气泡、标题截断）必须和
+## 真正渲染的字体用同一套度量 —— 拿 `ThemeDB.fallback_font` 量、拿这支画，
+## 气泡就会算窄或算宽。那几处都不是 Label 节点，拿不到"主题字体重画"的时机。
+const FONT := preload("res://assets/fonts/main_font.tres")
+
 ## —— 底色 ——
 const BG := Color("16161a")
 const PANEL := Color("232329")

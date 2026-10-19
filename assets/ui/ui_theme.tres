@@ -2,18 +2,19 @@
 
 ; 全局 UI 主题
 ;
-; 【为什么需要它】项目里没有任何字体资源，Godot 默认主题的字体不含中文字形，
-; 全靠「系统字体回退」侥幸显示。这在 Windows 上能看，但 Android 导出后不可控。
-; 这里用 SystemFont + 候选列表，不引入任何字体二进制文件（21 天工期不值得为字体
-; 折腾仓库体积），同时把「用什么字体、多大字号」从代码里挪出来，扉师改这里就行。
+; 【现在用什么字体】`assets/fonts/main_font.tres` —— 本体是 Kaisei Tokumin ExtraBold
+; （美术挑的「偏风格和艺术字」正文字体），外面包了一层 FontVariation，挂一串系统字体兜底。
+;
+; 【为什么要兜底】那套字是**日文字体**：项目里实际用到的 1847 个汉字中，它缺 639 个
+; （你、们、这、说、剧、戏、时……）。没有兜底的话，三分之一的中文会变成豆腐块。
+; 于是缺字落到系统黑体，字形风格不统一，但至少读得出来 —— 将来换中文字体时，
+; 只要改 `main_font.tres` 里的 base_font，不用动任何代码。
 ;
 ; 【为什么不塞进 project.godot 的 gui/theme/custom】本轮的录像机是独立测试场景，
 ; 不该顺手改全局配置 —— 等手机壳立起来再决定要不要全局挂载。
 
-[sub_resource type="SystemFont" id="SystemFont_ui"]
-font_names = PackedStringArray("Source Han Sans SC", "思源黑体", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "SimHei")
-allow_system_fallback = true
+[ext_resource type="FontVariation" path="res://assets/fonts/main_font.tres" id="1_main"]
 
 [resource]
-default_font = SubResource("SystemFont_ui")
+default_font = ExtResource("1_main")
 default_font_size = 18

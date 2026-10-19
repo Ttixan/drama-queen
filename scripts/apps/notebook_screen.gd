@@ -13,14 +13,13 @@ extends Control
 ## 【贴纸不是四张图】素材只有一张 `stickers.png`（四张横排），
 ## 这里用 `AtlasTexture` 切出区域 —— **不落四份 PNG**，美术改图时只换一张。
 ##
-## 【字体】沿用台历那两张：中文 `chinese.ttf`，`×` 用它（实测有字形，
-## 但 `✕`(U+2715) 没有）；`english.ttf` 是纯数字/拉丁用的，这里只在标题里的
-## 英文（Delight / Outrage）出现——那两处也在正文里，跟着中文字体走更稳。
+## 【字体】与全局一致：`assets/fonts/main_font.tres`（Kaisei Tokumin ExtraBold
+## + 系统字体兜底）。`×` / `✕` 这类符号本体缺字时由兜底层补上，不会再出豆腐块。
 
 ## 回到桌子（上层把本场景当子页面打开时）
 signal cancelled
 
-const FONT_CN := preload("res://assets/fonts/chinese.ttf")
+const FONT_CN := preload("res://assets/fonts/main_font.tres")
 
 const STICKER_SHEET := preload("res://assets/ui/notebook/stickers.png")
 const NOTE_TEXTURE := preload("res://assets/ui/notebook/note.png")

@@ -64,5 +64,6 @@ func _draw() -> void:
 	draw_rect(rect, fill, true)
 	draw_rect(rect, Color(1.0, 0.84, 0.28, 0.55), false, 2.0)
 	if not label.is_empty():
-		draw_string(ThemeDB.fallback_font, Vector2(10, 30), label,
+		# 调试标签也用全局那支字体，免得同一屏里出现两种字形
+		draw_string(UiPalette.FONT, Vector2(10, 30), label,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.1, 0.1, 0.1, 0.85))

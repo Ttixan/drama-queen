@@ -1,0 +1,11 @@
+[gd_resource type="FontVariation" load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/KaiseiTokumin-ExtraBold.ttf" id="1_kaisei"]
+
+[sub_resource type="SystemFont" id="SystemFont_fallback"]
+font_names = PackedStringArray("Source Han Sans SC", "思源黑体", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "SimHei")
+allow_system_fallback = true
+
+[resource]
+base_font = ExtResource("1_kaisei")
+fallbacks = Array[Font]([SubResource("SystemFont_fallback")])

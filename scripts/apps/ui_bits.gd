@@ -16,10 +16,10 @@ static func one_line(l: Label, font_size: int, max_width: float = 9999.0) -> Lab
 	l.autowrap_mode = TextServer.AUTOWRAP_OFF
 	l.clip_text = true
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	# 【为什么要留余量】`ThemeDB.fallback_font` **量不准中日韩字**（那些字要落到系统字体），
-	# 算出来的宽度偏窄 —— 于是「陈女士 · 人事」被截成「陈女士 · 人事…」。
-	# 宁可宽几个像素，也不要切掉半个字。
-	var font := ThemeDB.fallback_font
+	# 【为什么量的是 `UiPalette.FONT`】以前拿 `ThemeDB.fallback_font` 量，那支不含中文，
+	# 宽度全靠回退字体估 —— 「陈女士 · 人事」被截成「陈女士 · 人事…」。
+	# 现在量的是**真正渲染**的那支字；余量仍留着，省略号本身也要占位。
+	var font := UiPalette.FONT
 	var w := font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	l.custom_minimum_size.x = minf(max_width, w * 1.15 + 12.0)
 	return l
