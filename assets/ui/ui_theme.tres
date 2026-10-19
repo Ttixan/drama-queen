@@ -2,16 +2,15 @@
 
 ; 全局 UI 主题
 ;
-; 【现在用什么字体】`assets/fonts/main_font.tres` —— 本体是 Kaisei Tokumin ExtraBold
-; （美术挑的「偏风格和艺术字」正文字体），外面包了一层 FontVariation，挂一串系统字体兜底。
+; 【现在用什么字体】`assets/fonts/main_font.tres` —— 本体是「獅尾半月字體 tc-Light」
+; （美术给的「正文字体-便于阅读」），外面包了一层 FontVariation，挂一串系统字体兜底。
 ;
-; 【为什么要兜底】那套字是**日文字体**：项目里实际用到的 1847 个汉字中，它缺 639 个
-; （你、们、这、说、剧、戏、时……）。没有兜底的话，三分之一的中文会变成豆腐块。
-; 于是缺字落到系统黑体，字形风格不统一，但至少读得出来 —— 将来换中文字体时，
-; 只要改 `main_font.tres` 里的 base_font，不用动任何代码。
+; 【为什么换掉 Kaisei】之前那套是**日文字体**，项目实际用到的 1745 个汉字里缺 590 个
+; （你、剧、试、镜、赚、换……）。缺字会落到系统黑体，正文里突然换一套字形；
+; 个别环境里还会直接不显示。新字体同一批字 **0 缺字**，正文不再靠兜底。
 ;
-; 【为什么不塞进 project.godot 的 gui/theme/custom】本轮的录像机是独立测试场景，
-; 不该顺手改全局配置 —— 等手机壳立起来再决定要不要全局挂载。
+; 【兜底还留着】玩家输入的名字、将来的 emoji / 生僻符号不在统计范围内；
+; 系统字体是最后一道保险。将来再换字体只需改 `main_font.tres` 的 base_font。
 
 [ext_resource type="FontVariation" path="res://assets/fonts/main_font.tres" id="1_main"]
 

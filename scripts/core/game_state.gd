@@ -19,6 +19,16 @@ var fame: int = 0              ## 知名度
 var reputation: int = 0        ## 风评
 var negative_exposure: int = 0 ## 负面曝光累计（隐藏，不上状态栏）
 
+## ---- 开场 / 身份 ----
+## 开场（A1 报纸广告 → A2/A3 独白 → 取名）播完了没有。
+## 【新局 = false，老存档 = true】`from_save_dict` 对缺失字段的默认值见那里 ——
+## 10-19 之前的存档不该被强制重看一遍开场。
+var intro_done: bool = false
+## 玩家自己取的名字。空 = 还没取，邮件 / 报纸 / 微信回退到定角池的占位名。
+## 【为什么存在状态层而不是直接写 CastingPool】名字必须跟着存档走；
+## `CastingPool` 是磁盘上的模板资源，往它身上写只在本进程有效。
+var player_name: String = ""
+
 ## ---- 时间 ----
 var day: int = 1               ## 1 .. 21
 var ap_left_today: int = AP_PER_DAY
@@ -465,6 +475,7 @@ func to_save_dict() -> Dictionary:
 	return {
 		"money": money, "acting": acting, "fame": fame,
 		"reputation": reputation, "negative_exposure": negative_exposure,
+		"intro_done": intro_done, "player_name": player_name,
 		"day": day, "ap_left_today": ap_left_today,
 		"submissions_total": submissions_total, "successes_total": successes_total,
 		"submissions_this_week": submissions_this_week,
@@ -501,6 +512,10 @@ func from_save_dict(d: Dictionary) -> void:
 	fame = int(d.get("fame", 0))
 	reputation = int(d.get("reputation", 0))
 	negative_exposure = int(d.get("negative_exposure", 0))
+	# 【老档默认 true】这个字段是 10-19 加进来的；之前的存档里没有它，
+	# 默认成 false 会让所有老玩家在读档后被按着看一遍开场。
+	intro_done = bool(d.get("intro_done", true))
+	player_name = String(d.get("player_name", "")).strip_edges()
 	day = int(d.get("day", 1))
 	ap_left_today = int(d.get("ap_left_today", AP_PER_DAY))
 	submissions_total = int(d.get("submissions_total", 0))

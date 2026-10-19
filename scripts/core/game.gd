@@ -8,6 +8,11 @@ extends Node
 
 var state: GameState
 
+## 定角池里的**出厂名字**。玩家没取名（或老存档没有名字）时回退到它。
+## 【为什么在启动时抄一份】`_apply_player_name` 会把玩家名写回定角池；
+## 开新局时要把池子还原成出厂值，而不是留着上一局的名字。
+var _default_player_name := ""
+
 
 func _ready() -> void:
 	# 「该存档了」的广播由本单例自己接住 —— 这样结算流程（WeekCycle 的调用方）
@@ -16,6 +21,11 @@ func _ready() -> void:
 
 	# 录像机录完那段表情包也由本单例接住（理由见 `_on_recorder_finished`）
 	EventBus.recorder_finished.connect(_on_recorder_finished)
+
+	# 【先抄出厂名，再读档 / 开新局】读到的名字要写回定角池，而开新局时要还原。
+	var pool := MailLibrary.casting_pool()
+	if pool != null:
+		_default_player_name = pool.player_name
 
 	# 【开局先试着读档】决策 1.1 只说了「每周结算自动存档」——
 	# **存了却没人读，那份存档就是死的**。读不到（第一次玩 / 文件坏了 / 格式对不上）
@@ -29,6 +39,8 @@ func _ready() -> void:
 	# 冲掉，表现成「设了待翻的牌，界面却说没有」。正常启动时 state 一定是 null。
 	if state == null and not load_from():
 		new_game()
+	# 测试 / 工具可能已经塞好了 state；名字镜像仍要同步一次（幂等）
+	_apply_player_name()
 
 
 ## 开新局。两个参数传 -1 = 用数值表里的起始值（`data/balance.tres`）。
@@ -45,6 +57,8 @@ func new_game(init_money: int = -1, init_acting: int = -1) -> void:
 	state.event_seed = randi()
 	# 第 1 天就是第 1 周的第一天，所以这里要排一次
 	_roll_week_event()
+	# 新局还没有名字：把定角池还原成出厂值，别留着上一局那个
+	_apply_player_name()
 	EventBus.ap_changed.emit(state.ap_left_today)
 	# 放在最后：界面收到它时，新状态已经就位，可以放心照着重画
 	EventBus.state_reset.emit()
@@ -67,6 +81,51 @@ func fame() -> int:
 
 func reputation() -> int:
 	return state.reputation
+
+
+# ============================================================
+# 玩家名
+# ============================================================
+## 界面 / 邮件 / 报纸都从这里拿名字。**状态层是唯一来源**；
+## `CastingPool.player_name` 只是给现有读取链（MailComposer / HeadlineComposer /
+## 微信）留的镜像，由 `_apply_player_name` 在启动 / 读档 / 取名时同步。
+func player_name() -> String:
+	if state == null:
+		return ""
+	var who := state.player_name.strip_edges()
+	if not who.is_empty():
+		return who
+	var pool := MailLibrary.casting_pool()
+	return pool.player_name if pool != null else ""
+
+
+## 开场取名用。写入状态并立刻同步镜像 —— 邮件和报纸下一次读到的就是新名字。
+func set_player_name(value: String) -> void:
+	if state == null:
+		return
+	var who := value.strip_edges()
+	if who.is_empty():
+		return
+	state.player_name = who
+	_apply_player_name()
+
+
+## 把状态里的名字写回定角池。空名字 = 回退到出厂值（开新局）。
+## 【为什么不是各界面改读 Game.player_name】那要改 MailComposer / HeadlineComposer /
+## 微信三处，而它们都在 `--script` 里跑（autoload 不可见的坑，见 gm_console 文件头）。
+## 写回池子只改一处，既保留单一读取链，也不碰那些纯逻辑类。
+func _apply_player_name() -> void:
+	if state == null:
+		return
+	var pool := MailLibrary.casting_pool()
+	if pool == null:
+		return
+	var who := state.player_name.strip_edges()
+	if who.is_empty():
+		who = _default_player_name
+	# 出厂名都没抄到（极端：MailLibrary 没起来）就别把池子改成空串
+	if not who.is_empty():
+		pool.player_name = who
 
 
 func day() -> int:
@@ -505,6 +564,8 @@ func load_from(path: String = "user://save.json") -> bool:
 	#    后者会留下没被覆盖到的字段（上一局的残留）。
 	state = GameState.new()
 	state.from_save_dict(parsed)
+	# 名字跟着存档走：老档没有名字 → 回退到定角池的出厂名
+	_apply_player_name()
 	EventBus.ap_changed.emit(state.ap_left_today)
 	# 读档对界面来说和开新局一样：状态整个换了，必须照着重画
 	EventBus.state_reset.emit()

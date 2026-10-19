@@ -13,7 +13,7 @@ extends Control
 ## 【贴纸不是四张图】素材只有一张 `stickers.png`（四张横排），
 ## 这里用 `AtlasTexture` 切出区域 —— **不落四份 PNG**，美术改图时只换一张。
 ##
-## 【字体】与全局一致：`assets/fonts/main_font.tres`（Kaisei Tokumin ExtraBold
+## 【字体】与全局一致：`assets/fonts/main_font.tres`（獅尾半月字體 tc-Light
 ## + 系统字体兜底）。`×` / `✕` 这类符号本体缺字时由兜底层补上，不会再出豆腐块。
 
 ## 回到桌子（上层把本场景当子页面打开时）

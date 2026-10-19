@@ -1,5 +1,21 @@
-[gd_scene load_steps=2 format=3 uid="uid://c8dccqu8kwlvk"]
+[gd_scene load_steps=3 format=3 uid="uid://c8dccqu8kwlvk"]
 
 [ext_resource type="PackedScene" path="res://scenes/main/desk_screen.tscn" id="1_desk"]
+[ext_resource type="Script" path="res://scripts/apps/main.gd" id="2_main"]
 
-[node name="MainScene" instance=ExtResource("1_desk")]
+[node name="MainScene" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_main")
+
+[node name="DeskScreen" parent="." instance=ExtResource("1_desk")]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2

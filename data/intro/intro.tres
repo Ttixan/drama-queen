@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="IntroData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/intro_data.gd" id="1_ka54u"]
+
+[resource]
+script = ExtResource("1_ka54u")
+masthead = "《有瓜有戏》"
+edition = "增刊 · 第 0 期"
+title = "不用选了。"
+product = "PSwitch box2"
+subtitle = "游戏界三家大厂史无前例的联名之作"
+body = "你是否厌倦了在PS5和Switch2之间反复横跳？
+你是否受够了Xbox的“性能怪兽”却找不到独占游戏？
+
+现在，不用选了。
+
+掌机主机一体，4K 120帧，SSD一秒加载，手柄带触觉反馈和体感震动。
+独占阵容：战圣、林克传说、暗环、宝可梦王国，全在首发，还能向下兼容你过去三十年买过的所有游戏。
+
+首发限量，抢不到就永远没有。"
+countdown = "距离发售：21天"
+footer = "整版广告 · PSwitch 联合体"
+lines_a2 = Array[String](["你关掉广告。看了一下微信余额，笑了。", "你是一个游戏宅，如果可以，你宁愿一辈子都躺在家里不上班。但现在，情况复杂了。", "你早就受够了出了新游戏机却买不起的情况，恨透了面对心爱之物却无能的自己。而听到这个广告时，这样的心情达到了顶峰——"])
+lines_a3 = Array[String](["你做出了一个大胆的决定。你决定杀入短剧圈。接剧本，拍试镜，再把试镜片段投给5家影视公司拿角色。赚快钱，换资源，升咖位。", "要么成为顶流影帝，要么沦为烂片之王。", "21天，凑够钱。开工！"])

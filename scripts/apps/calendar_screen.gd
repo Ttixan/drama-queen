@@ -13,7 +13,7 @@ extends Control
 ## 所以这里的 Rect2 用的是**设计坐标**：换图、换窗口大小都不用改。
 ## 反过来说：插画挪了位置，这几个常量得跟着改（和桌子的 Hotspot 同一个约定）。
 ##
-## 【字体：全局一套】`assets/fonts/main_font.tres` —— Kaisei Tokumin ExtraBold，
+## 【字体：全局一套】`assets/fonts/main_font.tres` —— 獅尾半月字體 tc-Light，
 ## 缺字落到系统字体兜底（见该文件与 `ui_theme.tres` 的说明）。
 ## 以前中文和数字各用一张字体（数字是另一支手写体），现在统一成一支 ——
 ## 两支字的基线不一样，同一行里数字会"浮"起来。旧的两张 ttf 已删除。

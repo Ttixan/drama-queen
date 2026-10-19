@@ -1,11 +1,25 @@
 [gd_resource type="FontVariation" load_steps=3 format=3]
 
-[ext_resource type="FontFile" path="res://assets/fonts/KaiseiTokumin-ExtraBold.ttf" id="1_kaisei"]
+; 全局正文字体
+;
+; 【2026-10-19 换字】原来用 Kaisei Tokumin ExtraBold（日文字体），
+; 项目实际用到的 1745 个汉字里它缺 **590 个**（你 / 剧 / 试 / 镜 / 赚 / 换……），
+; 缺字靠系统黑体兜底，字形会突然换一套，而且个别字在部分环境里直接不显示。
+; 现在本体换成美术给的「獅尾半月字體 tc-Light」（正文字体-便于阅读）：
+; 同一批 1745 个字 **0 缺字**，不再需要靠兜底撑正文。
+;
+; 【为什么还留 SystemFont 兜底】玩家自己输入的名字、将来的 emoji / 生僻符号
+; 不在那 1745 个里；兜底是最后一道保险，不是正文字体的替代品。
+;
+; 【源文件】`.document/字体/正文字体-便于阅读/獅尾半月字體tc-Light.ttf`
+; 复制进 `assets/fonts/` 时改成 ASCII 名，避免 Android 导出链对中文文件名出问题。
+
+[ext_resource type="FontFile" path="res://assets/fonts/ShiweiBanyue-Light.ttf" id="1_body"]
 
 [sub_resource type="SystemFont" id="SystemFont_fallback"]
 font_names = PackedStringArray("Source Han Sans SC", "思源黑体", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "SimHei")
 allow_system_fallback = true
 
 [resource]
-base_font = ExtResource("1_kaisei")
+base_font = ExtResource("1_body")
 fallbacks = Array[Font]([SubResource("SystemFont_fallback")])
