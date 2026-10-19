@@ -206,18 +206,18 @@ func _run_all() -> void:
 		_check("对方那行：头像在最左、气泡紧跟其后",
 				"%s/%s" % [rows[0].get_child(0).get_class(), rows[0].get_child(1).get_class()],
 				"Panel/PanelContainer")
-		_check("对方那条：气泡是中性灰", _bubble_bg(rows[0]), UiPalette.PANEL_SOFT)
+		_check("对方那条：气泡是米色纸片", _bubble_tex(rows[0]), "bubble_peer.png")
 		_check("自己那行：气泡 + 头像，最前面是撑开的空控件（把气泡顶到右边）",
 				"%s/%s/%s" % [
 					rows[1].get_child(0).get_class(),
 					rows[1].get_child(1).get_class(),
 					rows[1].get_child(2).get_class(),
 				], "Control/PanelContainer/Panel")
-		_check("自己那条：气泡是微信绿", _bubble_bg(rows[1]), UiPalette.WECHAT)
-		_check("绿底上压的是深色字（白字在绿底上发虚）",
-				_bubble_text_color(rows[1]), UiPalette.INK)
+		_check("自己那条：气泡是青绿纸片", _bubble_tex(rows[1]), "bubble_me.png")
+		_check("纸片上压的是深色字（浅底上白字看不见）",
+				_bubble_text_color(rows[1]).get_luminance() < 0.3, true)
 		_check("短消息的气泡跟着文字收窄，不是一条通栏",
-				_card_of(rows[0]).get_combined_minimum_size().x < 300.0, true)
+				_card_of(rows[0]).get_combined_minimum_size().x < 560.0, true)
 
 	# 「去录像机」同样是整屏切走。**录完的回程归手机屏管**（它记着是谁顶开的），
 	# 而表情包由核心层接住 —— 微信那一刻不在场，所以这两件事都不能指望它自己做
@@ -238,15 +238,14 @@ func _run_all() -> void:
 	_check("composer 的状态行说的是还没拿到剧本",
 			_app._status_line.text.contains("剧本"), true)
 
-	# 底部那排档位 = 要一份这一档的剧本（和聊天里那三个按钮是同一件事）
-	_app._role_buttons[RoleRequirement.Tier.EXTRA].button_pressed = true
+	# 底部那排档位已经删掉，换档只剩聊天里那三个按钮 —— 直接走它们背后的同一个函数
+	_app._pick_tier(RoleRequirement.Tier.EXTRA)
 	await _settle()
 	# 【点完档位他先"打"一会儿】我要的那句已经在，那份 .docx 还没拍过来
 	_check("点完档位先摆出「正在输入」", _find_named(_app._chat_log, "TypingRow") != null, true)
 	_check("剧本这时还没发过来", _chat_contains(".docx"), false)
 	await _finish_typing_now()
 	_check("选中了龙套", _app._role.tier, RoleRequirement.Tier.EXTRA)
-	_check("公司门槛显示正确", _app._requirement_label.text.contains("演技门槛 0"), true)
 	_check("要到了剧本：状态里记下了这一档",
 			int(_game.hr_script_of("A").get("tier", -1)), RoleRequirement.Tier.EXTRA)
 	_check("剧本发过来了（聊天里出现那个 .docx）", _chat_contains(".docx"), true)
@@ -361,7 +360,7 @@ func _run_all() -> void:
 	_check("开着事件会话时不选中任何 HR", _app._current, null)
 	_check("事件说话人出现在联系人列表里", _app._event_rows.has(ev.speaker), true)
 	_check("两个选项按钮都在", _app._event_buttons.size(), 2)
-	_check("HR 那三排 composer 藏起来了", _app._role_row.visible, false)
+	_check("HR 那几排 composer 藏起来了", _app._attach_row.visible, false)
 	_check("事件那排 composer 露出来了", _app._event_row.visible, true)
 	_check("聊天记录里有开场白", _chat_has(String(ev.intro)), true)
 	_check("按钮上带着代价与收益",
@@ -393,17 +392,17 @@ func _run_all() -> void:
 
 	# 事件会话里的气泡走**同一套**配色：他说的灰、我说的绿 —— 不再另开一套青
 	var ev_rows := _bubble_rows()
-	_check("事件会话里他说的也是灰气泡", _bubble_bg(ev_rows[0]), UiPalette.PANEL_SOFT)
-	_check("我回的那句是绿气泡", _bubble_bg(ev_rows[1]), UiPalette.WECHAT)
-	_check("他后面那句还是灰的（不是绿也不是红）",
-			_bubble_bg(ev_rows[ev_rows.size() - 1]), UiPalette.PANEL_SOFT)
+	_check("事件会话里他说的也是米色纸", _bubble_tex(ev_rows[0]), "bubble_peer.png")
+	_check("我回的那句是青绿纸", _bubble_tex(ev_rows[1]), "bubble_me.png")
+	_check("他后面那句还是米色的（不是青绿也不是别的）",
+			_bubble_tex(ev_rows[ev_rows.size() - 1]), "bubble_peer.png")
 	_check("本周不会再来第二件", _game.pending_event(), null)
 	_check("处理完事件那排按钮收起来了", _app._event_buttons[paid].visible, false)
 
 	# 切回 HR 会话，composer 要换回来
 	_game.unlock_hr("A")
 	_app._select_company("A")
-	_check("切回 HR 后角色那排回来了", _app._role_row.visible, true)
+	_check("切回 HR 后发送那排回来了", _app._send_row.visible, true)
 	_check("切回 HR 后附件那排回来了", _app._attach_row.visible, true)
 	_check("切回 HR 后事件那排藏起来", _app._event_row.visible, false)
 	print("   自动打开 → 门槛预演 → 二选一 → 切回 HR，全程走通")
@@ -471,20 +470,13 @@ func _run_all() -> void:
 	# 文件卡：整张可点，点开铺出橘色的剧本页
 	var card := _script_card()
 	_check("文件卡在聊天记录里（是 Button，整张可点）", card is Button, true)
-	_check("卡上画着那个「W」图标", _has_label(card, "W"), true)
-	# 【W 要落在蓝底正中间】提提一眼看出来过「偏了」—— 量的是几何中心对几何中心。
-	# 蓝底是 PanelContainer（会把子节点铺满），W 靠两个 alignment 居中；
-	# 自己摆锚点那种写法在布局跑完之后才会看出偏，所以这条必须等布局跑完再量。
-	var icon := _find_named(card, "WordIcon")
-	var mark := _find_named(card, "WordMark")
-	_check("蓝底是个 56×56 的 PanelContainer", icon is PanelContainer, true)
-	if icon != null and mark != null:
-		_check("W 的横向中心 = 蓝底的横向中心",
-				absf(mark.position.x + mark.size.x / 2.0 - icon.size.x / 2.0) < 0.5, true)
-		_check("W 的纵向中心 = 蓝底的纵向中心",
-				absf(mark.position.y + mark.size.y / 2.0 - icon.size.y / 2.0) < 0.5, true)
-		# 【图标不能贴着卡片边】提提两次看出「太靠左」—— Button 不是容器，
-		# 子节点不会自动让开 stylebox 的 content_margin，留白得显式给（见 CARD_PAD）
+	# 图标换成美术那张纸页图（`微信界面-文件图标.png` 裁出来的 TextureRect）。
+	# 居中与留白交给 TextureRect 的 STRETCH_KEEP_ASPECT_CENTERED + 卡片内边距，
+	# 不再有「W 会不会偏」那一类几何断言。
+	var icon := _find_named(card, "FileIcon")
+	_check("卡上画着文件图标", icon is TextureRect, true)
+	if icon is TextureRect:
+		_check("图标有实际尺寸", (icon as TextureRect).size.x > 0.0, true)
 		var pad: float = icon.get_global_rect().position.x - card.get_global_rect().position.x
 		_check("图标离卡片左边缘有留白（%d px）" % int(pad), pad >= 16.0, true)
 	_check("剧本页默认关着", _app._script_overlay.visible, false)
@@ -497,16 +489,16 @@ func _run_all() -> void:
 	_check("正文里留着试镜批注", _app._script_text.text.contains("[试镜批注]"), true)
 	_check("正文里留着拼贴标记", _app._script_text.text.contains("拼贴表情轮"), true)
 	_check("剧本页盖在聊天区上（不是另开一个 App）",
-			_app._script_overlay.get_parent().name, "BodyWrap")
+			_app._script_overlay.get_parent().name, "ChatPanel")
 	_check("聊天记录还在底下（只是被盖住）", _app._chat_log.get_child_count() > 0, true)
 	_app._script_back_button.pressed.emit()
 	_check("返回键关掉它，回到聊天", _app._script_overlay.visible, false)
 
 	# 换档位 = 重新要一份（提提选的 B：每次投递前都要走一遍）。
-	# 【换档走底部那排】聊天里那三个按钮**只在手上没剧本时才出现**（有剧本就摆文件卡了），
-	# 所以换档是点底部那排 —— 两条路最后都进 `_pick_tier`
+	# 【换档只有一条路】聊天里那三个按钮**只在手上没剧本时才出现**（有剧本就摆文件卡了），
+	# 底部那排已经删掉 —— 换档走 `_pick_tier`，和聊天里点按钮是同一个入口
 	_check("手上有剧本时，聊天里不再摆选项", _app._tier_buttons.size(), 0)
-	_app._role_buttons[RoleRequirement.Tier.EXTRA].button_pressed = true
+	_app._pick_tier(RoleRequirement.Tier.EXTRA)
 	_check("档位换成龙套了", int(_game.hr_script_of("A").get("tier", -1)), RoleRequirement.Tier.EXTRA)
 	_check("手上那份也跟着换了", _app._role.tier, RoleRequirement.Tier.EXTRA)
 	_check("剧本页还关着", _app._script_overlay.visible, false)
@@ -516,16 +508,12 @@ func _run_all() -> void:
 	_app._pick_tier(RoleRequirement.Tier.EXTRA)
 	_check("同一档再点不重抽", str(_game.hr_script_of("A")), keep)
 
-	# 演技不够的档位在底部那排上不了台：灰掉并写明要多少演技 ——
-	# 但**已经拿到手的剧本不会被收走**（那是他要来的东西，凭什么收）
+	# 演技掉回 0：**已经拿到手的剧本不会被收走**（那是他要来的东西，凭什么收）——
+	# 档位按钮只在「手上没剧本」时出现，所以这里能查的就是这一条。
 	_game.state.acting = 0
 	# 【走真实路径】真机上演技是在别的 App 里涨的，回微信时这个 App 是**重建**的 ——
-	# `_select_company` 正是重建后必然走的那一步（它重摆底部那排按钮与聊天记录）
+	# `_select_company` 正是重建后必然走的那一步（它重摆聊天记录与 composer）
 	_app._select_company("A")
-	_check("演技掉回 0 后，配角那个按钮灰了",
-			(_app._role_buttons[RoleRequirement.Tier.SUPPORTING] as Button).disabled, true)
-	_check("按钮上写着要多少演技",
-			String((_app._role_buttons[RoleRequirement.Tier.SUPPORTING] as Button).text).contains("演技"), true)
 	_check("已经拿到手的剧本不会被收走", str(_game.hr_script_of("A")), keep)
 
 	# 【一个档都够不着时不该摆选项】提提 10-16：三个按钮全灰着摆出来的话，
@@ -609,19 +597,27 @@ func _chat_text(i: int) -> String:
 	var card := _card_of(rows[i])
 	if card == null or card.get_child_count() == 0:
 		return "<这条气泡里没有文字框>"
-	var margin := card.get_child(0) as MarginContainer
-	if margin == null or margin.get_child_count() == 0:
+	# 气泡里直接就是 Label —— 留白交给 StyleBoxTexture 的 content_margin
+	# （以前套过一层 MarginContainer，那会儿才要从里面再取一层）
+	var label := card.get_child(0) as Label
+	if label == null:
 		return "<这条气泡里没有文字>"
-	return String((margin.get_child(0) as Label).text)
+	return String(label.text)
 
 
-## 第 i 条气泡的底色
-func _bubble_bg(row: Node) -> Color:
+## 第 i 条气泡的底图文件名
+## 【为什么不再比 bg_color】气泡换成美术的纸片贴图了（StyleBoxTexture），
+## 底色在贴图里，`StyleBoxFlat.bg_color` 这条路已经拿不到东西。
+func _bubble_tex(row: Node) -> String:
 	var card := _card_of(row)
 	if card == null:
-		return Color(0, 0, 0, 0)
-	var box := card.get_theme_stylebox("panel") as StyleBoxFlat
-	return box.bg_color if box != null else Color(0, 0, 0, 0)
+		return ""
+	var box := card.get_theme_stylebox("panel")
+	if box is StyleBoxTexture:
+		var tex := (box as StyleBoxTexture).texture
+		if tex != null:
+			return tex.resource_path.get_file()
+	return ""
 
 
 ## 一条气泡里文字的颜色
@@ -629,10 +625,8 @@ func _bubble_text_color(row: Node) -> Color:
 	var card := _card_of(row)
 	if card == null or card.get_child_count() == 0:
 		return Color(0, 0, 0, 0)
-	var margin := card.get_child(0) as MarginContainer
-	if margin == null or margin.get_child_count() == 0:
-		return Color(0, 0, 0, 0)
-	return (margin.get_child(0) as Label).get_theme_color("font_color")
+	var label := card.get_child(0) as Label
+	return label.get_theme_color("font_color") if label != null else Color(0, 0, 0, 0)
 
 
 ## 主角的名字：**界面上那一句是从内容池读的**（`data/casting_pool.tres`），

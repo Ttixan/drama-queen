@@ -190,14 +190,6 @@ text = "左边挑一个 HR 开始私聊"
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="RequirementLabel" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/ChatHeader/HeaderMargin/HeaderBox"]
-custom_minimum_size = Vector2(260, 0)
-layout_mode = 2
-size_flags_vertical = 4
-text = "—"
-horizontal_alignment = 2
-vertical_alignment = 1
-
 [node name="ChatScroll" type="ScrollContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -221,20 +213,6 @@ theme_override_constants/margin_bottom = 16
 [node name="ComposerBox" type="VBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin"]
 layout_mode = 2
 theme_override_constants/separation = 12
-
-[node name="RoleRow" type="HBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="RoleCaption" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/RoleRow"]
-layout_mode = 2
-text = "投哪个角色"
-vertical_alignment = 1
-
-[node name="RoleButtons" type="HBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/RoleRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 10
 
 [node name="AttachRow" type="HBoxContainer" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox"]
 layout_mode = 2
@@ -260,10 +238,6 @@ layout_mode = 2
 text = "还没有表情包"
 autowrap_mode = 3
 
-[node name="AttachDetail" type="Label" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/AttachRow/AttachCard/AttachMargin/AttachBox"]
-layout_mode = 2
-text = "点右边「去录像机」拼一段 3 帧的"
-autowrap_mode = 3
 
 [node name="OpenRecorderButton" type="Button" parent="Page/BodyWrap/Body/ChatPanel/ChatMargin/ChatBox/Composer/ComposerMargin/ComposerBox/AttachRow"]
 custom_minimum_size = Vector2(220, 68)

@@ -47,10 +47,12 @@ func _run() -> void:
 		await _wait(1.6)
 		_save(vp, "res://tools/_shot_wechat_chat.png")
 
-		# 让这位 HR 发一份剧本，翻开那一页看贴图对不对
-		if game != null and app._current != null:
-			game.call("request_script", app._current, 0)
-			await _wait(0.4)
+		# 让这位 HR 发一份剧本：先等「他发剧本」那段打完字，文件卡才会落地
+		if app._current != null:
+			# 走界面自己的入口：它会要剧本 + 启动"打字"，文件卡打完才落地
+			app._pick_tier(0)
+			await _wait(4.5)
+			_save(vp, "res://tools/_shot_wechat_file.png")
 			app._open_script()
 			await _wait(0.5)
 			_save(vp, "res://tools/_shot_wechat_script.png")

@@ -21,6 +21,8 @@ signal finished
 const INTRO_PATH := "res://data/intro/intro.tres"
 const DIALOGUE_SCENE := preload("res://scenes/ui/dialogue_box.tscn")
 const FONT_CN := preload("res://assets/fonts/main_font.tres")
+## 演员登记表的纸面：`通用框3个.png` 里最上面那个米色框（裁出来的 503×111）
+const FRAME_BEIGE := preload("res://assets/ui/intro/frame_beige.png")
 
 ## 报纸纸面在 1920×1080 画布上的位置（模板实测：180,47 → 1733,1019）
 const PAPER_RECT := Rect2(180, 47, 1553, 972)
@@ -30,12 +32,13 @@ const LEFT_BLOCK := Rect2(249, 305, 575, 672)
 const RIGHT_PANEL := Rect2(874, 305, 740, 670)
 
 ## 名字卡：纸张浮在压暗的桌面上
-const CARD_RECT := Rect2(550, 285, 820, 510)
+## 登记表：删掉两行说明之后内容矮了一截，纸面跟着收到 430
+const CARD_RECT := Rect2(550, 325, 820, 430)
 const NAME_MAX_LEN := 6
 
 ## 「剧照」：录像机那套五官合成出来的相框卡片，压在报纸角上 / 摆在登记表两侧。
-## 位置按 1920×1080 绝对坐标摆 —— 报纸右下的 × 按钮（1622,915）必须留空，
-## 否则玩家会觉得按钮被照片挡住了（虽然照片不吃点击）。
+## 位置按 1920×1080 绝对坐标摆 —— 右下角要留给「继续」（1437,905 → 1697,979），
+## 照片不能压到它上面（虽然照片不吃点击，但视觉上会像被挡住）。
 const PHOTO_NEWS := [
 	{"path": "res://assets/ui/intro/card_smug.png",
 			"pos": Vector2(24, 100), "height": 262.0, "angle": -8.0, "delay": 0.55},
@@ -99,20 +102,6 @@ func _build_paper() -> void:
 	_label(_paper_text, data.edition, 22, UiPalette.PAGE_INK_SOFT,
 			Rect2(560, 76, 620, 44))
 
-	# 右上角的「广告」小标签：告诉玩家这不是新闻，是整版广告
-	var tag := PanelContainer.new()
-	tag.position = Vector2(1560, 60)
-	tag.size = Vector2(112, 42)
-	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var tag_style := UiPalette.panel(UiPalette.DANGER, 4)
-	tag_style.content_margin_left = 12
-	tag_style.content_margin_right = 12
-	tag_style.content_margin_top = 4
-	tag_style.content_margin_bottom = 4
-	tag.add_theme_stylebox_override("panel", tag_style)
-	_paper_text.add_child(tag)
-	_vlabel(tag, "广告", 20, UiPalette.PAPER, false, UiPalette.TITLE_FONT)
-
 	# 两条深色栏目条（模板里本来就是深灰，只往上压白字）
 	_label(_paper_text, "整版广告", 24, UiPalette.PAPER,
 			Rect2(270, 250, 520, 40), HORIZONTAL_ALIGNMENT_LEFT, false,
@@ -121,22 +110,26 @@ func _build_paper() -> void:
 			Rect2(895, 250, 700, 40), HORIZONTAL_ALIGNMENT_LEFT, false,
 			UiPalette.TITLE_FONT)
 
-	# 左栏主视觉
-	_label(_paper_text, data.title, 70, UiPalette.PAPER,
-			Rect2(285, 350, 510, 170), HORIZONTAL_ALIGNMENT_LEFT, true,
+	# 标题搬到右栏上方（左栏让给产品名与倒计时）。
+	# 右栏是米色纸面，字得用墨色 —— 原来是深灰块上的白字，直接搬过来会看不见。
+	# 【为什么是白字】右栏上方那一片在模板里是深灰的图片占位块，黑字压上去发灰
+	_label(_paper_text, data.title, 52, UiPalette.PAPER,
+			Rect2(890, 300, 712, 120), HORIZONTAL_ALIGNMENT_LEFT, true,
 			UiPalette.TITLE_FONT)
+
+	# 左栏主视觉：标题移走后整块上移，别让左栏上半截空着
 	var rule := ColorRect.new()
-	rule.position = Vector2(287, 540)
+	rule.position = Vector2(287, 470)
 	rule.size = Vector2(120, 8)
 	rule.color = UiPalette.ACCENT
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_paper_text.add_child(rule)
 
 	_label(_paper_text, data.product, 52, UiPalette.ACCENT,
-			Rect2(285, 570, 520, 80), HORIZONTAL_ALIGNMENT_LEFT, true,
+			Rect2(285, 500, 520, 80), HORIZONTAL_ALIGNMENT_LEFT, true,
 			UiPalette.TITLE_FONT)
 	var subtitle := _label(_paper_text, data.subtitle, 26, UiPalette.PAPER,
-			Rect2(285, 665, 500, 130), HORIZONTAL_ALIGNMENT_LEFT, true)
+			Rect2(285, 595, 500, 130), HORIZONTAL_ALIGNMENT_LEFT, true)
 	subtitle.add_theme_constant_override("line_spacing", 8)
 
 	# 倒计时：约定格式「距离发售：21天」——冒号前是标签、后是数字
@@ -151,10 +144,11 @@ func _build_paper() -> void:
 		_label(_paper_text, data.countdown, 44, UiPalette.DANGER,
 				Rect2(287, 860, 500, 90))
 
-	# 右栏正文：模板的分栏线在下面，正文块压上去之后仍然露着纸边和栏线
+	# 右栏正文：标题占了上面一截，正文块跟着下移并收短
+	# （收太多会把 footer 挤到面板外面 —— 正文没有滚动，面板高度就是内容的容器）
 	var panel := PanelContainer.new()
-	panel.position = RIGHT_PANEL.position
-	panel.size = RIGHT_PANEL.size
+	panel.position = Vector2(RIGHT_PANEL.position.x, RIGHT_PANEL.position.y + 127)
+	panel.size = Vector2(RIGHT_PANEL.size.x, RIGHT_PANEL.size.y - 127)
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_theme_stylebox_override("panel",
 			UiPalette.panel(Color(0.957, 0.945, 0.91, 0.96), 4, 2, UiPalette.INK))
@@ -177,30 +171,34 @@ func _build_paper() -> void:
 
 	var body := _vlabel(box, data.body, 22, UiPalette.INK, true)
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("line_spacing", 10)
+	# 行距从 10 收到 6：标题占了上面一截，正文面板只剩 543 高，
+	# 原来的行距会把 footer 顶到面板外面（面板不会裁剪，字就露在纸上了）
+	body.add_theme_constant_override("line_spacing", 6)
 
 	_vlabel(box, data.footer, 17, UiPalette.PAGE_INK_FAINT, false)
 
-	# 关掉广告：**等整页淡入之后才出现**（见 `_on_fade_in_done`）
+	# 「继续」：**等整页淡入之后才出现**（见 `_on_fade_in_done`）
+	# 【为什么不再是右下角那个 ×】这页是广告，但玩家要做的是「往下走」——
+	# × 读起来像「关掉、别看」，一个「继续」才是「看完了，开始」。
 	_close_button = Button.new()
-	_close_button.text = "×"
+	_close_button.text = "继续"
 	_close_button.visible = false
 	_close_button.focus_mode = Control.FOCUS_NONE
 	_close_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	_close_button.position = Vector2(1622, 915)
-	_close_button.size = Vector2(82, 82)
+	_close_button.position = Vector2(1437, 905)
+	_close_button.size = Vector2(260, 74)
 	_close_button.pivot_offset = _close_button.size * 0.5
-	_close_button.add_theme_font_override("font", FONT_CN)
-	_close_button.add_theme_font_size_override("font_size", 42)
-	_close_button.add_theme_color_override("font_color", UiPalette.PAPER)
-	_close_button.add_theme_color_override("font_hover_color", UiPalette.PAPER)
-	_close_button.add_theme_color_override("font_pressed_color", UiPalette.PAPER)
+	_close_button.add_theme_font_override("font", UiPalette.TITLE_FONT)
+	_close_button.add_theme_font_size_override("font_size", 32)
+	_close_button.add_theme_color_override("font_color", UiPalette.INK)
+	_close_button.add_theme_color_override("font_hover_color", UiPalette.INK)
+	_close_button.add_theme_color_override("font_pressed_color", UiPalette.INK)
 	_close_button.add_theme_stylebox_override("normal",
-			UiPalette.button(UiPalette.DANGER, UiPalette.INK, 2, 41))
+			UiPalette.button(UiPalette.ACCENT, UiPalette.INK, 2, 8))
 	_close_button.add_theme_stylebox_override("hover",
-			UiPalette.button(Color("f26468"), UiPalette.INK, 2, 41))
+			UiPalette.button(Color("ffe071"), UiPalette.INK, 2, 8))
 	_close_button.add_theme_stylebox_override("pressed",
-			UiPalette.button(Color("c23a3f"), UiPalette.INK, 2, 41))
+			UiPalette.button(Color("e6bd35"), UiPalette.INK, 3, 8))
 	_close_button.pressed.connect(_on_close_ad)
 	_paper_layer.add_child(_close_button)
 
@@ -266,14 +264,32 @@ func _build_name_layer() -> void:
 	for spec: Dictionary in PHOTO_NAME:
 		_add_photo(_name_layer, spec)
 
+	# 投影：贴图自带手绘描边但没有阴影，直接压在暗桌面上会显得「浮不起来」。
+	# 单独垫一层板子做硬阴影，比给 StyleBoxTexture 找 shadow 省事（它没有这个属性）。
+	var shadow := Panel.new()
+	shadow.position = CARD_RECT.position + Vector2(9, 12)
+	shadow.size = CARD_RECT.size
+	shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var shadow_style := StyleBoxFlat.new()
+	shadow_style.bg_color = Color(0, 0, 0, 0.38)
+	shadow_style.corner_radius_top_left = 10
+	shadow_style.corner_radius_top_right = 10
+	shadow_style.corner_radius_bottom_left = 10
+	shadow_style.corner_radius_bottom_right = 10
+	shadow.add_theme_stylebox_override("panel", shadow_style)
+	_name_layer.add_child(shadow)
+
 	var card := PanelContainer.new()
 	card.position = CARD_RECT.position
 	card.size = CARD_RECT.size
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
-	var card_style := UiPalette.panel(UiPalette.PAPER, 6, 3, UiPalette.INK)
-	card_style.shadow_color = Color(0, 0, 0, 0.6)
-	card_style.shadow_size = 18
-	card_style.shadow_offset = Vector2(0, 8)
+	# 底图换成美术给的米色通用框：九宫格只拉中间，两端的圆角和手绘描边原地不动
+	var card_style := StyleBoxTexture.new()
+	card_style.texture = FRAME_BEIGE
+	card_style.texture_margin_left = 40
+	card_style.texture_margin_right = 40
+	card_style.texture_margin_top = 26
+	card_style.texture_margin_bottom = 26
 	card.add_theme_stylebox_override("panel", card_style)
 	_name_layer.add_child(card)
 
@@ -289,16 +305,12 @@ func _build_name_layer() -> void:
 	margin.add_child(box)
 
 	_vlabel(box, "演员登记表", 42, UiPalette.INK, false, UiPalette.TITLE_FONT)
-	_vlabel(box, "签下名字，明天开机。", 20, UiPalette.PAGE_INK_SOFT, false)
 
 	var rule := ColorRect.new()
 	rule.custom_minimum_size = Vector2(0, 3)
 	rule.color = Color(UiPalette.INK, 0.75)
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(rule)
-
-	_vlabel(box, "%d 个字以内，首尾空格会去掉。" % NAME_MAX_LEN,
-			17, UiPalette.PAGE_INK_FAINT, false)
 
 	_name_edit = LineEdit.new()
 	_name_edit.placeholder_text = "你的名字"
@@ -320,6 +332,11 @@ func _build_name_layer() -> void:
 	box.add_child(_name_edit)
 
 	_name_hint = _vlabel(box, "", 17, UiPalette.PAGE_INK_FAINT, false)
+
+	# 输入框和按钮之间撑开，让「开工」贴着纸的下沿（表单上方紧凑、下方不空）
+	var lead := Control.new()
+	lead.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(lead)
 
 	_confirm_button = Button.new()
 	_confirm_button.text = "开工"

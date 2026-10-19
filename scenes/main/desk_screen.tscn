@@ -73,7 +73,7 @@ script = ExtResource("3_hot")
 active_texture = ExtResource("5_phone")
 label = "手机"
 hint = "查看消息和投递试镜"
-hint_rect = Rect2(680, 170, 940, 270)
+hint_rect = Rect2(640, 170, 610, 270)
 hint_font_size = 44
 target_scene = ExtResource("7_shell")
 

@@ -15,16 +15,19 @@ extends Control
 
 ## 字重走标题那支（Bold）：贴纸是手绘风，正文的 Light 压在纸纹上会糊
 const FONT := preload("res://assets/fonts/title_font.tres")
-## 红笔色：素材里四个图标都是黑描边 + 高饱和填充，数字用红字才读得出
-const INK := Color("cf3f2c")
+## 数字用黑色：贴纸是浅米底，红字在缩到 1080p 以下时偏粉、和图标里的橙红撞色；
+## 黑字和图标那圈手绘黑描边是同一支笔，反而更像「写上去的」
+const INK := Color("141414")
 
 ## 顶部绿色胶带区
 const DAY_RECT := Rect2(22, 4, 500, 48)
-## 上排：左闪电 / 右金币；下排：左面具 / 右星星
-const AP_RECT := Rect2(112, 80, 148, 60)
-const MONEY_RECT := Rect2(352, 80, 176, 60)
-const ACTING_RECT := Rect2(112, 178, 148, 60)
-const FAME_RECT := Rect2(352, 178, 176, 60)
+## 2×2 网格：四个数字的**垂直中心**要落在图标的中心线上。
+## 图标中心实测：上排 y≈104（闪电 82~126、金币 82~126），下排 y≈205
+## （面具 179~232、星星 188~232）。左格 0~276、右格 276~599。
+const AP_RECT := Rect2(94, 74, 140, 60)
+const MONEY_RECT := Rect2(360, 74, 170, 60)
+const ACTING_RECT := Rect2(94, 180, 140, 60)
+const FAME_RECT := Rect2(360, 180, 170, 60)
 
 const WEEKDAYS := ["一", "二", "三", "四", "五", "六", "日"]
 

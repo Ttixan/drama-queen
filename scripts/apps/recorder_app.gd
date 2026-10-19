@@ -101,20 +101,22 @@ const P_BOTTOM := "Page/BottomBar/BottomMargin/BottomRow"
 const P_TOP := "Page/TopBar"
 const P_STATS := P_TOP + "/Stats"
 
-## 顶栏四个状态图标的中心位置 —— **按条子宽度的比例**给，与美术稿一致
-## （43.4% / 57.9% / 71.6% / 87.2%）。条子走九宫格横向拉伸，写死像素换个宿主宽度就错位。
+## 顶栏四个状态图标的中心位置 —— **按条子宽度的比例**给。
+## 新美术稿把图标**画进条子里**了（旧稿是空条 + 四张独立的图标贴图），
+## 这里量的是 1917×107 原图上四个图标的中心：828 / 1089 / 1347 / 1603。
 ## 顺序 = 闪电 / 面具 / 星星 / 金币，含义照主界面便利贴：行动点 / 演技 / 知名度 / 金钱。
-const STAT_ANCHORS := [0.434, 0.579, 0.716, 0.872]
-## 图标高度：条子原高 107，顶栏 96 —— 同比例缩到 68，四个图标都不变形
-const STAT_ICON_H := 68.0
+## 条子走九宫格横向拉伸，写死像素换个宿主宽度就错位，所以只存比例。
+const STAT_ANCHORS := [0.432, 0.568, 0.703, 0.836]
+## 数字起点离图标中心多远：图标半宽 ≈27 + 间隙 12
+const STAT_VALUE_OFFSET := 39.0
 const STAT_VALUE_SIZE := 28
-## 数字与图标之间的空隙。图标本身的底就是条子的灰，叠回去看不出边界
-const STAT_GAP := 10.0
 ## 标题左边距：返回按钮的右沿（12 + 237）之后再留一段
 const TITLE_X := 272.0
 
 @onready var _back_button: TextureButton = get_node(P_TOP + "/BackButton")
 @onready var _title: Label = get_node(P_TOP + "/Title")
+## 顶栏里的 Stats 容器（高度 = 顶栏高，数字的垂直居中按它算）
+@onready var _stats_box: Control = get_node(P_STATS)
 @onready var _stat_icons: Array[TextureRect] = [
 	get_node(P_STATS + "/IconAP"),
 	get_node(P_STATS + "/IconActing"),
@@ -496,29 +498,24 @@ func _on_confirm_pressed() -> void:
 # 顶栏状态（四项数值 + 图标布局）
 # ============================================================
 
-## 图标按**条子宽度的比例**定位，数字紧贴图标右侧。
+## 数字按**条子宽度的比例**定位到各自图标的右侧。
 ## 每次 resized 都重算 —— 录像机既能整屏跑，也会被塞进手机右栏（≈1372 宽）。
+##
+## 【图标为什么不再参与布局】新稿把四个图标画进条子里了，四张 `stat_*.png`
+## 只留着不显示（见 `_apply_styles`）—— 再叠一层会和画上去的图标错开成重影。
 func _layout_stats() -> void:
 	var w := size.x
-	var h := size.y
+	# 【高度必须取顶栏、不是整个 App】原来写的是 `size.y`（1920×1080 里的 1080），
+	# 数字于是垂直居中到屏幕中间去了 —— 顶栏上只剩图标，数字被下面板子盖住。
+	var h := _stats_box.size.y
 	if w <= 1.0 or h <= 1.0:
 		return
 
-	for i in _stat_icons.size():
-		var icon := _stat_icons[i]
-		var tex := icon.texture
-		if tex == null:
-			continue
-		# 高度定死、宽度按原图比例 —— 图标不跟着条子的横向拉伸变形
-		var iw := STAT_ICON_H * tex.get_width() / tex.get_height()
+	for i in _stat_values.size():
 		var cx: float = STAT_ANCHORS[i] * w
-		icon.size = Vector2(iw, STAT_ICON_H)
-		icon.position = Vector2(cx - iw * 0.5, (h - STAT_ICON_H) * 0.5)
-
 		var value := _stat_values[i]
-		var vx := cx + iw * 0.5 + STAT_GAP
-		value.position = Vector2(vx, 0.0)
-		value.size = Vector2(maxf(80.0, w - vx), h)
+		value.position = Vector2(cx + STAT_VALUE_OFFSET, 0.0)
+		value.size = Vector2(maxf(90.0, w - cx), h)
 		value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 
@@ -852,6 +849,9 @@ func _apply_styles() -> void:
 	UiPalette.title(_title, 34, C_INK)
 	for value in _stat_values:
 		UiPalette.title(value, STAT_VALUE_SIZE, C_INK)
+	# 四个图标已经画在条子里了，这四张贴图全部收起 —— 留着会和画上去的重影
+	for icon in _stat_icons:
+		icon.visible = false
 
 	# 帧号 + 帧序列：底栏第三行，比「还没拼完」淡一档，不抢主提示
 	_txt(_frame_info, 15, UiPalette.TEXT_ON_PAPER_DIM)

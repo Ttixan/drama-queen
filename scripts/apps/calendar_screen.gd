@@ -673,6 +673,13 @@ func _on_end_day_pressed() -> void:
 		if not reports.is_empty():
 			_open_report(reports[reports.size() - 1])
 		return
+	# 过一天的过渡：先去压暗（`cover()` 只起 tween、不等），再同步推进 ——
+	# `end_day()` 必须同步，一堆调用方按下按钮后立刻断言新状态。
+	# 没有过渡层时（直接实例化日历页的测试）就静默跳过。
+	var layer := get_tree().get_first_node_in_group("day_transition")
+	if layer != null:
+		layer.call("cover")
+
 	var res := Game.end_day()
 	if res.get("settled", false):
 		# 先刷新再开浮层 —— 否则浮层底下那行数字还停在结算前，
@@ -684,6 +691,10 @@ func _on_end_day_pressed() -> void:
 		# 试镜成功后按「下一天」：牌在推进时已经排好，这里直接翻。
 		# 周末那一支不用管 —— 报纸先弹，关掉报纸时 `_close_report()` 会再问一次。
 		_maybe_open_reward()
+
+	# 黑幕里打字「第 X 天」，打完自己淡出。周报/翻牌都在它底下，先让玩家看见日期
+	if layer != null:
+		layer.call("announce", Game.day())
 
 
 ## 桌面点下去被核心层拒绝时，把原因显示出来。

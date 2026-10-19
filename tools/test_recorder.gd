@@ -51,7 +51,9 @@ func _run_all() -> void:
 	_check("确认按钮置灰", _app._confirm_button.disabled, true)
 	_check("空帧标签 = 平静（历史 bug 回归）", _app._clip.frame_label(0), "平静")
 	_check("界面上的情绪标签也是平静", _app._emotion_value.text, "平静")
-	_check("帧序列初始为三连平静", _app._sequence_label.text, "帧序列：平静 → 平静 → 平静")
+	# 帧序列早就从顶栏搬到 `FrameInfo` 了（顶栏整条让给状态图标）——
+	# 旧断言还在读 `_sequence_label`，属性不存在会中断 _run_all，进程就挂在那里
+	_check("帧序列初始为三连平静", _app._frame_info.text, "帧 1 / 3 · 平静 → 平静 → 平静")
 	_check("部件明细为空", _app._emotion_parts.text, "—")
 
 	print("")

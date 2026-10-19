@@ -38,6 +38,16 @@ func _run() -> void:
 		game.call("end_day")
 	await _wait(0.4)
 	_save(vp, "res://tools/_shot_desk_after.png")
+
+	# 把手机的悬浮提示点亮，确认它不再压到右上角那张便利贴
+	var phone: Node = desk.get_node_or_null("Hotspots/HotspotPhone")
+	var phone_hint: Label = phone.get("_hint_label") if phone != null else null
+	if phone_hint != null:
+		phone_hint.visible = true
+		if phone.get("active_texture") != null:
+			desk.get_node("Bg").texture = phone.get("active_texture")
+		await _wait(0.3)
+		_save(vp, "res://tools/_shot_desk_hint.png")
 	quit(0)
 
 

@@ -106,16 +106,12 @@ const TIER_COLORS := UiPalette.COMPANY_TIER_COLORS
 @onready var _contacts_hint: Label = get_node(P_CONTACTS + "/ContactsHint")
 @onready var _peer_name: Label = get_node(P_HEADER + "/PeerBox/PeerName")
 @onready var _peer_meta: Label = get_node(P_HEADER + "/PeerBox/PeerMeta")
-@onready var _requirement_label: Label = get_node(P_HEADER + "/RequirementLabel")
 @onready var _chat_scroll: ScrollContainer = get_node(P_CHAT + "/ChatScroll")
 @onready var _chat_log: VBoxContainer = get_node(P_CHAT + "/ChatScroll/ChatLog")
-@onready var _role_row: Control = get_node(P_COMPOSER + "/RoleRow")
 @onready var _attach_row: Control = get_node(P_COMPOSER + "/AttachRow")
 @onready var _send_row: Control = get_node(P_COMPOSER + "/SendRow")
-@onready var _role_buttons_row: HBoxContainer = get_node(P_COMPOSER + "/RoleRow/RoleButtons")
 @onready var _attach_card: PanelContainer = get_node(P_COMPOSER + "/AttachRow/AttachCard")
 @onready var _attach_title: Label = get_node(P_COMPOSER + "/AttachRow/AttachCard/AttachMargin/AttachBox/AttachTitle")
-@onready var _attach_detail: Label = get_node(P_COMPOSER + "/AttachRow/AttachCard/AttachMargin/AttachBox/AttachDetail")
 @onready var _go_boss_button: Button = get_node(P_CONTACTS + "/GoBossButton")
 @onready var _open_recorder_button: Button = get_node(P_COMPOSER + "/AttachRow/OpenRecorderButton")
 @onready var _status_line: Label = get_node(P_COMPOSER + "/SendRow/StatusLine")
@@ -135,7 +131,6 @@ var _role: RoleRequirement
 var _pending: Clip
 var _rows: Dictionary = {}            ## code -> Button
 var _row_labels: Dictionary = {}      ## code -> {name, state}
-var _role_buttons: Dictionary = {}    ## tier -> Button
 ## 聊天记录里那三个「试镜哪档」按钮（脚本建的，每次重建聊天都重来一遍）。
 ## 留着引用是为了测试能直接按 —— 与 `_event_buttons` 同一个道理。
 var _tier_buttons: Array[Button] = []
@@ -379,10 +374,6 @@ func _select_event_speaker(speaker: StringName) -> void:
 	for c: String in _rows:
 		(_rows[c] as Button).button_pressed = false
 	_syncing = false
-	# 角色档位那一排是 HR 专用的，切到事件会话要清掉
-	for child in _role_buttons_row.get_children():
-		child.queue_free()
-	_role_buttons.clear()
 	_refresh_all()
 	_rebuild_chat()
 	_scroll_chat_to_bottom()
@@ -630,39 +621,12 @@ func _select_company(code: String) -> void:
 # 角色档位
 # ============================================================
 func _build_role_buttons() -> void:
-	for child in _role_buttons_row.get_children():
-		child.queue_free()
-	_role_buttons.clear()
+	# 【底部那排档位按钮已经去掉】档位只有聊天里那三个「试镜哪档」可选
+	# （见 `_add_tier_buttons`）—— 两处都能改档位，就会出现「按钮选着配角、
+	# 手上却是主角的剧本」。这里只剩一件事：给 composer 落一个默认档位，
+	# 免得发送时 `_role` 是空。
 	if _current == null:
 		return
-
-	var group := ButtonGroup.new()
-	for role: RoleRequirement in _current.roles:
-		var b := Button.new()
-		b.name = "Role_%d" % role.tier
-		b.toggle_mode = true
-		b.focus_mode = Control.FOCUS_NONE
-		b.button_group = group
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 62)
-		b.text = "%s\n演技 %d ｜ 匹配 %.0f%%" % [
-			role.tier_name(), _required_acting(role), role.match_line * 100.0]
-		b.add_theme_font_size_override("font_size", 16)
-		b.add_theme_stylebox_override("normal",
-				UiPalette.button(W_SOFT, W_LINE, 2, 12, 0, 8))
-		b.add_theme_stylebox_override("hover",
-				UiPalette.button(Color("fff6ec"), UiPalette.WECHAT, 2, 12, 0, 8))
-		b.add_theme_stylebox_override("pressed",
-				UiPalette.button(UiPalette.WECHAT, UiPalette.WECHAT, 2, 12, 3, 8))
-		b.add_theme_stylebox_override("disabled",
-				UiPalette.button(Color("ececec"), W_LINE, 1, 12, 0, 8))
-		b.add_theme_color_override("font_color", W_DIM)
-		b.add_theme_color_override("font_pressed_color", UiPalette.INK)
-		b.add_theme_color_override("font_disabled_color", Color("9a9a9a"))
-		b.toggled.connect(_on_role_toggled.bind(role.tier))
-		_role_buttons_row.add_child(b)
-		_role_buttons[role.tier] = b
-
 	_auto_pick_role()
 
 
@@ -687,38 +651,16 @@ func _any_role_ok() -> bool:
 	return false
 
 
-## 底部那排档位按钮。**和聊天里那三个按钮是同一件事**：
-## 点一个档位 = 跟 HR 要一份这一档的剧本（见 `_pick_tier`）——
-## 分成两条路的话，会出现「按钮选着配角、手上却是主角的剧本」。
-func _on_role_toggled(on: bool, tier: int) -> void:
-	if _syncing or not on or _current == null:
-		return
-	_role = _current.role_of(tier)
-	# 已经拿着这一档的剧本时 `_pick_tier` 不重抽，这时才需要自己刷一遍 composer
-	if not _pick_tier(tier):
-		_refresh_composer()
-
-
-## 没选过 / 选的那个现在不够格 → 自动落在第一个够格的档位上。
-## 【为什么要自动落】行动点只有 21 个，让玩家先选一个投出去一定不过的档位
-## 是在骗他浪费一天。够格才给选，并且在按钮上写明要求。
+## 档位永远跟着**手上那份剧本**走（没剧本就空着，发送前会被 `_block_reason` 拦下）。
+## 以前这里还要同步底部那排按钮的状态，那排删掉之后只剩这一件事。
 func _auto_pick_role() -> void:
 	if _current == null or _current.roles.is_empty():
 		return
-	# 【没剧本时不预选】档位是**手上那份剧本**定的。还没要到剧本就先空着 ——
-	# 预选一个的话，玩家会以为「已经选好了、可以发了」，而这一排按钮还是摁下去的
-	# （已按下的按钮再点一次不发信号），于是永远走不到「要剧本」那一步。
 	var wanted := _script_role()
 	if wanted != null:
 		_role = wanted
 	elif _role != null and not _acting_ok(_role):
 		_role = null
-	_syncing = true
-	for tier: int in _role_buttons:
-		var b: Button = _role_buttons[tier]
-		b.disabled = not _acting_ok(_current.role_of(tier))
-		b.button_pressed = (_role != null and tier == _role.tier)
-	_syncing = false
 
 
 # ============================================================
@@ -785,7 +727,6 @@ func _refresh_header() -> void:
 	if _current == null:
 		_peer_name.text = "还没选联系人"
 		_peer_meta.text = "左边挑一个 HR 开始私聊"
-		_requirement_label.text = "—"
 		return
 	var unlocked := Game.is_hr_unlocked(_current.code)
 	_peer_name.text = "%s（%s）" % [_current.hr_name, _current.display_name]
@@ -795,11 +736,6 @@ func _refresh_header() -> void:
 		_peer_meta.text = "正在输入…"
 	else:
 		_peer_meta.text = "%s · %s" % [_current.hr_title, "已私聊" if unlocked else "还没解锁"]
-	var lines: Array[String] = []
-	lines.append("演技门槛 %d" % _current.acting_threshold)
-	for role: RoleRequirement in _current.roles:
-		lines.append("%s %.0f%%" % [role.tier_name(), role.match_line * 100.0])
-	_requirement_label.text = "\n".join(lines)
 
 
 ## 发不出去的原因，按优先级给一条。空串 = 可以发。
@@ -839,7 +775,6 @@ func _refresh_composer() -> void:
 	# 事件那套是「二选一」。两者没有共用部件，硬塞进一套就得在每处判分支，
 	# 所以按会话类型直接显隐。
 	var in_event := _is_event_chat()
-	_role_row.visible = not in_event
 	_attach_row.visible = not in_event
 	_send_row.visible = not in_event
 	_event_row.visible = in_event
@@ -862,11 +797,9 @@ func _refresh_hr_composer() -> void:
 	if _pending == null:
 		_attach_title.text = "还没有表情包"
 		_attach_title.add_theme_color_override("font_color", W_DIM)
-		_attach_detail.text = "点右边「去录像机」拼一段 3 帧的 —— 每投一次都要重新拼"
 	else:
 		_attach_title.text = "待投递：%s" % " → ".join(_pending.all_labels())
 		_attach_title.add_theme_color_override("font_color", W_INK)
-		_attach_detail.text = _pending.summarize()
 	_attach_card.add_theme_stylebox_override("panel",
 			UiPalette.panel(W_SOFT, 14, 2,
 					UiPalette.WECHAT if _pending != null else W_LINE))
@@ -876,10 +809,10 @@ func _refresh_hr_composer() -> void:
 	if reason.is_empty():
 		_status_line.text = "可以发了 —— 消耗 %d 点行动点，本周还剩 %d 次" % [
 			_current.ap_cost, Game.submissions_left_this_week()]
-		_status_line.add_theme_color_override("font_color", UiPalette.POSITIVE)
+		_status_line.add_theme_color_override("font_color", UiPalette.POSITIVE.darkened(0.25))
 	else:
 		_status_line.text = reason
-		_status_line.add_theme_color_override("font_color", UiPalette.ACCENT)
+		_status_line.add_theme_color_override("font_color", UiPalette.ACCENT.darkened(0.35))
 
 
 # ============================================================
@@ -940,14 +873,10 @@ func _build_event_composer() -> void:
 func _refresh_event_header() -> void:
 	_peer_name.text = _speaker_name(_event_speaker)
 	_peer_meta.text = "找你有点事"
-	var ev := Game.pending_event_for(_event_speaker)
-	if ev == null:
-		_requirement_label.text = "这条已经过去了"
-		return
-	var lines: Array[String] = []
-	for o: EventOption in ev.options:
-		lines.append("%s：%s" % [o.label, o.describe()])
-	_requirement_label.text = "\n".join(lines)
+	# 选项的代价与收益不再堆在头部（那块 `RequirementLabel` 已删）——
+	# 它们本来就写在每个选项按钮自己的文案里（见 `_refresh_event_composer`）。
+	if Game.pending_event_for(_event_speaker) == null:
+		_peer_meta.text = "这条已经过去了"
 
 
 func _refresh_event_composer() -> void:
@@ -979,10 +908,10 @@ func _refresh_event_composer() -> void:
 			blocked.append("%s：%s" % [o.label, reason])
 	if blocked.is_empty():
 		_event_status.text = "选一个 —— 今天还剩 %d 点行动点" % Game.ap_left()
-		_event_status.add_theme_color_override("font_color", UiPalette.POSITIVE)
+		_event_status.add_theme_color_override("font_color", UiPalette.POSITIVE.darkened(0.25))
 	else:
 		_event_status.text = "；".join(blocked)
-		_event_status.add_theme_color_override("font_color", UiPalette.ACCENT)
+		_event_status.add_theme_color_override("font_color", UiPalette.ACCENT.darkened(0.35))
 
 
 ## 在微信里回了一句。规则全在 `DailyActions.resolve_event`，
@@ -1032,11 +961,6 @@ func _rebuild_chat() -> void:
 	# 所以不用往存档里多存一份 —— 每次重建都对得上。
 	_add_bubble("我是%s的%s" % [_current.display_name, _current.hr_name], false)
 	_add_bubble("我是%s" % _player_name(), true)
-
-	# 口味线索：隐藏公式下的学习通道。**正本在 Boss直聘 的招聘页上**
-	# （进过那页才解锁了这家 HR，所以这里不会提前泄底）；
-	# 这里复述一条是**便利**，不是新增信息 —— 拼表情包时不用来回切 App。
-	_add_note("这家的偏好：" + _current.hint)
 
 	# 【正在打字的是哪一条】`mail` 用下标藏履历里的那封回信；`script` 藏「他发剧本」那一段。
 	# 下标是**整份履历**的下标，所以下面要对全部履历计数，不能只数本公司的。
@@ -1216,15 +1140,17 @@ func _bubble_style(mine: bool) -> StyleBoxTexture:
 	# 【215 是怎么来的】贴图里那条点阵装饰横跨左（右）侧约 200px。九宫格只认
 	# 四条边距，把点阵留进可拉伸的中间区，它会被拉成一串长条（第一版就踩了）。
 	# 所以把「尾巴 + 点阵」整块当边格钉死，气泡变宽时只拉伸空白那一段。
+	# 文字这边只留一点点：点阵是**底图装饰**，让字压上去没关系（提提定的），
+	# 留 222 时正文被推到气泡右半，短句子看着像「右边空了一大块」
 	if mine:
 		sb.texture_margin_left = 34
 		sb.texture_margin_right = 215
 		sb.content_margin_left = 36
-		sb.content_margin_right = 222
+		sb.content_margin_right = 44
 	else:
 		sb.texture_margin_left = 215
 		sb.texture_margin_right = 34
-		sb.content_margin_left = 222
+		sb.content_margin_left = 44
 		sb.content_margin_right = 36
 	sb.content_margin_top = 14
 	sb.content_margin_bottom = 14
@@ -1568,7 +1494,13 @@ func _add_file_card(doc: ScriptDoc) -> void:
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(_bubble_avatar(false))
-	row.add_child(_file_card(doc))
+	# 【卡片要缩进 20】气泡的 rect 里包着一条尾巴，主体（那条圆角框）比 rect 左缘
+	# 靠右约 20px。卡片不缩进就会比所有气泡「凸出去一块」，看着像没对齐。
+	var pad := MarginContainer.new()
+	pad.add_theme_constant_override("margin_left", 20)
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pad.add_child(_file_card(doc))
+	row.add_child(pad)
 	row.add_child(spacer)
 	_chat_log.add_child(row)
 
@@ -1777,9 +1709,6 @@ func _on_state_reset() -> void:
 	_role = null
 	_event_speaker = &""
 	_close_script()
-	for child in _role_buttons_row.get_children():
-		child.queue_free()
-	_role_buttons.clear()
 	_syncing = true
 	for c: String in _rows:
 		(_rows[c] as Button).button_pressed = false
@@ -1833,11 +1762,7 @@ func _apply_styles() -> void:
 
 	UiPalette.text(_peer_name, 24, W_INK)
 	UiPalette.text(_peer_meta, 15, W_DIM)
-	UiPalette.text(_requirement_label, 16, W_GREEN)
-
-	UiPalette.text(get_node(P_COMPOSER + "/RoleRow/RoleCaption"), 16, W_DIM)
 	UiPalette.text(_attach_title, 20, W_INK)
-	UiPalette.text(_attach_detail, 15, W_DIM)
 	UiPalette.text(_status_line, 16, W_GREEN)
 
 	_style_action(_back_button, W_SOFT, W_INK, W_LINE, 20)
