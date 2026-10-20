@@ -68,8 +68,12 @@ const TEX_PAPER := "res://assets/parts/face_paper.png"
 const TEX_BASE := "res://assets/parts/face_base.png"
 
 ## 顶栏两个通用框：青绿（标题「录像机」）/ 米色（本帧得分）
+## 【米色为什么另有一张】`intro/frame_beige.png` 是「开口标签」——右端只有角笔画、
+## 没有竖边；单独一块顶栏框立在那儿右边就少一截。这张是从美术给的
+## `.document/second/通用框3个.png` 里裁下来的**四边闭合**版本，只给顶栏用。
 const TEX_FRAME_TEAL := preload("res://assets/ui/frame_teal.png")
 const TEX_FRAME_BEIGE := preload("res://assets/ui/intro/frame_beige.png")
+const TEX_STAT_FRAME := preload("res://assets/ui/recorder/stat_frame_beige.png")
 
 
 ## 页签键的边长，以及图标在键里的最大显示尺寸。
@@ -749,16 +753,17 @@ func _build_top_panels() -> void:
 	_stat_frame.size = Vector2(1398, 80)
 	_stat_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stat_frame.add_theme_stylebox_override("panel",
-			_closed_frame_style(TEX_FRAME_BEIGE, 40, 26))
+			_frame_style(TEX_STAT_FRAME, 40, 26))
 	top.add_child(_stat_frame)
 
 	# 「本帧得分 / 本场需求」小标题：加载剧本后文案会换成「本场需求」
 	_score_caption = _top_label(_stat_frame, "本帧得分", 18, C_TEXT_DIM,
 			Vector2(28, 0), Vector2(110, 80))
 	# 三个槽：没加载剧本时只用到前两个；剧本一场最多并列三条复合情绪（男主场景 2/3/4）
+	# 槽距 400：三槽占 150+800+380 = 1330，仍留在框内（嵌入时框宽约 1380）
 	for i in 3:
 		_score_labels.append(_top_label(_stat_frame, "—", 26, C_INK,
-				Vector2(150 + i * 420, 0), Vector2(400, 80)))
+				Vector2(150 + i * 400, 0), Vector2(380, 80)))
 
 	# 两块框是后加的，默认画在 Title 上面 —— 把标题提回最上层，否则「录像机」被框盖住
 	top.move_child(_title, top.get_child_count() - 1)
@@ -779,8 +784,9 @@ func _layout_top_panels() -> void:
 
 	var stat_x := x + _title_frame.size.x + 8.0
 	_stat_frame.position = Vector2(stat_x, 8)
-	# 右边贴 Body 的右边框（1920 - 20）—— 多给 4px 会凸出边框一条
-	_stat_frame.size = Vector2(1900.0 - stat_x, 80)
+	# 右缘离 Body 的右边框（1920 - 20）留 12px：手绘描边贴着页边会被外框
+	# 和屏幕边缘挤掉一截，看起来像框没画完
+	_stat_frame.size = Vector2(1888.0 - stat_x, 80)
 
 
 func _top_label(parent: Node, text: String, font_size: int, color: Color,
@@ -811,20 +817,6 @@ func _frame_style(tex: Texture2D, mx: float, my: float) -> StyleBoxTexture:
 	sb.content_margin_top = 0
 	sb.content_margin_bottom = 0
 	return sb
-
-
-## 同 _frame_style，但**右端拿左端镜像补上**。
-## 【为什么不是直接用素材】frame_beige.png 右端是「开口」的 —— 只画了上下两个
-## 角笔画、没有竖边（原图当标签纸用，右边故意留白接别的元素）。单独一块顶栏框
-## 立在那儿就显得右边少一截。补在运行时生成的纹理上，不脏共享素材。
-func _closed_frame_style(tex: Texture2D, mx: int, my: int) -> StyleBoxTexture:
-	var img := tex.get_image()
-	var w := img.get_width()
-	var h := img.get_height()
-	var left := img.get_region(Rect2i(0, 0, mx, h))
-	left.flip_x()
-	img.blit_rect(left, Rect2i(0, 0, mx, h), Vector2i(w - mx, 0))
-	return _frame_style(ImageTexture.create_from_image(img), mx, my)
 
 
 ## 本帧得分：把这一帧三件部件的**展示属性**（关键词表那 8 种情绪）加起来，
