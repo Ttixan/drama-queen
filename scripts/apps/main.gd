@@ -79,6 +79,35 @@ func _on_tutorial_finished() -> void:
 	_tutorial = null
 
 
+# ============================================================
+# 给 GM 控制台用的开关（`tutorial skip` / `tutorial reset`）
+# ============================================================
+## 跳过整段新手引导：进度拨到 DONE，并把当前挂着的那层当场收掉
+## 【只改存档不够】引导层是**已实例化的节点**，不改它就会一直贴在屏幕上，
+## 得等重进主场景才消失 —— 调 GM 的人看到的就是「命令没生效」。
+func skip_tutorial() -> void:
+	Game.skip_tutorial()
+	_close_layer(_tutorial)
+	_tutorial = null
+	# 兜底：万一这层不是本脚本挂的（测试直接 add_child / 热重载），按类型再扫一遍
+	for child in get_children():
+		if child is TutorialLayer:
+			child.queue_free()
+
+
+## 把引导倒回第一拍并立刻重新挂上（用来反复验前半段）
+func reset_tutorial() -> void:
+	if Game.state == null:
+		return
+	Game.reset_tutorial()
+	_close_layer(_tutorial)
+	_tutorial = null
+	for child in get_children():
+		if child is TutorialLayer:
+			child.queue_free()
+	_maybe_open_tutorial()
+
+
 func _on_state_reset() -> void:
 	# 重开一局时把两位都收掉，再由下面的 `_maybe_*` 按新状态决定要不要重新盖上 ——
 	# 不清理的话，旧的开场/引导会留在新局上继续跑（它的进度还是上一局的）

@@ -381,6 +381,23 @@ func owns_expression_set(id: String) -> bool:
 	return state.owns_expression_set(id)
 
 
+# ============================================================
+# 新手引导（GM 开关）
+# ============================================================
+## 跳过整段新手引导。**-1 = 已完成**，与老存档读回来时的默认值同一套语义
+## （见 `GameState.from_save_dict`），免得这里再造一个"完成"枚举。
+## 【只动状态】屏幕上那层由界面收（`main.skip_tutorial()` / GM 指令里扫一遍树）。
+func skip_tutorial() -> void:
+	if state != null:
+		state.tutorial_step = -1
+
+
+## 把引导倒回第一拍（下次进主场景会从头开始）
+func reset_tutorial() -> void:
+	if state != null:
+		state.tutorial_step = 0
+
+
 ## 这件部件现在能不能用。
 ## 两条互斥的门：带 `set_id` 的看翻牌拿没拿到；其余看周次（目前只有爆缸/绿豆蛙）。
 func is_part_unlocked(part: PartData) -> bool:

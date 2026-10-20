@@ -189,6 +189,8 @@ func _run(raw: String) -> void:
 			_cmd_backup()
 		"restore":
 			_cmd_restore()
+		"tutorial", "guide":
+			_cmd_tutorial(args)
 		_:
 			_print_err("不认识的指令：%s（help）" % head)
 
@@ -208,6 +210,8 @@ func _help() -> void:
 	_print("submit <A~E> [extra|support|lead]  求解一段适配这家公司的表情并直接投递")
 	_print("paper [ending]             弹一版《有瓜有戏》看版面（不动存档；ending 看结局页）")
 	_print("backup / restore           备份 / 还原 user://save.json")
+	_print("tutorial skip              跳过新手引导（进度拨到 DONE，并收掉当前那层）")
+	_print("tutorial reset             引导倒回第一拍并立刻重挂")
 
 
 # ============================================================
@@ -630,6 +634,57 @@ func _cmd_restore() -> void:
 	# 还原只是把文件写回去；界面还停在当前局 —— 必须让 Game 重读一次才会「真的回去」
 	Game.load_from()
 	_print("已还原 %s 并重新读档（手机 / 日历已按新状态重画）" % SAVE_PATH)
+
+
+# ============================================================
+# 新手引导
+# ============================================================
+## `tutorial skip` / `tutorial reset`
+##
+## 【为什么委托给主场景】引导层是主场景（`main.gd`）实例化并持有的；
+## 只把存档里的 `tutorial_step` 改掉，屏幕上那层还在，看着就是「没生效」。
+func _cmd_tutorial(args: PackedStringArray) -> void:
+	var sub := args[0].to_lower() if args.size() > 0 else "skip"
+	var scene := get_tree().current_scene
+	match sub:
+		"skip", "done":
+			if Game.state == null:
+				_print_err("Game.state 还没有")
+				return
+			if scene != null and scene.has_method("skip_tutorial"):
+				scene.call("skip_tutorial")
+			else:
+				# 不在主壳里（比如从别的场景起）也要能跳过
+				Game.skip_tutorial()
+				_drop_tutorial_layers()
+			_print("已跳过新手引导")
+		"reset":
+			if Game.state == null:
+				_print_err("Game.state 还没有")
+				return
+			if scene != null and scene.has_method("reset_tutorial"):
+				scene.call("reset_tutorial")
+			else:
+				Game.reset_tutorial()
+				_drop_tutorial_layers()
+			_print("引导已倒回第一拍（回到主场景时从头开始）")
+		"step", "state":
+			if Game.state == null:
+				_print_err("Game.state 还没有")
+				return
+			_print("tutorial_step = %d" % Game.state.tutorial_step)
+		_:
+			_print_err("用法：tutorial [skip|reset|step]")
+
+
+## 把当前场景里挂着的引导层全收掉（`tutorial_step` 改了，屏幕上那层还在就白改）
+func _drop_tutorial_layers() -> void:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+	for child in scene.get_children():
+		if child is TutorialLayer:
+			child.queue_free()
 
 
 func _copy(from: String, to: String) -> bool:

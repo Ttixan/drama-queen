@@ -303,7 +303,14 @@ func _run() -> void:
 	_check("存档写明已完成", _game.state.tutorial_step, TutorialLayer.Step.DONE)
 
 	print("")
-	print("[13] 新局从 0 开始（重开会把界面一起收掉，所以放最后）")
+	print("[13] GM：跳过 / 重置引导（走的同一个入口）")
+	_game.skip_tutorial()
+	_check("进度被拨成 -1（完成 = 老档同义）", _game.state.tutorial_step, -1)
+	_game.reset_tutorial()
+	_check("reset 倒回第一拍", _game.state.tutorial_step, 0)
+
+	print("")
+	print("[14] 新局从 0 开始（重开会把界面一起收掉，所以放最后）")
 	_game.new_game()
 	_check("新局从 0 开始", _game.state.tutorial_step, 0)
 
