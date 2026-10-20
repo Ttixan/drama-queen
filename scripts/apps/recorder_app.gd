@@ -1061,6 +1061,12 @@ func _apply_styles() -> void:
 	_title.size = Vector2(200, 60)
 	_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
+	# 【底栏那三行说明整体收起】「帧 1/3 · 魅 → 平静 → 平静」「还没拼完 —— 本帧还差…」
+	# 「灰着的 15 件随周次解锁…」—— 顶栏已经有本帧得分、卡片自己写着属性和解锁条件，
+	# 这三行只是把同样的信息复述一遍，还占走底栏一半高度。
+	# 节点和文案逻辑都留着（`_sync_status` 还在跑），只是不再显示。
+	get_node(P_BOTTOM + "/StatusBox").visible = false
+
 	# 帧号 + 帧序列：底栏第三行，比「还没拼完」淡一档，不抢主提示
 	_txt(_frame_info, 15, UiPalette.TEXT_ON_PAPER_DIM)
 
