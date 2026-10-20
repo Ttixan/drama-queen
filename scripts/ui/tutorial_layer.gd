@@ -34,29 +34,35 @@ enum Step {
 	TAP_HR_ROW = 8,      ## 圈住微信里的「王先生」
 	TAP_TIER = 9,        ## 圈住档位按钮（龙套）
 	TAP_SCRIPT_CARD = 10,## 圈住 HR 发来的剧本文件卡
-	TAP_SCRIPT_BACK = 11,## 圈住剧本页的返回
-	TAP_RECORDER = 12,   ## 圈住「去录像机」
-	TAP_LOAD_SCRIPT = 13,## 圈住底栏「加载剧本」
-	TAP_PICK_SCRIPT = 14,## 圈住弹窗里第一个剧本
-	LINE_TABS = 15,      ## 独白：这里选五官分类
-	TAP_TAB = 16,        ## 圈住一个分类页签（逼玩家点一下）
-	LINE_PARTS = 17,     ## 独白：这里选具体部件
-	TAP_PART = 18,       ## 圈住一张部件卡
-	LINE_SLOTS = 19,     ## 独白：这里调帧数
-	LINE_NEED = 20,      ## 独白：这是需要的情绪浓度
-	LINE_HAVE = 21,      ## 独白：这是你脸上现有的情绪
-	LINE_MEMORY = 22,    ## 独白三段（普鲁奇克 + 内存碎片）→ 弹记忆抽取
-	TAP_CARD = 23,       ## 翻开一张牌
+	WAIT_SCRIPT_READ = 11,## 放行：让玩家先读 5 秒剧本，再圈关闭
+	TAP_SCRIPT_BACK = 12,## 圈住剧本页右上角的 ×（关闭）
+	TAP_RECORDER = 13,   ## 圈住「去录像机」
+	TAP_LOAD_SCRIPT = 14,## 圈住底栏「加载剧本」
+	TAP_PICK_SCRIPT = 15,## 圈住弹窗里第一个剧本
+	LINE_TABS = 16,      ## 独白：这里选五官分类
+	TAP_TAB = 17,        ## 圈住一个分类页签（逼玩家点一下）
+	LINE_PARTS = 18,     ## 独白：这里选具体部件
+	TAP_PART = 19,       ## 圈住一张部件卡
+	LINE_SLOTS = 20,     ## 独白：这里调帧数
+	LINE_NEED = 21,      ## 独白：这是需要的情绪浓度
+	LINE_HAVE = 22,      ## 独白：这是你脸上现有的情绪
+	LINE_MEMORY = 23,    ## 独白三段（普鲁奇克 + 内存碎片）→ 弹记忆抽取
+	TAP_CARD = 24,       ## 翻开一张牌
 	# ---- ③ 拼贴 → 投递 → 回桌面 → 日历 ----
-	WAIT_BUILD = 24,     ## 放行：玩家自己把三帧拼完（引导不遮）
-	TAP_SEND = 25,       ## 圈住微信的「发送」（投递）
-	LINE_SUBMITTED = 26, ## 独白：一整套应聘流程做完了
-	TAP_BACK_DESK = 27,  ## 圈住「返回桌面」
-	TAP_CALENDAR = 28,   ## 圈住桌上的日历
-	LINE_EVENING = 29,   ## 独白：闲暇可以做别的事 / 今天先休息 / 拿下 Pswitch
-	TAP_END_DAY = 30,    ## 圈住「确认安排（下一天）」
-	DONE = 31,           ## 引导全部走完
+	WAIT_BUILD = 25,     ## 放行：玩家自己把三帧拼完（引导不遮）
+	TAP_SEND = 26,       ## 圈住微信的「发送」（投递）
+	LINE_SUBMITTED = 27, ## 独白：一整套应聘流程做完了
+	TAP_BACK_DESK = 28,  ## 圈住「返回桌面」
+	TAP_CALENDAR = 29,   ## 圈住桌上的日历
+	LINE_EVENING = 30,   ## 独白：闲暇可以做别的事 / 今天先休息 / 拿下 Pswitch
+	TAP_END_DAY = 31,    ## 圈住「确认安排（下一天）」
+	DONE = 32,           ## 引导全部走完
 }
+
+## 剧本页打开后先让人读几秒，再圈右上角的 ×
+## 【为什么不是立刻圈】剧本是这一套流程里唯一需要"读"的东西，
+## 刚弹出来就在角上画个框，玩家还没看内容就先去点叉了
+const SCRIPT_READ_SEC := 5.0
 
 const DIALOGUE_SCENE := "res://scenes/ui/dialogue_box.tscn"
 const MEMORY_SCENE := "res://scenes/ui/memory_draw.tscn"
@@ -106,6 +112,8 @@ var _memory: Control
 var _step := Step.LINE_INTRO
 ## 进「点分类」那拍时记下当前页签 —— 玩家切到别的页签才算点过
 var _tab_at_entry := -1
+## 剧本页要放过的时间点（毫秒，见 `SCRIPT_READ_SEC`）
+var _script_read_until := 0
 
 
 func _ready() -> void:
@@ -162,6 +170,10 @@ func _enter(step: int) -> void:
 	var st := _state()
 	if st != null:
 		st.tutorial_step = step
+
+	# 剧本页：进来先给玩家 5 秒读，时间到了才画「点这里关掉」
+	if step == Step.WAIT_SCRIPT_READ:
+		_script_read_until = Time.get_ticks_msec() + int(SCRIPT_READ_SEC * 1000.0)
 
 	# 录像机五条讲解里的「点分类」：记下进来时的页签，切走才算点过
 	if step == Step.LINE_TABS:
@@ -240,6 +252,10 @@ func _check_progress() -> void:
 		Step.TAP_SCRIPT_CARD:
 			var wx3 := _wechat()
 			if wx3 != null and _visible_of(wx3, "_script_overlay"):
+				_go(Step.WAIT_SCRIPT_READ)
+		Step.WAIT_SCRIPT_READ:
+			# 让玩家先读几秒，时间到了才在右上角画出「点这里关掉」
+			if Time.get_ticks_msec() >= _script_read_until:
 				_go(Step.TAP_SCRIPT_BACK)
 		Step.TAP_SCRIPT_BACK:
 			var wx4 := _wechat()
@@ -401,8 +417,9 @@ func _update_hole() -> void:
 func _waits_for_target() -> bool:
 	return _step in [
 		Step.TAP_WECHAT, Step.TAP_HR_ROW, Step.TAP_TIER, Step.TAP_SCRIPT_CARD,
-		Step.TAP_SCRIPT_BACK, Step.TAP_RECORDER, Step.TAP_LOAD_SCRIPT,
-		Step.TAP_PICK_SCRIPT, Step.TAP_TAB, Step.TAP_PART, Step.TAP_CARD,
+		Step.WAIT_SCRIPT_READ, Step.TAP_SCRIPT_BACK, Step.TAP_RECORDER,
+		Step.TAP_LOAD_SCRIPT, Step.TAP_PICK_SCRIPT, Step.TAP_TAB, Step.TAP_PART,
+		Step.TAP_CARD,
 		# 收尾这几拍同理：拼贴期间、回微信的路上，都不能被遮罩挡住
 		Step.WAIT_BUILD, Step.TAP_SEND, Step.TAP_BACK_DESK,
 		Step.TAP_CALENDAR, Step.TAP_END_DAY,

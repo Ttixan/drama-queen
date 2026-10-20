@@ -169,6 +169,23 @@ func _run() -> void:
 			_same_rect(_tut.hole_rect(), tier_btn.get_global_rect().grow(10.0)), true)
 
 	print("")
+	print("[9.5] 剧本页：先让人读 5 秒，再圈右上角的 ×")
+	wx._script_overlay.visible = true      # 模拟「点了剧本卡」
+	_tut._enter(TutorialLayer.Step.WAIT_SCRIPT_READ)
+	await _wait(0.05)
+	_check("等待期间整层放行（洞是空的）", _tut.hole_rect(), Rect2())
+	_check("还停在等待拍", _tut.step(), TutorialLayer.Step.WAIT_SCRIPT_READ)
+	_check("这一拍没有一块遮罩盖着",
+			_tut._dims.any(func(d: ColorRect) -> bool: return d.visible), false)
+	_tut._script_read_until = 0            # 把 5 秒压掉
+	await _wait(0.1)
+	_check("时间到 → 圈关闭按钮", _tut.step(), TutorialLayer.Step.TAP_SCRIPT_BACK)
+	_check("洞圈在剧本页右上角的 ×",
+			_same_rect(_tut.hole_rect(),
+					(wx._script_back_button as Control).get_global_rect().grow(10.0)), true)
+	wx._script_overlay.visible = false
+
+	print("")
 	print("[10] 录像机：先加载剧本，再讲五条")
 	# 微信里选过档位后手上会有一份剧本 —— 这里直接塞进状态，
 	# 省掉「等 HR 打字」那几秒（那条链路由 test_wechat 覆盖）
