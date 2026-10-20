@@ -67,9 +67,41 @@ func new_game(init_money: int = -1, init_acting: int = -1) -> void:
 	_roll_week_event()
 	# 新局还没有名字：把定角池还原成出厂值，别留着上一局那个
 	_apply_player_name()
+	_capture_week_start()
 	EventBus.ap_changed.emit(state.ap_left_today)
 	# 放在最后：界面收到它时，新状态已经就位，可以放心照着重画
 	EventBus.state_reset.emit()
+
+
+# ============================================================
+# 「重开本周」的回滚点
+# ============================================================
+## 周初快照。**只在内存里** —— 它是这一周的回滚点，不进存档：
+## 读档之后重新照一张就行，存进文件反而会让「存档里的周初」和实际对不上。
+var _week_start: Dictionary = {}
+
+
+func _capture_week_start() -> void:
+	if state != null:
+		_week_start = state.to_save_dict()
+
+
+## 回到本周第一天。保留的是**那一周开始时的全部状态**（钱、属性、履历、事件），
+## 所以「重开本周」不会把这一周赚到的钱留下 —— 那等于白拿。
+func restart_week() -> bool:
+	if _week_start.is_empty() or state == null:
+		return false
+	state = GameState.new()
+	state.from_save_dict(_week_start.duplicate(true))
+	_apply_player_name()
+	EventBus.ap_changed.emit(state.ap_left_today)
+	EventBus.money_changed.emit(state.money, 0)
+	EventBus.acting_changed.emit(state.acting, 0)
+	EventBus.fame_changed.emit(state.fame, 0)
+	EventBus.day_advanced.emit(state.day, state.week())
+	# 放在最后：界面收到它时，回滚后的状态已经就位
+	EventBus.state_reset.emit()
+	return true
 
 
 # ============================================================
@@ -505,6 +537,9 @@ func _advance() -> void:
 	EventBus.ap_changed.emit(state.ap_left_today)
 	EventBus.day_advanced.emit(state.day, state.week())
 	_roll_week_event()
+	# 走到新一周的第一天 = 照一张回滚点（排完事件之后照，事件也要能重开）
+	if state.day_of_week() == 1:
+		_capture_week_start()
 
 
 ## 排事件：**每天推进后都问一次**「今天要不要出东西」。
