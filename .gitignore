@@ -9,3 +9,7 @@ builds/
 
 # Excel / WPS 打开文件时生成的锁文件
 ~$*
+
+# 带超时跑 --script 测试时落下的日志（tools/_xxx_test.log / .err）
+tools/_*.log
+tools/_*.log.err
