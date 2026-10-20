@@ -33,6 +33,14 @@ func _run() -> void:
 	var desk: Node = main.get_node("DeskScreen")
 	_save(vp, "res://tools/_shot_pause_desk.png")
 
+	# 悬停态：直接把 normal 换成 hover 那张（鼠标事件不好模拟）
+	var menu_btn: TextureButton = desk.get_node("MenuButton")
+	var normal_tex := menu_btn.texture_normal
+	menu_btn.texture_normal = menu_btn.texture_hover
+	await _wait(0.15)
+	_save(vp, "res://tools/_shot_pause_hover.png")
+	menu_btn.texture_normal = normal_tex
+
 	desk.call("_open_pause_menu")
 	await _wait(0.5)
 	_save(vp, "res://tools/_shot_pause_menu.png")

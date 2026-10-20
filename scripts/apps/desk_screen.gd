@@ -35,14 +35,15 @@ const GM_CONSOLE := preload("res://scripts/debug/gm_console.gd")
 @export var app_hotspot: Hotspot
 
 const PAUSE_SCENE := preload("res://scenes/ui/pause_menu.tscn")
-## 菜单按钮压的那张米色通用框（和开始界面 / 手机返回键同一张）
-const FRAME_BEIGE := preload("res://assets/ui/intro/frame_beige.png")
+## 左上角那颗「菜单」图标：普通 / 悬停 两态（美术给的是竖排合并图，已拆开）
+const ICON_MENU := preload("res://assets/ui/icon_menu.png")
+const ICON_MENU_HOVER := preload("res://assets/ui/icon_menu_hover.png")
 
 @onready var _bg: TextureRect = $Bg
 @onready var _hotspots: Control = $Hotspots
 
 ## 左上角那颗「菜单」按钮（点开游戏内菜单）
-var _menu_button: Button
+var _menu_button: TextureButton
 var _pause_menu: Control
 
 ## 当前打开的功能（点手机进来的手机壳）
@@ -75,38 +76,23 @@ func _ready() -> void:
 # ============================================================
 # 游戏内菜单
 # ============================================================
-## 左上角那颗按钮。压在日历热点左上角一点点 —— 桌面最左边只有 89px 宽，
-## 再往右就会盖住日历本体
+## 左上角那颗图标。压在日历热点左上角一点点 —— 桌面最左边只有 89px 宽，
+## 再往右就会盖住日历本体。
+## 两态各自居中：hover 那张比普通那张大一圈（橙框撑着），居中摆放就不会「跳」。
 func _build_menu_button() -> void:
-	_menu_button = Button.new()
+	_menu_button = TextureButton.new()
 	_menu_button.name = "MenuButton"
-	_menu_button.text = "菜单"
-	_menu_button.position = Vector2(12, 14)
-	_menu_button.size = Vector2(92, 62)
+	_menu_button.texture_normal = ICON_MENU
+	_menu_button.texture_hover = ICON_MENU_HOVER
+	_menu_button.texture_pressed = ICON_MENU_HOVER
+	_menu_button.ignore_texture_size = true
+	_menu_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	_menu_button.position = Vector2(12, 8)
+	_menu_button.size = Vector2(100, 100)
 	_menu_button.focus_mode = Control.FOCUS_NONE
 	_menu_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	_menu_button.add_theme_font_override("font", UiPalette.FONT)
-	_menu_button.add_theme_font_size_override("font_size", 22)
-	_menu_button.add_theme_color_override("font_color", UiPalette.INK)
-	_menu_button.add_theme_color_override("font_hover_color", UiPalette.INK)
-	_menu_button.add_theme_color_override("font_pressed_color", UiPalette.INK)
-	var normal := _beige_style(Color(1, 1, 1))
-	_menu_button.add_theme_stylebox_override("normal", normal)
-	_menu_button.add_theme_stylebox_override("hover", _beige_style(Color(0.97, 0.96, 0.92)))
-	_menu_button.add_theme_stylebox_override("pressed", _beige_style(Color(0.9, 0.89, 0.85)))
 	_menu_button.pressed.connect(_open_pause_menu)
 	add_child(_menu_button)
-
-
-func _beige_style(tint: Color) -> StyleBoxTexture:
-	var sb := StyleBoxTexture.new()
-	sb.texture = FRAME_BEIGE
-	sb.texture_margin_left = 34
-	sb.texture_margin_right = 34
-	sb.texture_margin_top = 24
-	sb.texture_margin_bottom = 24
-	sb.modulate_color = tint
-	return sb
 
 
 func _open_pause_menu() -> void:
