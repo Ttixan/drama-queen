@@ -212,6 +212,10 @@ func _run() -> void:
 	await _wait(0.1)
 	_check("收下后进入「自己拼」的放行段", _tut.step(), TutorialLayer.Step.WAIT_BUILD)
 	_check("引导层还留着（没结束）", _tut.visible, true)
+	# 【曾经卡在这】收下之后那块全屏的抽取层没被收走，玩家点不动录像机
+	_check("收下后抽取层整个收走", _tut._memory, null)
+	_check("遮罩也放行了（没有一块 dim 还挡着）",
+			_tut._dims.all(func(d: ColorRect) -> bool: return not d.visible), true)
 
 	print("")
 	print("[12] 拼完回微信 → 投递 → 回桌面 → 日历 → 下一天")

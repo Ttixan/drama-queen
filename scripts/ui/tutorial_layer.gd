@@ -343,6 +343,11 @@ func _on_memory_picked(set_id: String) -> void:
 
 
 func _on_memory_finished() -> void:
+	# 【收下 = 把这一层整个收走】它是一整块全屏 Control（自带暗底 + STOP），
+	# 留着会把录像机挡得死死的 —— 玩家看到的就是「点了收下没反应」。
+	if _memory != null and is_instance_valid(_memory):
+		_memory.queue_free()
+		_memory = null
 	# 【不是结束，是放行】收下之后轮到玩家自己拼三帧 —— 引导退到背景等着，
 	# 等他从录像机点「完成」回到微信再接着指下一拍。
 	_go(Step.WAIT_BUILD)
