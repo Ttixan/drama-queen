@@ -10,7 +10,7 @@ display_name = "爆缸笑脸"
 slot = 1
 tier = 12
 texture = ExtResource("2_rdhlc")
-unlock_week = 3
+set_id = &"blowup"
 attributes = {
 "惊讶": 25,
 "愤怒": 5

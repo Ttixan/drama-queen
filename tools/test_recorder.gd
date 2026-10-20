@@ -223,15 +223,18 @@ func _run_all() -> void:
 			_check("%s 的卡可用状态与状态层一致" % part.id, card.disabled, not unlocked)
 			if not unlocked:
 				locked_seen += 1
-				# 两种门写两种话：等得起 vs 得去翻牌
+				# 锁着的卡要写清「怎么才能开」：周结算翻牌 / 新手礼包 / （暂未用的）周次门
+				var set_id := String(part.set_id)
 				var want := "第 %d 周解锁" % part.unlock_week
-				if not String(part.set_id).is_empty():
+				if ExpressionSets.is_starter(set_id):
+					want = "新手礼包"
+				elif not set_id.is_empty():
 					want = "翻牌获得"
 				_check("%s 的卡写明了解锁方式" % part.id, card.tooltip_text, want)
 			else:
 				free_seen += 1
 	_check("已解锁的卡都点得动（%d 件）" % free_seen, free_seen > 0, true)
-	# 真·开局：9 件翻牌（三套）+ 9 件周次门（认真脸×3 第 2 周 + 爆缸/绿豆蛙×6 第 3 周）= 18
+	# 真·开局：6 套复杂表情全是灰的 = 18 件（周次门已经没有了）
 	if game != null and game.state != null and game.state.week() == 1:
 		_check("第 1 周确实有 18 件灰着", locked_seen, 18)
 	# 「留空」不是部件，永远不该被锁

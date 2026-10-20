@@ -9,7 +9,7 @@ id = &"eyes_10"
 display_name = "爆缸笑脸"
 tier = 10
 texture = ExtResource("2_hj1mt")
-unlock_week = 3
+set_id = &"blowup"
 attributes = {
 "喜悦": 40,
 "愤怒": 10,

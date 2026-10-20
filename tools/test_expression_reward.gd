@@ -82,7 +82,10 @@ func _test_sets() -> void:
 			seen[pid] = true
 		_check("%s 覆盖眼/嘴/眉" % id, slots.size(), 3)
 	_check("九件互不重复", all_parts, seen.size())
-	_check("部件表里没有多余的 set", _count_set_parts(), 9)
+	# 10-20 起：新手礼包也带 set_id（爆缸笑脸 / 恶俗青蛙 / 严肃给力，各三件），
+	# 所以带 set 的部件一共 18 件，不是 9 件 —— 这里只要求「不多不少正好是两批之和」。
+	_check("部件表里没有多余的 set", _count_set_parts(),
+			ExpressionSets.SETS.size() * 3 + ExpressionSets.STARTER_SETS.size() * 3)
 
 
 func _count_set_parts() -> int:
@@ -226,19 +229,22 @@ func _test_save_roundtrip() -> void:
 func _test_unlock_gate(game: Node) -> void:
 	print("[6] 收发牌与录像机的解锁门")
 	game.state = GameState.new()
-	var eyes := PartLibrary.by_id("eyes_08")        # 得意
-	var late := PartLibrary.by_id("eyes_10")        # 爆缸笑脸（周次门）
+	var eyes := PartLibrary.by_id("eyes_08")        # 得意（周结算翻牌）
+	var late := PartLibrary.by_id("eyes_10")        # 爆缸笑脸（新手礼包）
 	var base := PartLibrary.by_id("eyes_04")        # 普通件
 	_check("没拿到得意 → 不能用", game.is_part_unlocked(eyes), false)
 	_check("普通件开局就能用", game.is_part_unlocked(base), true)
-	_check("爆缸笑脸第 1 周不能用", game.is_part_unlocked(late), false)
+	_check("新手礼包没翻开之前不能用", game.is_part_unlocked(late), false)
 
 	game.state.owned_sets.append("smug")
 	_check("拿到得意 → 三件都能用", game.is_part_unlocked(eyes), true)
 	_check("但绿豆蛙还是不能用", game.is_part_unlocked(PartLibrary.by_id("eyes_11")), false)
 
-	game.state.day = 15   # 第 3 周
-	_check("第 3 周爆缸笑脸解禁", game.is_part_unlocked(late), true)
+	# 【10-20 起周次门没了】爆缸笑脸只在引导里翻到才有，等到第 3 周也不会自己开
+	game.state.day = 15
+	_check("第 3 周也不会自己解锁（新手礼包限定）", game.is_part_unlocked(late), false)
+	game.grant_expression_set("blowup")
+	_check("翻到之后才解禁", game.is_part_unlocked(late), true)
 
 
 # ============================================================

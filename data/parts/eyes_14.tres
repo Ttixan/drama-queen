@@ -9,7 +9,7 @@ id = &"eyes_14"
 display_name = "认真脸"
 tier = 14
 texture = ExtResource("2_fw57e")
-unlock_week = 2
+set_id = &"serious"
 attributes = {
 "信任": 20,
 "喜悦": 20,

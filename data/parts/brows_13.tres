@@ -10,7 +10,7 @@ display_name = "认真脸"
 slot = 2
 tier = 13
 texture = ExtResource("2_htbso")
-unlock_week = 2
+set_id = &"serious"
 attributes = {
 "信任": 20,
 "恐惧": 20,

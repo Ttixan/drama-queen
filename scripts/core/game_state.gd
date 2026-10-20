@@ -278,6 +278,19 @@ func peek_flip() -> Dictionary:
 	return {} if pending_flips.is_empty() else pending_flips[0]
 
 
+## 直接把一套复杂表情记成「已拥有」—— **新手礼包**用（引导里翻到哪张给哪张）。
+## 【为什么不走 `pending_flips`】那不是"排队等结算"，是当场翻、当场收下；
+## 走队列还得给它编一个假的档位，反而把「每档只发一次」的规则搅浑。
+## 返回 true = 这次真的新加进去（重复调用不会有副作用）。
+func grant_expression_set(set_id: String) -> bool:
+	if set_id.is_empty() or not ExpressionSets.has(set_id):
+		return false
+	if owned_sets.has(set_id):
+		return false
+	owned_sets.append(set_id)
+	return true
+
+
 ## 玩家点「收下」时消费：把这一套加进已拥有，返回刚翻到的那条记录。
 ## 【为什么不在翻开动画一开始就消费】动画中途退出（切屏 / 杀进程）不该吞掉奖励 ——
 ## 只有他说「收下」才算数。
@@ -331,12 +344,13 @@ func roll_reward_set(tier: int, week: int) -> String:
 			taken[queued] = true
 
 	var pool: Array[String] = []
-	for id: String in ExpressionSets.ids():
+	for id: String in ExpressionSets.reward_ids():
 		if not taken.has(id):
 			pool.append(id)
 	# 三套都拿过了（正常玩不到：只有三个档位）—— 兜底回全套，宁可重复也不空手
+	# ⚠️ 只回**周结算那三套**：新手礼包（爆缸笑脸那三套）不该被结算抽走
 	if pool.is_empty():
-		pool = ExpressionSets.ids()
+		pool = ExpressionSets.reward_ids()
 	if pool.is_empty():
 		return ""
 

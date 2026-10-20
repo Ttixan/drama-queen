@@ -10,7 +10,7 @@ display_name = "绿豆蛙"
 slot = 2
 tier = 11
 texture = ExtResource("2_35m2y")
-unlock_week = 3
+set_id = &"frog"
 attributes = {
 "惊讶": 20,
 "愤怒": 30

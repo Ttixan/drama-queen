@@ -131,27 +131,29 @@ func _initialize() -> void:
 		_check("reload() 后内容仍然正确", a3.display_name, a1.display_name)
 
 	print("")
-	print("[7] 两种解锁门：周次（爆缸笑脸 / 绿豆蛙）与翻牌（三套复杂表情）")
+	print("[7] 解锁门：10-20 起**没有周次门**，6 套复杂表情全走 `set`")
 	for week: int in EXPECT_UNLOCKED_BY_WEEK:
 		var n := 0
 		for p: PartData in PartLibrary.all():
 			if p.is_unlocked_at(week):
 				n += 1
-		_check("第 %d 周可用 %d 件" % [week, EXPECT_UNLOCKED_BY_WEEK[week]], n,
-				EXPECT_UNLOCKED_BY_WEEK[week])
+		# 以前这里按周数递减（49 / 52 …）；现在 week 门只剩默认值 1，
+		# 每周的「按周可用件数」都等于总数 —— 真正锁住的是 set 门（下面两段验）
+		_check("第 %d 周按周门放行的件数 = 全部" % week, n, PartLibrary.count())
 	_check("eyes_04 第 1 周就有", PartLibrary.by_id("eyes_04").unlock_week, 1)
 
-	# ---- 周次门：认真脸第 2 周，爆缸笑脸 / 绿豆蛙第 3 周 ----
-	var week_gated := {
-		"eyes_14": 2, "mouth_00": 2, "brows_13": 2,    # 认真脸
-		"eyes_10": 3, "mouth_12": 3, "brows_10": 3,    # 爆缸笑脸
-		"eyes_11": 3, "mouth_13": 3, "brows_11": 3,    # 绿豆蛙
-	}
-	for id: String in week_gated:
-		var p := PartLibrary.by_id(id)
-		_check("%s 第 %d 周解锁" % [id, week_gated[id]], p.unlock_week, week_gated[id])
-		_check("%s 上一周还不能用" % id, p.is_unlocked_at(week_gated[id] - 1), false)
-		_check("%s 到点能用" % id, p.is_unlocked_at(week_gated[id]), true)
+	# ---- 新手礼包三套：爆缸笑脸 / 恶俗青蛙 / 严肃给力 ----
+	# 只在开场引导的「记忆抽取」里翻一次；部件靠 `owned_sets` 放行，不按周。
+	_check("新手礼包有三套", ExpressionSets.STARTER_SETS.size(), 3)
+	for spec: Dictionary in ExpressionSets.STARTER_SETS:
+		var set_id := String(spec["id"])
+		_check("%s 被标成新手礼包" % set_id, ExpressionSets.is_starter(set_id), true)
+		var parts := ExpressionSets.parts_of(set_id)
+		_check("%s 有三件（眼/嘴/眉）" % set_id, parts.size(), 3)
+		for id: String in parts:
+			var p := PartLibrary.by_id(id)
+			_check("%s 的 set_id = %s" % [id, set_id], String(p.set_id), set_id)
+			_check("%s 不走周次门" % id, p.unlock_week, 1)
 	# 8 基础表情的部件开局就有（恐惧眼 / 愤怒② / 喜悦眉是 10-20 补进来的）
 	for id in ["eyes_12", "eyes_13", "brows_12"]:
 		_check("%s 第 1 周就能用" % id, PartLibrary.by_id(id).is_unlocked_at(1), true)

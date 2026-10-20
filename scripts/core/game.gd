@@ -369,6 +369,14 @@ func claim_pending_flip() -> Dictionary:
 	return entry
 
 
+## 新手礼包：把引导里翻到的那套直接记进「已拥有」（会跟着存档走）
+func grant_expression_set(set_id: String) -> bool:
+	if state == null or not state.grant_expression_set(set_id):
+		return false
+	EventBus.expression_set_owned.emit(set_id)
+	return true
+
+
 func owns_expression_set(id: String) -> bool:
 	return state.owns_expression_set(id)
 

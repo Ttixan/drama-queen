@@ -16,18 +16,21 @@ extends RefCounted
 ## 每类只有三个选项的话，这游戏就退化成三选一了。
 ##
 ## 【8 基础表情开局】玩家一开始只有 8 个基础表情（喜悦/信任/恐惧/惊讶/悲伤/
-## 厌恶/愤怒/期待）的五官部件；其余按两条门解锁：记忆提取/每周放送套走 `set`
-## 翻牌或 `week`（认真脸 week 2，爆缸/绿豆蛙 week 3）。
+## 厌恶/愤怒/期待）的五官部件；其余 6 套复杂表情全部走 `set` 门（10-20 定稿）——
+## **不再有按周解锁的部件**，`week` 字段保留给将来的"每周放送"，目前没人用。
 ##
-## 【两种"现在还不能用"，别混】
-## 1. `week` = 第几周起可用（缺省 1）。只留给「爆缸笑脸 / 绿豆蛙」两套 ——
-##    它们第 3 周才进池子，从 `day` 派生（`PartData.is_unlocked_at`），不进存档。
-## 2. `set` = 属于哪一套"复杂表情"。那三套（得意 / 皮笑肉不笑 / 想起已故的爱人）
-##    **不再按周给**，而是周结算翻牌赢来的（见 `scripts/data/expression_sets.gd`）：
-##    玩家在龙套 / 配角 / 主角上**首次成功投递**，各得一次翻牌，
-##    翻到哪套就开哪套（`GameState.owned_sets`，进存档）。
+## 【6 套复杂表情分两条路】
+## 1. **新手礼包三套**（爆缸笑脸 / 恶俗青蛙 / 严肃给力）：只在开场引导的
+##    「记忆抽取」里翻一次，三张牌选一张，翻中哪套就开哪套
+##    （`Game.get_expression_set` / `GameState.grant_expression_set`）。
+##    之后再也不出现 —— 没翻中的两套这一局就拿不到了。
+## 2. **周结算翻牌三套**（得意 / 皮笑肉不笑 / 想起已故的爱人）：玩家在
+##    龙套 / 配角 / 主角上**首次成功投递**，各得一次翻牌（见
+##    `scripts/data/expression_sets.gd` 与 `GameState.queue_expression_rewards`）。
+## 两条路都落在 `GameState.owned_sets`（进存档），录像机据此解禁部件。
+##
 ## 【为什么一套三件必须同门】半套可用会让玩家拼出「得意的嘴 + 皮笑肉不笑的眼睛」
-## 这种画面上说不通的组合。所以 眼/嘴/眉 的 `set` / `week` 必须一致。
+## 这种画面上说不通的组合。所以 眼/嘴/眉 的 `set` 必须一致。
 ##
 ## 【梯度是硬约束】每个**必填**槽位内必须同时存在正效价、中性、负效价部件。
 ## 缺了任何一档，玩家就拼不出「递减曲线」（D 文艺片）和「帧间反转」（E 大厂），
@@ -59,15 +62,15 @@ const PARTS: Array[Dictionary] = [
 	{"slot": EYES, "tier": 8, "name": "得意", "emo": {"charm": 2.0, "anger": 1.0}, "set": "smug"},
 	# 眼珠发直、嘴角在笑 —— 「笑得不对劲」的那一半，与 mouth_10 同源
 	{"slot": EYES, "tier": 9, "name": "皮笑肉不笑", "emo": {"joy": 1.0, "awkward": 2.0}, "set": "smirk"},
-	{"slot": EYES, "tier": 10, "name": "爆缸笑脸", "emo": {"joy": 3.0}, "week": 3},
-	{"slot": EYES, "tier": 11, "name": "绿豆蛙", "emo": {"awkward": 2.0}, "week": 3},
+	{"slot": EYES, "tier": 10, "name": "爆缸笑脸", "emo": {"joy": 3.0}, "set": "blowup"},
+	{"slot": EYES, "tier": 11, "name": "绿豆蛙", "emo": {"awkward": 2.0}, "set": "frog"},
 	# 10-20 补缺：恐惧眼（8 基础补全）、愤怒第二张变体、认真脸眼
 	{"slot": EYES, "tier": 12, "name": "恐惧", "emo": {"sorrow": 2.0, "shock": 1.0}},
 	{"slot": EYES, "tier": 13, "name": "愤怒②", "emo": {"anger": 3.0}},
-	{"slot": EYES, "tier": 14, "name": "认真脸", "emo": {"shock": 1.0}, "week": 2},
+	{"slot": EYES, "tier": 14, "name": "认真脸", "emo": {"shock": 1.0}, "set": "serious"},
 
 	# ---- 嘴 14 件 ----
-	{"slot": MOUTH, "tier": 0, "name": "认真脸", "emo": {}, "week": 2},
+	{"slot": MOUTH, "tier": 0, "name": "认真脸", "emo": {}, "set": "serious"},
 	{"slot": MOUTH, "tier": 1, "name": "惊讶", "emo": {"shock": 1.0}},
 	{"slot": MOUTH, "tier": 2, "name": "信任", "emo": {"joy": 2.0}},
 	{"slot": MOUTH, "tier": 3, "name": "喜悦", "emo": {"joy": 3.0}},
@@ -83,8 +86,8 @@ const PARTS: Array[Dictionary] = [
 	# 苦笑的嘴：哀为主，但嘴角是往上提的 —— 所以带一点魅
 	{"slot": MOUTH, "tier": 11, "name": "想起已故的爱人", "emo": {"sorrow": 2.0, "charm": 1.0}, "set": "late_love"},
 	# 「爆缸」= 笑到引擎报废：喜 + 一点惊（笑岔气了）
-	{"slot": MOUTH, "tier": 12, "name": "爆缸笑脸", "emo": {"joy": 3.0, "shock": 1.0}, "week": 3},
-	{"slot": MOUTH, "tier": 13, "name": "绿豆蛙", "emo": {"awkward": 2.0, "shock": 1.0}, "week": 3},
+	{"slot": MOUTH, "tier": 12, "name": "爆缸笑脸", "emo": {"joy": 3.0, "shock": 1.0}, "set": "blowup"},
+	{"slot": MOUTH, "tier": 13, "name": "绿豆蛙", "emo": {"awkward": 2.0, "shock": 1.0}, "set": "frog"},
 
 	# ---- 眉 14 件 ----
 	{"slot": BROWS, "tier": 0, "name": "信任", "emo": {}},
@@ -97,11 +100,11 @@ const PARTS: Array[Dictionary] = [
 	{"slot": BROWS, "tier": 7, "name": "得意", "emo": {"charm": 2.0, "anger": 1.0}, "set": "smug"},
 	{"slot": BROWS, "tier": 8, "name": "皮笑肉不笑", "emo": {"joy": 1.0, "awkward": 2.0}, "set": "smirk"},
 	{"slot": BROWS, "tier": 9, "name": "想起已故的爱人", "emo": {"sorrow": 2.0}, "set": "late_love"},
-	{"slot": BROWS, "tier": 10, "name": "爆缸笑脸", "emo": {"joy": 2.0, "shock": 1.0}, "week": 3},
-	{"slot": BROWS, "tier": 11, "name": "绿豆蛙", "emo": {"awkward": 2.0}, "week": 3},
+	{"slot": BROWS, "tier": 10, "name": "爆缸笑脸", "emo": {"joy": 2.0, "shock": 1.0}, "set": "blowup"},
+	{"slot": BROWS, "tier": 11, "name": "绿豆蛙", "emo": {"awkward": 2.0}, "set": "frog"},
 	# 10-20 补缺：喜悦眉、认真脸眉
 	{"slot": BROWS, "tier": 12, "name": "喜悦", "emo": {"joy": 2.0}},
-	{"slot": BROWS, "tier": 13, "name": "认真脸", "emo": {"shock": 1.0}, "week": 2},
+	{"slot": BROWS, "tier": 13, "name": "认真脸", "emo": {"shock": 1.0}, "set": "serious"},
 
 	# ---- 其他 6 件：可留空(None)，组合数 ×7 ----
 	# 名字取自素材 `配件 - X.png` 的右边。情绪权重按名字标过一遍，

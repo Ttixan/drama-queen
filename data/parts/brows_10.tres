@@ -10,7 +10,7 @@ display_name = "爆缸笑脸"
 slot = 2
 tier = 10
 texture = ExtResource("2_tgi6a")
-unlock_week = 3
+set_id = &"blowup"
 attributes = {
 "喜悦": 20,
 "悲伤": 10,

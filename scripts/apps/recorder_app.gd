@@ -1042,7 +1042,12 @@ func _reorder_cards() -> void:
 func _lock_hint(part: PartData) -> String:
 	if Game.is_part_unlocked(part):
 		return ""
-	if not String(part.set_id).is_empty():
+	var set_id := String(part.set_id)
+	if not set_id.is_empty():
+		# 新手礼包那三套只可能在开场引导里拿到；没拿到就是这一局都没有了 ——
+		# 还写「翻牌获得」会让玩家一直等一张不会来的牌
+		if ExpressionSets.is_starter(set_id):
+			return "新手礼包"
 		return "翻牌获得"
 	return "第 %d 周解锁" % part.unlock_week
 
