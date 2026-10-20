@@ -152,6 +152,8 @@ func _on_card_pressed(index: int) -> void:
 		_cards[i].disabled = true
 		_set_glow(i, false)
 	_flipped = true
+	# 翻牌 = 开箱：这一声是「你要的东西出来了」，跟着翻面动画起
+	Sfx.play(&"item_unbox")
 
 	_front_tex = load(ExpressionSets.frame_of(String(_entry.get("set", ""))))
 	var card := _cards[index]

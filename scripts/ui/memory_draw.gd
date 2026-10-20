@@ -221,6 +221,8 @@ func _on_card_pressed(index: int) -> void:
 		_cards[i].disabled = true
 		_set_glow(i, false)
 	_flipped = true
+	# 新手礼包翻牌也走「开箱」那一声 —— 两处翻的是同一种仪式
+	Sfx.play(&"item_unbox")
 
 	var id := _ids[index]
 	var front: Texture2D = load(ExpressionSets.frame_of(id))

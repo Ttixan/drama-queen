@@ -777,7 +777,9 @@ func _test_sfx() -> void:
 	_check("Sfx autoload 在", sfx != null, true)
 	if sfx == null:
 		return
-	_check("7 条素材都配上了", sfx.STREAMS.size(), 7)
+	# 【不写死条数】素材会加（10-20 就多了「开箱」那一条）——
+	# 真正要钉住的是「每个代号都配了音量」，否则新加一条会悄悄按 0dB 播
+	_check("每条音都配了音量", sfx.STREAMS.size(), sfx.VOLUME_DB.size())
 	var broken := 0
 	for code: StringName in sfx.STREAMS:
 		if sfx.STREAMS[code] == null:

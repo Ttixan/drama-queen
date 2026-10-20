@@ -11,9 +11,13 @@ extends Node
 ## 所以这里监听 `get_tree().node_added`：**只要是 BaseButton 就自动挂上**，
 ## 页面作者不用为音效写任何代码，也不用知道 `Sfx` 存在。
 ##
-## 【本批素材缺两条】**没有 `bgm_main_theme`（表里"进行中"）**、
-## **没有 `sfx_game_open_pack`（表里就写着缺）**。所以这里只有 7 条；
-## 等文件到了：`STREAMS` 加一行 + 在对应信号上补一次 `play()` 即可。
+## 【10-20 换过一版素材】美术给了六条 `.ogg`（`.document/音效/`），
+## 其中五条**替换**了原来的占位 wav（点击 / 悬浮 / 投递成功 / 钱 / 演技），
+## 第六条 `item_unbox`（开箱）是新加的一拍 —— 现在只在**翻牌**时响
+## （周结算翻牌与新手礼包的记忆抽取）。
+##
+## 【还是缺两条】`bgm_main_theme`（背景乐）与 `mail_reply`、`weibo` 这一版没重录，
+## 继续用原来的 wav。等文件到了：`STREAMS` 改路径，界面侧一行都不用动。
 ##
 ## 【废弃的三条没有接】消息提示音 / 消息震动音 / 结局音（表里"已废弃"），
 ## 别在这里补 —— 废弃的意思是那条交互已经没有了。
@@ -21,12 +25,13 @@ extends Node
 ## 代号 -> 音。代号用「这声音是干什么的」，不用文件名：
 ## 以后美术换一版素材，改的是右边那个路径，界面侧一行都不用动。
 const STREAMS: Dictionary = {
-	&"ui_click": preload("res://assets/sfx/ui_click_01.wav"),
-	&"ui_hover": preload("res://assets/sfx/ui_click_02.wav"),
-	&"mail_sent": preload("res://assets/sfx/email_send_success.wav"),
+	&"ui_click": preload("res://assets/sfx/ui_click_01.ogg"),
+	&"ui_hover": preload("res://assets/sfx/ui_click_02.ogg"),
+	&"mail_sent": preload("res://assets/sfx/email_send_success.ogg"),
 	&"mail_reply": preload("res://assets/sfx/email_reply.wav"),
-	&"money_up": preload("res://assets/sfx/stat_money_up.wav"),
-	&"skill_up": preload("res://assets/sfx/stat_skill_up.wav"),
+	&"money_up": preload("res://assets/sfx/stat_money_up.ogg"),
+	&"skill_up": preload("res://assets/sfx/stat_skill_up.ogg"),
+	&"item_unbox": preload("res://assets/sfx/item_unbox.ogg"),
 	&"weibo": preload("res://assets/sfx/weibo_notify.wav"),
 }
 
@@ -39,6 +44,8 @@ const VOLUME_DB: Dictionary = {
 	&"mail_reply": -4.0,
 	&"money_up": -6.0,
 	&"skill_up": -6.0,
+	## 翻牌是"开出东西"的正反馈，比普通点击亮一点
+	&"item_unbox": -5.0,
 	&"weibo": -6.0,
 }
 
