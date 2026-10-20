@@ -30,7 +30,7 @@ func _run() -> void:
 	_save(vp, "res://tools/_shot_recorder.png")
 
 	# 给第一帧挑一双眼，顶栏「本帧得分」才有东西可算
-	app._on_card_toggled(true, PartData.Slot.EYES, "eyes_05")
+	app._on_card_toggled(true, PartData.Slot.EYES, "eyes_00")
 	await _wait(0.3)
 	_save(vp, "res://tools/_shot_recorder_score.png")
 

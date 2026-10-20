@@ -635,7 +635,8 @@ func _layout_top_panels() -> void:
 
 	var stat_x := x + _title_frame.size.x + 8.0
 	_stat_frame.position = Vector2(stat_x, 8)
-	_stat_frame.size = Vector2(1904.0 - stat_x, 80)
+	# 右边贴 Body 的右边框（1920 - 20）—— 多给 4px 会凸出边框一条
+	_stat_frame.size = Vector2(1900.0 - stat_x, 80)
 
 
 func _top_label(parent: Node, text: String, font_size: int, color: Color,
@@ -668,22 +669,28 @@ func _frame_style(tex: Texture2D, mx: float, my: float) -> StyleBoxTexture:
 	return sb
 
 
-## 本帧得分：情绪向量里最高的两项 ×100，按 50 封顶。
-## 向量是归一化的（0~1），一帧拼三件，两项一般落在 20~50 —— 和设计稿「35/50」同一量级。
+## 本帧得分：把这一帧三件部件的**展示属性**（关键词表那 8 种情绪）加起来，
+## 取最高的两项，按 50 封顶。
+##
+## 【必须和卡片上的徽章同源】卡片写「信任 +40 期待 +20」，顶栏就得读出同一对数。
+## 之前这里用的是 `frame_vector()` —— 那是判定用的 6 维权重（喜/怒/哀/惊/魅/尬），
+## 跟关键词表不是一套体系，于是卡片写着「期待 +20」、顶栏却显示「魅 50/50」。
 func _sync_scores() -> void:
-	var v := _clip.frame_vector(_frame)
+	var total := {}
+	for part: PartData in _clip.frames[_frame].parts():
+		for attr_name: String in part.attributes:
+			total[attr_name] = int(total.get(attr_name, 0)) + int(part.attributes[attr_name])
+
 	var pairs: Array = []
-	for i in Emotion.COUNT:
-		if v[i] > 0.005:
-			pairs.append([i, v[i]])
+	for attr_name: String in total:
+		pairs.append([attr_name, int(total[attr_name])])
 	pairs.sort_custom(func(a: Array, b: Array) -> bool:
-		return float(a[1]) > float(b[1]))
+		return int(a[1]) > int(b[1]))
 
 	for i in _score_labels.size():
 		if i < pairs.size():
-			var score := mini(50, roundi(float(pairs[i][1]) * 100.0))
-			_score_labels[i].text = "%s %d/50" % [
-					Emotion.to_name(int(pairs[i][0])), score]
+			var score := mini(50, int(pairs[i][1]))
+			_score_labels[i].text = "%s %d/50" % [String(pairs[i][0]), score]
 		else:
 			_score_labels[i].text = "—"
 
