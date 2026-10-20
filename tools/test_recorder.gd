@@ -92,7 +92,7 @@ func _run_all() -> void:
 	print("")
 	print("[4b] 肤色：写进帧、但不进判定")
 	_check("没选过时帧里是 null（渲染按默认肤色）", _app._clip.frames[0].skin, null)
-	_check("默认肤色那张卡亮着", _card(PartData.Slot.SKIN, "skin_00").button_pressed, true)
+	_check("默认肤色那张卡亮着", _card(PartData.Slot.SKIN, PartLibrary.DEFAULT_SKIN_ID).button_pressed, true)
 	# 前后对比而不是写死「喜」：上一步挂了脸红的配件，这里的情绪本来就不是单纯的喜
 	var emo_before: String = _app._emotion_value.text
 	var parts_before: String = _app._emotion_parts.text

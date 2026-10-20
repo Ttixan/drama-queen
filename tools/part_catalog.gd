@@ -114,7 +114,7 @@ const PARTS: Array[Dictionary] = [
 	{"slot": EXTRA, "tier": 5, "name": "眼镜", "emo": {}},
 
 	# ---- 肤色 9 件：纯外观槽，**不参与判定**（emo 全空）----
-	# 【tier 0 是默认肤色】`Clip.Frame.skin` 为 null 时按它渲染，所以它必须一直是第一件。
+	# 【默认肤色是「白」skin_01】`Clip.Frame.skin` 为 null 时按 `PartLibrary.DEFAULT_SKIN_ID` 渲染。
 	# 素材里的「喜 / 怒 / 悲 / 恐 / 受刺激」是画给某些表情配的脸色，
 	# 现在只当外观用；要不要给它们情绪权重，得策划拍板（给了就会改变现有难度曲线）。
 	{"slot": SKIN, "tier": 0, "name": "亚洲人常规肤色", "emo": {}},

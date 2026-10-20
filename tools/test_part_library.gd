@@ -10,18 +10,19 @@ extends SceneTree
 ##   顺序、缓存、分组、以及那个最容易漏的「其他 = 留空」。
 
 const EXPECT_SLOT_COUNT := {
-	PartData.Slot.EYES: 12,
+	PartData.Slot.EYES: 15,
 	PartData.Slot.MOUTH: 14,
-	PartData.Slot.BROWS: 12,
+	PartData.Slot.BROWS: 14,
 	PartData.Slot.EXTRA: 6,
 	PartData.Slot.SKIN: 9,
 }
 
-const EXPECT_TOTAL := 53
+const EXPECT_TOTAL := 58
 
 ## 按**周次**累计可用件数。三套复杂表情不在这条线上（它们靠翻牌，见 [7]）——
-## 所以第 1 / 2 周都是 47（53 − 爆缸笑脸 / 绿豆蛙 各 3 件），第 3 周 53。
-const EXPECT_UNLOCKED_BY_WEEK := {1: 47, 2: 47, 3: 53}
+## 第 1 周 49（58 − 认真脸×3 第 2 周 − 爆缸笑脸 / 绿豆蛙 各 3 件第 3 周），
+## 第 2 周 52，第 3 周 58。
+const EXPECT_UNLOCKED_BY_WEEK := {1: 49, 2: 52, 3: 58}
 
 var _failures: Array[String] = []
 var _checks := 0
@@ -106,7 +107,7 @@ func _initialize() -> void:
 	var def := PartLibrary.default_skin()
 	_check("默认肤色取得到", def != null, true)
 	if def != null:
-		_check("默认肤色就是 skin_00", String(def.id), PartLibrary.DEFAULT_SKIN_ID)
+		_check("default_skin() 返回的就是 DEFAULT_SKIN_ID 那件", String(def.id), PartLibrary.DEFAULT_SKIN_ID)
 	# 【纯外观槽】一件都不能带情绪 —— 否则玩家换张脸就悄悄改了判定结果
 	for p: PartData in PartLibrary.by_slot(PartData.Slot.SKIN):
 		_check("肤色「%s」不参与判定" % p.display_name, p.emotion_labels(), "中性")
@@ -140,16 +141,20 @@ func _initialize() -> void:
 				EXPECT_UNLOCKED_BY_WEEK[week])
 	_check("eyes_04 第 1 周就有", PartLibrary.by_id("eyes_04").unlock_week, 1)
 
-	# ---- 周次门：第 3 周才进池的两套 ----
+	# ---- 周次门：认真脸第 2 周，爆缸笑脸 / 绿豆蛙第 3 周 ----
 	var week_gated := {
+		"eyes_14": 2, "mouth_00": 2, "brows_13": 2,    # 认真脸
 		"eyes_10": 3, "mouth_12": 3, "brows_10": 3,    # 爆缸笑脸
 		"eyes_11": 3, "mouth_13": 3, "brows_11": 3,    # 绿豆蛙
 	}
 	for id: String in week_gated:
 		var p := PartLibrary.by_id(id)
-		_check("%s 第 3 周解锁" % id, p.unlock_week, week_gated[id])
-		_check("%s 第 2 周还不能用" % id, p.is_unlocked_at(2), false)
-		_check("%s 第 3 周能用" % id, p.is_unlocked_at(3), true)
+		_check("%s 第 %d 周解锁" % [id, week_gated[id]], p.unlock_week, week_gated[id])
+		_check("%s 上一周还不能用" % id, p.is_unlocked_at(week_gated[id] - 1), false)
+		_check("%s 到点能用" % id, p.is_unlocked_at(week_gated[id]), true)
+	# 8 基础表情的部件开局就有（恐惧眼 / 愤怒② / 喜悦眉是 10-20 补进来的）
+	for id in ["eyes_12", "eyes_13", "brows_12"]:
+		_check("%s 第 1 周就能用" % id, PartLibrary.by_id(id).is_unlocked_at(1), true)
 	# 每一件都得落在 1..3 里 —— 写成 0 或 4 就等于「永远不给」或「一开始就错锁」
 	var bad := 0
 	for p: PartData in PartLibrary.all():

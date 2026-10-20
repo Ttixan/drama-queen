@@ -30,8 +30,8 @@ const TAB_ORDER: Array[int] = [
 ]
 
 ## 默认肤色。`Clip.Frame.skin` 为 null（没选过／老存档）时，界面按它渲染。
-## 【必须是 tier 0 那件】`tools/part_catalog.gd` 的 SKIN 段第一行就是它。
-const DEFAULT_SKIN_ID := "skin_00"
+## 【美术指定用「白」】skin_01 =「肤色 - 白」（part_catalog.gd 的 SKIN 段）。
+const DEFAULT_SKIN_ID := "skin_01"
 
 ## 「其他」槽位的留空选项。
 ## 【为什么用 null 而不是造一件「空部件」】造空部件就要给它情绪向量，而「没有情绪」
