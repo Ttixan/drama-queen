@@ -247,11 +247,19 @@ func _load_base_art() -> void:
 ## MUL 直接就是正确结果，不读屏幕、也不依赖绘制顺序。
 ##
 ## 三层共用同一个材质实例：材质无状态，没必要建三份。
+## 只有「爆缸笑脸」套的三件部件需要正片叠底（底是带色的，不留白底），
+## 其余部件普通叠加 —— 白底会被当成白色画上去。
+const MUL_PART_IDS: Array[String] = ["brows_10", "eyes_10", "mouth_12"]
+var _mul_mat: CanvasItemMaterial
+
+
 func _apply_blend_modes() -> void:
-	var mul := CanvasItemMaterial.new()
-	mul.blend_mode = CanvasItemMaterial.BLEND_MODE_MUL
-	for layer: TextureRect in [_layer_brows, _layer_eyes, _layer_mouth]:
-		layer.material = mul
+	_mul_mat = CanvasItemMaterial.new()
+	_mul_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_MUL
+
+
+func _needs_mul(part: PartData) -> bool:
+	return part != null and part.id in MUL_PART_IDS
 
 
 func _collect_nodes() -> void:
@@ -791,8 +799,11 @@ func _sync_preview() -> void:
 	# 【肤色与底图永远有】空帧也是一张白纸上的人脸，不是一块黑 —— 玩家一眼就知道「脸还在，只是没拼五官」。
 	_layer_skin.texture = _skin_texture(f)
 	_layer_brows.texture = null if f.brows == null else f.brows.texture
+	_layer_brows.material = _mul_mat if _needs_mul(f.brows) else null
 	_layer_eyes.texture = null if f.eyes == null else f.eyes.texture
+	_layer_eyes.material = _mul_mat if _needs_mul(f.eyes) else null
 	_layer_mouth.texture = null if f.mouth == null else f.mouth.texture
+	_layer_mouth.material = _mul_mat if _needs_mul(f.mouth) else null
 	_layer_extra.texture = null if f.extra == null else f.extra.texture
 	_frame_badge.text = "帧 %d" % (_frame + 1)
 	# 空帧时给一句提示，否则取景框是一整块黑，看起来像坏了

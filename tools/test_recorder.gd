@@ -156,17 +156,20 @@ func _run_all() -> void:
 	_check("没选过肤色 → 画的是默认肤色",
 			_app._layer_skin.texture, PartLibrary.default_skin().texture)
 
-	# 【正片叠底不能丢】眼白 / 牙齿是白色填充，普通叠加贴到深肤色上就是一块白纸。
-	# 守的是「三层五官必须挂着 MUL 材质」—— 掉了不会报错，只会重新长出白边。
+	# 【正片叠底按部件走】只有「爆缸笑脸」套的三件部件（brows_10 / eyes_10 / mouth_12）
+	# 挂 MUL 材质，普通部件普通叠加 —— 乘上去白底会把眼白涂没。
 	# 前提是素材已经预乘过（import_emoji_layers.py 的 MULTIPLY_SLOTS），
 	# 所以这两件事要一起验：材质对了、素材也得是那个形态。
 	for l: TextureRect in [_app._layer_brows, _app._layer_eyes, _app._layer_mouth]:
-		_check("%s 挂着正片叠底材质" % l.name,
-				l.material is CanvasItemMaterial
-						and l.material.blend_mode == CanvasItemMaterial.BLEND_MODE_MUL, true)
+		_check("%s 普通部件不套正片叠底" % l.name, l.material, null)
 	_check("五官素材已预乘（透明区是白，不是黑）", _is_multiply_ready(_app._layer_eyes.texture), true)
 	# 配件是「挂在脸前面的东西」，不走正片叠底 —— 乘上去深肤色会把镜框压成暗红
 	_check("配件层不套正片叠底", _app._layer_extra.material, null)
+	_pick(PartData.Slot.EYES, "eyes_10")
+	_check("爆缸笑的眼睛挂正片叠底", _app._layer_eyes.material is CanvasItemMaterial
+			and _app._layer_eyes.material.blend_mode == CanvasItemMaterial.BLEND_MODE_MUL, true)
+	_pick(PartData.Slot.EYES, "eyes_04")
+	_check("换回普通眼睛后材质清掉", _app._layer_eyes.material, null)
 	_check("帧1：角标显示帧 1", _app._frame_badge.text, "帧 1")
 	_check("帧1：情绪标签 = 喜", _app._emotion_value.text, "喜")
 	_select_frame(2)
