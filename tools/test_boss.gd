@@ -72,8 +72,9 @@ func _run_all() -> void:
 	_check("选中了 A", _app._current.code, "A")
 	_check("看招聘页不解锁", _game.is_hr_unlocked("A"), false)
 	_check("一条解锁事件都没发", _unlock_events.size(), 0)
-	_check("公司名渲染出来", _app._company_name.text, "小登传媒")
-	_check("定位渲染出来", _app._company_tagline.text, _md_tagline("A"))
+	# 【10-20 改版】详情页只留一行大字公司名；原来的小字公司名与「流水线烂片小厂」定位都不显示了
+	_check("公司名渲染在原来那行大字上", _app._company_tagline.text, "小登传媒")
+	_check("上面那行旧标题收起来了", _app._company_name.visible, false)
 	_check("职位渲染出来", _app._job_title.text, CompanyLibrary.by_code("A").position_title)
 	_check("详情渲染出来",
 			_app._detail_text.text, CompanyLibrary.by_code("A").posting_text)

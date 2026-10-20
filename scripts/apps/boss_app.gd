@@ -518,6 +518,8 @@ func _build_hr_card() -> void:
 
 func _show_empty_state() -> void:
 	_current = null
+	# 空状态还要靠这行小字撑住，不能跟着上面一起藏掉
+	_company_name.visible = true
 	_company_name.text = "还没选公司"
 	_company_tagline.text = "左边点一家公司，看它的招聘页"
 	_lock_state.text = ""
@@ -534,8 +536,10 @@ func _show_empty_state() -> void:
 
 func _show_posting() -> void:
 	var co := _current
-	_company_name.text = co.display_name
-	_company_tagline.text = co.tagline
+	# 【公司名放回原来那行大字】以前是「小字公司名 + 大字定位（流水线烂片小厂）」两行，
+	# 都在回答"这是谁"，读起来重复；现在只留一行大字公司名，定位不再显示。
+	_company_name.visible = false
+	_company_tagline.text = co.display_name
 	_meta_row.visible = true
 	_job_panel.visible = true
 	_hr_card.visible = true
