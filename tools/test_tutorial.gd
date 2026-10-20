@@ -205,14 +205,61 @@ func _run() -> void:
 	await _wait(0.7)
 	_check("翻到的是爆缸笑脸", _tut._memory.picked_id(), "blowup")
 	_check("那套已经记进状态", _game.state.owned_sets.has("blowup"), true)
+	# 本层正盖在录像机上：抽到的那一刻那三件就该从灰变亮，不然玩家以为没生效
+	_check("录像机里的爆缸眼立刻解禁",
+			(rec._cards[PartData.Slot.EYES]["eyes_10"] as Button).disabled, false)
 	_tut._memory._claim.pressed.emit()
 	await _wait(0.1)
-	_check("收下后本批引导结束", _tut.step(), TutorialLayer.Step.DONE)
+	_check("收下后进入「自己拼」的放行段", _tut.step(), TutorialLayer.Step.WAIT_BUILD)
+	_check("引导层还留着（没结束）", _tut.visible, true)
+
+	print("")
+	print("[12] 拼完回微信 → 投递 → 回桌面 → 日历 → 下一天")
+	var clip := Clip.new()
+	_game.set_pending_clip(clip)
+	phone.open_app(WECHAT_SCENE)
+	await _wait(0.3)
+	_check("微信打开了", phone.current_app_path(), WECHAT_SCENE)
+	var wx2: Node = phone._current
+	(wx2._rows["A"] as Button).button_pressed = true
+	await _wait(0.2)
+	_check("回微信落在王先生", wx2._current.code, "A")
+	_check("刚拼好的表情包带回来了", wx2._pending != null, true)
+	_check("推进到「发送」那一拍", _tut.step(), TutorialLayer.Step.TAP_SEND)
+	_check("洞圈在发送按钮",
+			_same_rect(_tut.hole_rect(), (phone._current._send_button as Control).get_global_rect().grow(10.0)), true)
+	# 投递成功会把手上那份清掉（真实路径在 `_on_send` 里）
+	phone._current._pending = null
+	await _wait(0.2)
+	_check("投递后是「一整套流程做完了」的独白", _tut.step(), TutorialLayer.Step.LINE_SUBMITTED)
+	await _dismiss_dialogue()
+	_check("推进到「返回桌面」", _tut.step(), TutorialLayer.Step.TAP_BACK_DESK)
+	_check("洞圈在「返回桌面」",
+			_same_rect(_tut.hole_rect(), (phone._back_button as Control).get_global_rect().grow(10.0)), true)
+	(phone._back_button as Button).pressed.emit()
+	await _wait(0.2)
+	_check("回到桌面了", _desk().has_open_screen(), false)
+	_check("推进到「点日历」", _tut.step(), TutorialLayer.Step.TAP_CALENDAR)
+	var cal_spot: Control = _desk().get_node("Hotspots/HotspotCalendar")
+	_check("洞圈在日历热点",
+			_same_rect(_tut.hole_rect(), cal_spot.get_global_rect().grow(10.0)), true)
+	_desk()._on_activated(cal_spot)
+	await _wait(0.3)
+	_check("推进到晚间独白", _tut.step(), TutorialLayer.Step.LINE_EVENING)
+	await _dismiss_dialogue()
+	_check("推进到「确认下一天」", _tut.step(), TutorialLayer.Step.TAP_END_DAY)
+	var cal: Node = _desk()._open
+	var end_btn: Control = cal._cards["end"]["button"]
+	_check("洞圈在「确认安排（下一天）」",
+			_same_rect(_tut.hole_rect(), end_btn.get_global_rect().grow(10.0)), true)
+	end_btn.pressed.emit()
+	await _wait(0.5)
+	_check("点完下一天 → 引导结束", _tut.step(), TutorialLayer.Step.DONE)
 	_check("引导层收起来了", _tut.visible, false)
 	_check("存档写明已完成", _game.state.tutorial_step, TutorialLayer.Step.DONE)
 
 	print("")
-	print("[12] 新局从 0 开始（重开会把界面一起收掉，所以放最后）")
+	print("[13] 新局从 0 开始（重开会把界面一起收掉，所以放最后）")
 	_game.new_game()
 	_check("新局从 0 开始", _game.state.tutorial_step, 0)
 

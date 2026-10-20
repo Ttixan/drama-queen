@@ -45,7 +45,15 @@ enum Step {
 	LINE_HAVE = 19,      ## 独白：这是你脸上现有的情绪
 	LINE_MEMORY = 20,    ## 独白三段（普鲁奇克 + 内存碎片）→ 弹记忆抽取
 	TAP_CARD = 21,       ## 翻开一张牌
-	DONE = 22,           ## 本批引导结束（进拼贴轮）
+	# ---- ③ 拼贴 → 投递 → 回桌面 → 日历 ----
+	WAIT_BUILD = 22,     ## 放行：玩家自己把三帧拼完（引导不遮）
+	TAP_SEND = 23,       ## 圈住微信的「发送」（投递）
+	LINE_SUBMITTED = 24, ## 独白：一整套应聘流程做完了
+	TAP_BACK_DESK = 25,  ## 圈住「返回桌面」
+	TAP_CALENDAR = 26,   ## 圈住桌上的日历
+	LINE_EVENING = 27,   ## 独白：闲暇可以做别的事 / 今天先休息 / 拿下 Pswitch
+	TAP_END_DAY = 28,    ## 圈住「确认安排（下一天）」
+	DONE = 29,           ## 引导全部走完
 }
 
 const DIALOGUE_SCENE := "res://scenes/ui/dialogue_box.tscn"
@@ -71,6 +79,16 @@ const LINES := {
 	Step.LINE_SLOTS: ["这里可以用来调整你所试镜的这个剧本需要的试镜片段总数"],
 	Step.LINE_NEED: ["这是这个表情需要拿到的情绪浓度"],
 	Step.LINE_HAVE: ["这是你的脸上现有的情绪"],
+	Step.LINE_SUBMITTED: [
+		"像这样，一整套应聘的流程就做完了！不管结果好不好，事情总算是推进了，"
+		+ "那么接下来的二十一天也像这样加油吧！",
+	],
+	Step.LINE_EVENING: [
+		"除开试镜投递和演戏的时间，闲暇之余也可以做做别的事增加收入、精进演技，"
+		+ "毕竟人生不能只有工作嘛。",
+		"今天的试镜以及花费了你的所有精力。那么接下来的时间就好好休息，准备明天的工作好了！",
+		"Pswitch box2，这次你势必拿下。",
+	],
 	Step.LINE_MEMORY: [
 		"进入情绪之前，你忽然想起普鲁奇克的理论：人类那些复杂的情绪，比如爱与内疚，"
 		+ "拆开来看，也不过是喜悦、恐惧和悲伤这些基础情绪按比例叠加的结果。",
@@ -237,6 +255,31 @@ func _check_progress() -> void:
 			var rec2 := _recorder()
 			if rec2 != null and _has_picked_part(rec2):
 				_go(Step.LINE_SLOTS)
+		# ---- ③ 拼完 → 投递 → 桌面 → 日历 ----
+		Step.WAIT_BUILD:
+			# 玩家在录像机里自己拼三帧；点「完成」后手机屏会自动切回微信
+			var phone4 := _phone()
+			if phone4 != null and phone4.current_app_path() == WECHAT_SCENE:
+				_go(Step.TAP_SEND)
+		Step.TAP_SEND:
+			# 投递成功会把手上那份表情包清掉（`_on_send` 里的 `_pending = null`）
+			var wx6 := _wechat()
+			if wx6 != null and wx6.get("_pending") == null:
+				_go(Step.LINE_SUBMITTED)
+		Step.TAP_BACK_DESK:
+			var desk2 := _desk()
+			if desk2 != null and not desk2.has_open_screen():
+				_go(Step.TAP_CALENDAR)
+		Step.TAP_CALENDAR:
+			if _calendar() != null:
+				_go(Step.LINE_EVENING)
+		Step.TAP_END_DAY:
+			# `end_day()` 是同步的：点完 `Game.day()` 立刻变 2。
+			# 【马上收工】推进后会开周结算翻牌层（在日历里、引导层之下），
+			# 引导再挡着就点不到它了。
+			var st := _state()
+			if st != null and st.day >= 2:
+				_finish()
 
 
 func _on_line_finished() -> void:
@@ -292,13 +335,17 @@ func _open_memory() -> void:
 
 
 func _on_memory_picked(set_id: String) -> void:
-	var st := _state()
-	if st != null:
-		st.grant_expression_set(set_id)
+	# 走 Game 层，不走 GameState：它顺手发 `expression_set_owned`，
+	# 录像机收到会把刚抽到的那套从灰变亮（本层这时正盖在它上面）
+	var game := get_node_or_null("/root/Game")
+	if game != null:
+		game.grant_expression_set(set_id)
 
 
 func _on_memory_finished() -> void:
-	_go(Step.DONE)
+	# 【不是结束，是放行】收下之后轮到玩家自己拼三帧 —— 引导退到背景等着，
+	# 等他从录像机点「完成」回到微信再接着指下一拍。
+	_go(Step.WAIT_BUILD)
 
 
 func _update_hole() -> void:
@@ -340,6 +387,9 @@ func _waits_for_target() -> bool:
 		Step.TAP_WECHAT, Step.TAP_HR_ROW, Step.TAP_TIER, Step.TAP_SCRIPT_CARD,
 		Step.TAP_SCRIPT_BACK, Step.TAP_RECORDER, Step.TAP_TAB, Step.TAP_PART,
 		Step.TAP_CARD,
+		# 收尾这几拍同理：拼贴期间、回微信的路上，都不能被遮罩挡住
+		Step.WAIT_BUILD, Step.TAP_SEND, Step.TAP_BACK_DESK,
+		Step.TAP_CALENDAR, Step.TAP_END_DAY,
 	]
 
 
@@ -448,6 +498,24 @@ func _target_rect() -> Rect2:
 			if rec4 == null:
 				return Rect2()
 			return _rect_of(rec4.get("_emotion_value") as Control)
+		Step.TAP_SEND:
+			var wx6 := _wechat()
+			return _rect_of(wx6.get("_send_button") as Control) if wx6 != null else Rect2()
+		Step.TAP_BACK_DESK:
+			var phone4 := _phone()
+			return _rect_of(phone4.get("_back_button") as Control) if phone4 != null else Rect2()
+		Step.TAP_CALENDAR:
+			var desk2 := _desk()
+			if desk2 == null:
+				return Rect2()
+			return _rect_of(desk2.get_node_or_null("Hotspots/HotspotCalendar") as Control)
+		Step.TAP_END_DAY:
+			var cal := _calendar()
+			if cal == null:
+				return Rect2()
+			var cards: Dictionary = cal.get("_cards")
+			var end: Dictionary = cards.get("end", {})
+			return _rect_of(end.get("button") as Control)
 	return Rect2()
 
 
@@ -542,4 +610,15 @@ func _recorder() -> Node:
 	var current: Node = phone.get("_current")
 	if current != null and current.get("_score_labels") != null:
 		return current
+	return null
+
+
+## 日历屏不是手机屏：它直接挂在 `DeskScreen._open` 下（`_phone()` 会把它过滤掉）。
+func _calendar() -> Node:
+	var desk := _desk()
+	if desk == null:
+		return null
+	var open: Node = desk.get("_open")
+	if open != null and open.get("_cards") != null:
+		return open
 	return null

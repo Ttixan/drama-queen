@@ -229,6 +229,9 @@ func _ready() -> void:
 	EventBus.fame_changed.connect(_on_value_changed)
 	EventBus.day_advanced.connect(_on_day_changed)
 	EventBus.state_reset.connect(_refresh_stats)
+	# 新手礼包是在**本屏开着的时候**翻到的（周结算翻牌在日历里，那时本屏早关了）——
+	# 不刷新的话刚抽到的那一套还灰在那儿，玩家会以为白翻了
+	EventBus.expression_set_owned.connect(_on_expression_set_owned)
 	# 顶栏宽度由宿主（手机右栏 / 整屏）决定，第一次布局完才量得准
 	resized.connect(_layout_stats)
 
@@ -989,6 +992,10 @@ func _sync_slots() -> void:
 ## 灰着摆在那里本身就是进度条：玩家第一周就能看见后面还有什么，才会为了它继续玩。
 ## 【为什么每次刷新都重算】两种门都会在游戏开着的时候变：周次会推进、
 ## 翻牌会在结算后把一整套点亮。重算一遍只有 53 次比较，比订阅信号简单。
+func _on_expression_set_owned(_set_id: String) -> void:
+	_sync_locks()
+
+
 func _sync_locks() -> void:
 	for meta_key: String in _card_meta:
 		var meta: Dictionary = _card_meta[meta_key]

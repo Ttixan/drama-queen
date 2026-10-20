@@ -29,7 +29,7 @@ var intro_done: bool = false
 ## `CastingPool` 是磁盘上的模板资源，往它身上写只在本进程有效。
 var player_name: String = ""
 ## 新手引导走到哪一步（见 `TutorialLayer.Step`）。
-## 【0 = 没开始，7 = 这批引导走完，-1 = 老档视为已完成】
+## 【0 = 没开始，`Step.DONE` = 全部走完，-1 = 老档视为已完成】
 ## 与 `intro_done` 同一套口径：字段缺失时默认 `-1`，老玩家不会被按着重新看一遍。
 var tutorial_step: int = 0
 
