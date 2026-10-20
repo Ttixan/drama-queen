@@ -32,12 +32,11 @@ const DEFAULT_HINT := "悬浮看每个 App 是干什么的"
 const HUD_BAR_TEX := preload("res://assets/ui/phone/hud_bar.png")
 ## 返回桌面压的那张米色通用框（和演员登记表同一张）
 const FRAME_BEIGE := preload("res://assets/ui/intro/frame_beige.png")
-## 四个图标的中心占条宽的比例 —— 量自 1917×107 原图：812 / 1077 / 1359 / 1633。
-## 顺序 = 行动点 / 演技 / 名声 / 钱，数字挂在图标**右侧**（图标本身几乎顶满条子高，
-## 下面是没地方的 —— 量过 bbox：闪电 770~860 × 1~102）。
-const HUD_STAT_ANCHORS := [0.424, 0.562, 0.709, 0.852]
-## 数字起点离图标中心多远：图标半宽 ≈45 + 间隙 8
-const HUD_STAT_OFFSET := 53.0
+## 数字的起点占条宽的比例 —— 直接取**图标右缘 + 14px**（量自 1917×107 原图：
+## 四个图标右缘在 857 / 1142 / 1410 / 1699）。四个图标宽窄差得多（50~74），
+## 用「中心 + 固定偏移」会让窄的还行、宽的被压住 —— 提提看到的就是这个。
+## 顺序 = 行动点 / 演技 / 名声 / 钱。
+const HUD_STAT_X := [0.453, 0.602, 0.742, 0.892]
 const HUD_STAT_W := 110.0
 
 ## 录像机。**只有它**在被别的 App 顶开时才露自己的返回按钮 ——
@@ -130,10 +129,12 @@ func _build_hud() -> void:
 	_day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 
 	# 四个数字：横向跟着锚点、纵向压在图标下方那条空白带上
-	for i in HUD_STAT_ANCHORS.size():
-		var l := _hud_label(Vector2.ZERO, Vector2(HUD_STAT_W, 107), 24)
+	for i in HUD_STAT_X.size():
+		var l := _hud_label(Vector2.ZERO, Vector2(HUD_STAT_W, 107), 30)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		l.set_meta("hud_anchor", HUD_STAT_ANCHORS[i])
+		# 加粗：浅灰条上 24 号的正文体重心太轻，压在图标旁边像一行注释
+		l.add_theme_font_override("font", UiPalette.TITLE_FONT)
+		l.set_meta("hud_anchor", HUD_STAT_X[i])
 		_stat_labels.append(l)
 
 	# 【连 HudRow 自己的 resized】`_ready` 里 HudRow 还挂在容器里没布局完，
@@ -163,8 +164,8 @@ func _layout_hud_stats() -> void:
 	if w <= 1.0:
 		return
 	for l in _stat_labels:
-		var cx: float = float(l.get_meta("hud_anchor")) * w
-		l.position = Vector2(cx + HUD_STAT_OFFSET, 0.0)
+		var x: float = float(l.get_meta("hud_anchor")) * w
+		l.position = Vector2(x, 0.0)
 		l.size = Vector2(HUD_STAT_W, 107.0)
 
 
