@@ -128,14 +128,14 @@ func _show_toast(text: String) -> void:
 
 
 func _on_restart_week() -> void:
-	_confirm("重开本周？", "回到本周第一天。这一周赚到的钱、涨的演技都会退回去。",
+	_confirm("回到本周第一天。这一周赚到的钱、涨的演技都会退回去。",
 			"重开", func() -> void:
 				Game.restart_week()
 				_close())
 
 
 func _on_restart_game() -> void:
-	_confirm("重开游戏？", "从取名开始重来一遍，所有进度清空。",
+	_confirm("从取名开始重来一遍，所有进度清空。",
 			"重开", func() -> void:
 				Game.new_game()
 				# 【为什么整场景重载】桌子、手机、微信都还挂着上一局的数据；
@@ -164,7 +164,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 # ============================================================
 # 确认框（底图：通用信息框）
 # ============================================================
-func _confirm(title: String, body: String, ok_text: String, on_ok: Callable) -> void:
+func _confirm(body: String, ok_text: String, on_ok: Callable) -> void:
 	_close_dialog()
 	var layer := Control.new()
 	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -196,19 +196,22 @@ func _confirm(title: String, body: String, ok_text: String, on_ok: Callable) -> 
 	card.add_theme_stylebox_override("panel", style)
 	layer.add_child(card)
 
+	# 标题不再挤在顶部青条里，而是**压在框中央**：加大加粗，一句话说清要发生什么
 	var head := Label.new()
-	head.position = Vector2(34, 6)
-	head.size = Vector2(600, 34)
+	head.position = Vector2(34, 104)
+	head.size = Vector2(652, 56)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	head.text = title
+	head.text = "确认重新开始？"
 	head.add_theme_font_override("font", UiPalette.TITLE_FONT)
-	head.add_theme_font_size_override("font_size", 22)
+	head.add_theme_font_size_override("font_size", 34)
 	head.add_theme_color_override("font_color", UiPalette.INK)
 	card.add_child(head)
 
 	var text := Label.new()
-	text.position = Vector2(34, 66)
-	text.size = Vector2(652, 180)
+	text.position = Vector2(34, 168)
+	text.size = Vector2(652, 80)
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.add_theme_font_override("font", FONT_CN)
 	text.add_theme_font_size_override("font_size", 19)
@@ -217,17 +220,19 @@ func _confirm(title: String, body: String, ok_text: String, on_ok: Callable) -> 
 	text.text = body
 	card.add_child(text)
 
-	var cancel := _dialog_button("取消", false)
-	cancel.position = Vector2(720 - 34 - 320, 282)
-	cancel.pressed.connect(_close_dialog)
-	card.add_child(cancel)
-
+	# 两个按钮整体居中于卡片中轴：总宽 150+20+150 = 320 → 从 200 起
+	# 顺序是「重开在左、取消在右」—— 主操作挨着正文，取消退到最右
 	var ok := _dialog_button(ok_text, true)
-	ok.position = Vector2(720 - 34 - 150, 282)
+	ok.position = Vector2(200, 258)
 	ok.pressed.connect(func() -> void:
 		_close_dialog()
 		on_ok.call())
 	card.add_child(ok)
+
+	var cancel := _dialog_button("取消", false)
+	cancel.position = Vector2(370, 258)
+	cancel.pressed.connect(_close_dialog)
+	card.add_child(cancel)
 
 
 func _dialog_button(text: String, primary: bool) -> Button:
