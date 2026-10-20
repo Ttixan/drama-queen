@@ -180,6 +180,8 @@ var _clip: Clip
 var _frame := 0                       ## 当前编辑的帧下标
 ## 顶栏「本帧得分」的两个分数标签（情绪向量里最高的两项）
 var _score_labels: Array[Label] = []
+var _title_frame: Panel
+var _stat_frame: Panel
 var _tab: int = PartData.Slot.EYES    ## 当前页签
 var _tabs: Array[Button] = []         ## 与 PartLibrary.TAB_ORDER 一一对应
 var _pages: Dictionary = {}           ## slot -> VBoxContainer（一页 = 一张单列部件列表）
@@ -294,6 +296,8 @@ func _collect_nodes() -> void:
 ## 让调用方把录像机嵌进来时打开「返回」（见 wechat_app.gd 的「去录像机」）
 func enable_back() -> void:
 	_back_button.visible = true
+	# 返回键一亮，两块框就得让位（否则压在一起）
+	_layout_top_panels()
 
 
 # ============================================================
@@ -589,32 +593,49 @@ func _on_confirm_pressed() -> void:
 func _build_top_panels() -> void:
 	var top := get_node(P_TOP)
 
-	var title_frame := Panel.new()
-	title_frame.name = "TitleFrame"
-	title_frame.position = Vector2(258, 8)
-	title_frame.size = Vector2(240, 80)
-	title_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_frame.add_theme_stylebox_override("panel",
+	_title_frame = Panel.new()
+	_title_frame.name = "TitleFrame"
+	_title_frame.size = Vector2(240, 80)
+	_title_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_title_frame.add_theme_stylebox_override("panel",
 			_frame_style(TEX_FRAME_TEAL, 34, 24))
-	top.add_child(title_frame)
+	top.add_child(_title_frame)
 
-	var stat_frame := Panel.new()
-	stat_frame.name = "StatFrame"
-	stat_frame.position = Vector2(506, 8)
-	stat_frame.size = Vector2(1398, 80)
-	stat_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stat_frame.add_theme_stylebox_override("panel",
+	_stat_frame = Panel.new()
+	_stat_frame.name = "StatFrame"
+	_stat_frame.position.y = 8
+	_stat_frame.size = Vector2(1398, 80)
+	_stat_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stat_frame.add_theme_stylebox_override("panel",
 			_frame_style(TEX_FRAME_BEIGE, 40, 26))
-	top.add_child(stat_frame)
+	top.add_child(_stat_frame)
 
-	_top_label(stat_frame, "本帧得分", 18, C_TEXT_DIM,
-			Vector2(24, 0), Vector2(110, 80))
+	_top_label(_stat_frame, "本帧得分", 18, C_TEXT_DIM,
+			Vector2(28, 0), Vector2(110, 80))
 	for i in 2:
-		_score_labels.append(_top_label(stat_frame, "—", 30, C_INK,
+		_score_labels.append(_top_label(_stat_frame, "—", 30, C_INK,
 				Vector2(150 + i * 560, 0), Vector2(430, 80)))
 
 	# 两块框是后加的，默认画在 Title 上面 —— 把标题提回最上层，否则「录像机」被框盖住
 	top.move_child(_title, top.get_child_count() - 1)
+	_layout_top_panels()
+
+
+## 顶栏两块框的横向摆位。
+## 独立运行时左边没有返回键，两块框就贴着页面左边缘（和 Body 的边框对齐）；
+## 嵌进微信 / 手机里时返回键占着 12~249，整体让到 258 之后。
+func _layout_top_panels() -> void:
+	if _title_frame == null or _back_button == null:
+		return
+	var x := 258.0 if _back_button.visible else 20.0
+	_title_frame.position = Vector2(x, 8)
+	_title.position = Vector2(x + 20, 18)
+	_title.size = Vector2(200, 60)
+	_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+	var stat_x := x + _title_frame.size.x + 8.0
+	_stat_frame.position = Vector2(stat_x, 8)
+	_stat_frame.size = Vector2(1904.0 - stat_x, 80)
 
 
 func _top_label(parent: Node, text: String, font_size: int, color: Color,
