@@ -27,12 +27,12 @@ func _run() -> void:
 	var app = load(RECORDER).instantiate()
 	vp.add_child(app)
 	await _wait(0.8)
-	var stats: Control = app.get_node("Page/TopBar/Stats")
-	for n in ["ValueAP", "ValueActing", "ValueFame", "ValueMoney"]:
-		var l: Label = stats.get_node(n)
-		print(n, " pos=", l.position, " size=", l.size, " text=", l.text, " visible=", l.visible)
-	print("app size=", app.size, " stats size=", stats.size)
 	_save(vp, "res://tools/_shot_recorder.png")
+
+	# 给第一帧挑一双眼，顶栏「本帧得分」才有东西可算
+	app._on_card_toggled(true, PartData.Slot.EYES, "eyes_05")
+	await _wait(0.3)
+	_save(vp, "res://tools/_shot_recorder_score.png")
 
 	# 返回键在「子页面」里才显示：手动亮出来 + 切成 hover 贴图
 	var back: TextureButton = app.get_node("Page/TopBar/BackButton")

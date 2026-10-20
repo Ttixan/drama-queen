@@ -67,6 +67,10 @@ const TAB_ICONS := {
 const TEX_PAPER := "res://assets/parts/face_paper.png"
 const TEX_BASE := "res://assets/parts/face_base.png"
 
+## 顶栏两个通用框：青绿（标题「录像机」）/ 米色（本帧得分）
+const TEX_FRAME_TEAL := preload("res://assets/ui/frame_teal.png")
+const TEX_FRAME_BEIGE := preload("res://assets/ui/intro/frame_beige.png")
+
 
 ## 页签键的边长，以及图标在键里的最大显示尺寸。
 ## 新图标是带边框的方块（素材 139×137），比原来那批纯白简笔图大一圈，
@@ -174,6 +178,8 @@ const TITLE_X := 272.0
 
 var _clip: Clip
 var _frame := 0                       ## 当前编辑的帧下标
+## 顶栏「本帧得分」的两个分数标签（情绪向量里最高的两项）
+var _score_labels: Array[Label] = []
 var _tab: int = PartData.Slot.EYES    ## 当前页签
 var _tabs: Array[Button] = []         ## 与 PartLibrary.TAB_ORDER 一一对应
 var _pages: Dictionary = {}           ## slot -> VBoxContainer（一页 = 一张单列部件列表）
@@ -195,6 +201,7 @@ func _ready() -> void:
 	_load_base_art()
 	_apply_blend_modes()
 	_apply_styles()
+	_build_top_panels()
 	_layout_stats()
 	_rebuild_slots()
 	_build_cards()
@@ -574,6 +581,92 @@ func _on_confirm_pressed() -> void:
 ##
 ## 【图标为什么不再参与布局】新稿把四个图标画进条子里了，四张 `stat_*.png`
 ## 只留着不显示（见 `_apply_styles`）—— 再叠一层会和画上去的图标错开成重影。
+# ============================================================
+# 顶栏：两块通用框（标题 / 本帧得分）
+# ============================================================
+## 【为什么整块重做】旧顶栏是一条带四个状态图标的灰纸，和主界面便利贴重复；
+## 录像机真正需要知道的是「这一帧演成什么样」—— 所以换成「本帧得分」。
+func _build_top_panels() -> void:
+	var top := get_node(P_TOP)
+
+	var title_frame := Panel.new()
+	title_frame.name = "TitleFrame"
+	title_frame.position = Vector2(258, 8)
+	title_frame.size = Vector2(240, 80)
+	title_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_frame.add_theme_stylebox_override("panel",
+			_frame_style(TEX_FRAME_TEAL, 34, 24))
+	top.add_child(title_frame)
+
+	var stat_frame := Panel.new()
+	stat_frame.name = "StatFrame"
+	stat_frame.position = Vector2(506, 8)
+	stat_frame.size = Vector2(1398, 80)
+	stat_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stat_frame.add_theme_stylebox_override("panel",
+			_frame_style(TEX_FRAME_BEIGE, 40, 26))
+	top.add_child(stat_frame)
+
+	_top_label(stat_frame, "本帧得分", 18, C_TEXT_DIM,
+			Vector2(24, 0), Vector2(110, 80))
+	for i in 2:
+		_score_labels.append(_top_label(stat_frame, "—", 30, C_INK,
+				Vector2(150 + i * 560, 0), Vector2(430, 80)))
+
+	# 两块框是后加的，默认画在 Title 上面 —— 把标题提回最上层，否则「录像机」被框盖住
+	top.move_child(_title, top.get_child_count() - 1)
+
+
+func _top_label(parent: Node, text: String, font_size: int, color: Color,
+		pos: Vector2, box: Vector2) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.position = pos
+	l.size = box
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_theme_font_override("font", UiPalette.TITLE_FONT)
+	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_color_override("font_color", color)
+	parent.add_child(l)
+	return l
+
+
+## 通用框做底：九宫格只拉中间，两端卷角和手绘描边原地不动
+func _frame_style(tex: Texture2D, mx: float, my: float) -> StyleBoxTexture:
+	var sb := StyleBoxTexture.new()
+	sb.texture = tex
+	sb.texture_margin_left = mx
+	sb.texture_margin_right = mx
+	sb.texture_margin_top = my
+	sb.texture_margin_bottom = my
+	sb.content_margin_left = 0
+	sb.content_margin_right = 0
+	sb.content_margin_top = 0
+	sb.content_margin_bottom = 0
+	return sb
+
+
+## 本帧得分：情绪向量里最高的两项 ×100，按 50 封顶。
+## 向量是归一化的（0~1），一帧拼三件，两项一般落在 20~50 —— 和设计稿「35/50」同一量级。
+func _sync_scores() -> void:
+	var v := _clip.frame_vector(_frame)
+	var pairs: Array = []
+	for i in Emotion.COUNT:
+		if v[i] > 0.005:
+			pairs.append([i, v[i]])
+	pairs.sort_custom(func(a: Array, b: Array) -> bool:
+		return float(a[1]) > float(b[1]))
+
+	for i in _score_labels.size():
+		if i < pairs.size():
+			var score := mini(50, roundi(float(pairs[i][1]) * 100.0))
+			_score_labels[i].text = "%s %d/50" % [
+					Emotion.to_name(int(pairs[i][0])), score]
+		else:
+			_score_labels[i].text = "—"
+
+
 func _layout_stats() -> void:
 	var w := size.x
 	# 【高度必须取顶栏、不是整个 App】原来写的是 `size.y`（1920×1080 里的 1080），
@@ -668,6 +761,8 @@ func _sync_emotion() -> void:
 	# 落在底栏状态区 —— 它描述的是「整段表演」，和底栏的完成度提示是同一件事。
 	_frame_info.text = "帧 %d / %d · %s" % [
 			_frame + 1, _clip.frame_count(), " → ".join(_clip.all_labels())]
+
+	_sync_scores()
 
 
 func _sync_slots() -> void:
@@ -923,13 +1018,20 @@ func _apply_styles() -> void:
 	_frame_badge.add_theme_font_size_override("font_size", 18)
 	_frame_badge.add_theme_color_override("font_color", C_ACCENT)
 
-	# 顶栏：条子是浅灰纸，字一律压墨色（C_TEXT 是奶白，在纸上看不见）
-	UiPalette.title(_title, 34, C_INK)
+	# 顶栏整条换掉：美术给的「青绿标题框 + 米色得分框」两块通用框。
+	# 旧状态条（带四个图标）整条收起 —— 叠在新框后面会露出半截灰边。
+	get_node(P_TOP + "/Bar").visible = false
+	get_node(P_STATS).visible = false
 	for value in _stat_values:
-		UiPalette.title(value, STAT_VALUE_SIZE, C_INK)
-	# 四个图标已经画在条子里了，这四张贴图全部收起 —— 留着会和画上去的重影
+		value.visible = false
 	for icon in _stat_icons:
 		icon.visible = false
+
+	# 标题挪进青绿框里
+	UiPalette.title(_title, 28, C_INK)
+	_title.position = Vector2(278, 18)
+	_title.size = Vector2(200, 60)
+	_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 	# 帧号 + 帧序列：底栏第三行，比「还没拼完」淡一档，不抢主提示
 	_txt(_frame_info, 15, UiPalette.TEXT_ON_PAPER_DIM)
