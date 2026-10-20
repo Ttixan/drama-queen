@@ -207,27 +207,7 @@ grow_vertical = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="LayerBase" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-expand_mode = 1
-stretch_mode = 5
-
-[node name="LayerBrows" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-expand_mode = 1
-stretch_mode = 5
-
-[node name="LayerEyes" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
+[node name="LayerExtra" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -247,7 +227,27 @@ grow_vertical = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="LayerExtra" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
+[node name="LayerEyes" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LayerBrows" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LayerBase" type="TextureRect" parent="Page/BodyWrap/Body/PreviewPanel/PreviewMargin/PreviewBox/ViewFinder/ViewCenter/FaceCanvas"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

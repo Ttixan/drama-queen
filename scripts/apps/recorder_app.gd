@@ -760,7 +760,7 @@ func _sync_all() -> void:
 func _sync_preview() -> void:
 	var f: Clip.Frame = _clip.frames[_frame]
 	# 七层同坐标叠加 —— 占位图规格（512×512 共用画布、人脸中心 = 画布中心）的第一次实战检验。
-	# 从下往上：纸 → 肤色 → 空白脸 → 眉 → 眼 → 嘴 → 其他。
+	# 从下往上：纸 → 肤色 → 配件 → 嘴 → 眼 → 眉 → 空白脸（留白透出，只露鼻子）。
 	# 【肤色与底图永远有】空帧也是一张白纸上的人脸，不是一块黑 —— 玩家一眼就知道「脸还在，只是没拼五官」。
 	_layer_skin.texture = _skin_texture(f)
 	_layer_brows.texture = null if f.brows == null else f.brows.texture
