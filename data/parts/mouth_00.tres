@@ -9,6 +9,7 @@ id = &"mouth_00"
 display_name = "认真脸"
 slot = 1
 texture = ExtResource("2_dl0uh")
+unlock_week = 2
 attributes = {
 "信任": 10,
 "期待": 10

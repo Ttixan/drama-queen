@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_vbgim"]
+[ext_resource type="Texture2D" path="res://assets/parts/brows_12.png" id="2_2few7"]
+
+[resource]
+script = ExtResource("1_vbgim")
+id = &"brows_12"
+display_name = "喜悦"
+slot = 2
+tier = 12
+texture = ExtResource("2_2few7")
+attributes = {
+"信任": 15,
+"喜悦": 30,
+"期待": 5
+}
+joy = 2.0

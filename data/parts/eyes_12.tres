@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_wciwk"]
+[ext_resource type="Texture2D" path="res://assets/parts/eyes_12.png" id="2_cms31"]
+
+[resource]
+script = ExtResource("1_wciwk")
+id = &"eyes_12"
+display_name = "恐惧"
+tier = 12
+texture = ExtResource("2_cms31")
+attributes = {
+"恐惧": 40,
+"惊讶": 20
+}
+sorrow = 2.0
+shock = 1.0

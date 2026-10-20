@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_thbyr"]
+[ext_resource type="Texture2D" path="res://assets/parts/eyes_13.png" id="2_ivjje"]
+
+[resource]
+script = ExtResource("1_thbyr")
+id = &"eyes_13"
+display_name = "愤怒②"
+tier = 13
+texture = ExtResource("2_ivjje")
+attributes = {
+"厌恶": 20,
+"愤怒": 40
+}
+anger = 3.0

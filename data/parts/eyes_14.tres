@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="PartData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/part_data.gd" id="1_gekpd"]
+[ext_resource type="Texture2D" path="res://assets/parts/eyes_14.png" id="2_fw57e"]
+
+[resource]
+script = ExtResource("1_gekpd")
+id = &"eyes_14"
+display_name = "认真脸"
+tier = 14
+texture = ExtResource("2_fw57e")
+unlock_week = 2
+attributes = {
+"信任": 20,
+"喜悦": 20,
+"悲伤": 20,
+"期待": 20
+}
+shock = 1.0

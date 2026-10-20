@@ -10,10 +10,14 @@ extends RefCounted
 ##   这条规则的可执行版本在 `tools/import_emoji_layers.py` 的 `title_of()`，
 ##   重跑导入脚本会把每个 id 的建议名打出来，改表时对着抄。
 ##
-## 【为什么是 53 件而不是更少】
+## 【为什么是 58 件而不是更少】
 ## 技术上，每类只要有「正效价 / 中性 / 负效价」三档就能跑通全部判定。
 ## 这个量级是为了**表达的丰富度** —— GDD 的核心卖点是「我想演成什么样」，
 ## 每类只有三个选项的话，这游戏就退化成三选一了。
+##
+## 【8 基础表情开局】玩家一开始只有 8 个基础表情（喜悦/信任/恐惧/惊讶/悲伤/
+## 厌恶/愤怒/期待）的五官部件；其余按两条门解锁：记忆提取/每周放送套走 `set`
+## 翻牌或 `week`（认真脸 week 2，爆缸/绿豆蛙 week 3）。
 ##
 ## 【两种"现在还不能用"，别混】
 ## 1. `week` = 第几周起可用（缺省 1）。只留给「爆缸笑脸 / 绿豆蛙」两套 ——
@@ -41,8 +45,8 @@ const SKIN := PartData.Slot.SKIN
 ## slot / tier / 名字 / 情绪向量（可选 `week` = 解锁周次，缺省 1）
 ## 【效价速查】valence = (喜+魅) − (怒+哀+尬)
 const PARTS: Array[Dictionary] = [
-	# ---- 眼 12 件（信任 / 惊讶 / 愤怒 / 悲伤（忧愁）/ 喜悦 / 期待 / 厌恶 / 想起已故的爱人
-	#      + 得意 / 皮笑肉不笑 / 爆缸笑脸 / 绿豆蛙）----
+	# ---- 眼 15 件（信任 / 惊讶 / 愤怒×2 / 悲伤（忧愁）/ 喜悦 / 期待 / 厌恶 / 恐惧 /
+	#      想起已故的爱人 + 得意 / 皮笑肉不笑 / 爆缸笑脸 / 绿豆蛙 / 认真脸）----
 	{"slot": EYES, "tier": 0, "name": "信任", "emo": {}},
 	{"slot": EYES, "tier": 1, "name": "惊讶", "emo": {"shock": 2.0}},
 	{"slot": EYES, "tier": 2, "name": "愤怒", "emo": {"anger": 3.0}},
@@ -57,9 +61,13 @@ const PARTS: Array[Dictionary] = [
 	{"slot": EYES, "tier": 9, "name": "皮笑肉不笑", "emo": {"joy": 1.0, "awkward": 2.0}, "set": "smirk"},
 	{"slot": EYES, "tier": 10, "name": "爆缸笑脸", "emo": {"joy": 3.0}, "week": 3},
 	{"slot": EYES, "tier": 11, "name": "绿豆蛙", "emo": {"awkward": 2.0}, "week": 3},
+	# 10-20 补缺：恐惧眼（8 基础补全）、愤怒第二张变体、认真脸眼
+	{"slot": EYES, "tier": 12, "name": "恐惧", "emo": {"sorrow": 2.0, "shock": 1.0}},
+	{"slot": EYES, "tier": 13, "name": "愤怒②", "emo": {"anger": 3.0}},
+	{"slot": EYES, "tier": 14, "name": "认真脸", "emo": {"shock": 1.0}, "week": 2},
 
 	# ---- 嘴 14 件 ----
-	{"slot": MOUTH, "tier": 0, "name": "认真脸", "emo": {}},
+	{"slot": MOUTH, "tier": 0, "name": "认真脸", "emo": {}, "week": 2},
 	{"slot": MOUTH, "tier": 1, "name": "惊讶", "emo": {"shock": 1.0}},
 	{"slot": MOUTH, "tier": 2, "name": "信任", "emo": {"joy": 2.0}},
 	{"slot": MOUTH, "tier": 3, "name": "喜悦", "emo": {"joy": 3.0}},
@@ -78,7 +86,7 @@ const PARTS: Array[Dictionary] = [
 	{"slot": MOUTH, "tier": 12, "name": "爆缸笑脸", "emo": {"joy": 3.0, "shock": 1.0}, "week": 3},
 	{"slot": MOUTH, "tier": 13, "name": "绿豆蛙", "emo": {"awkward": 2.0, "shock": 1.0}, "week": 3},
 
-	# ---- 眉 12 件 ----
+	# ---- 眉 14 件 ----
 	{"slot": BROWS, "tier": 0, "name": "信任", "emo": {}},
 	{"slot": BROWS, "tier": 1, "name": "期待", "emo": {"joy": 1.0, "shock": 1.0}},
 	{"slot": BROWS, "tier": 2, "name": "惊讶", "emo": {"joy": 2.0}},
@@ -91,6 +99,9 @@ const PARTS: Array[Dictionary] = [
 	{"slot": BROWS, "tier": 9, "name": "想起已故的爱人", "emo": {"sorrow": 2.0}, "set": "late_love"},
 	{"slot": BROWS, "tier": 10, "name": "爆缸笑脸", "emo": {"joy": 2.0, "shock": 1.0}, "week": 3},
 	{"slot": BROWS, "tier": 11, "name": "绿豆蛙", "emo": {"awkward": 2.0}, "week": 3},
+	# 10-20 补缺：喜悦眉、认真脸眉
+	{"slot": BROWS, "tier": 12, "name": "喜悦", "emo": {"joy": 2.0}},
+	{"slot": BROWS, "tier": 13, "name": "认真脸", "emo": {"shock": 1.0}, "week": 2},
 
 	# ---- 其他 6 件：可留空(None)，组合数 ×7 ----
 	# 名字取自素材 `配件 - X.png` 的右边。情绪权重按名字标过一遍，
@@ -141,7 +152,7 @@ static func of_slot(slot: int) -> Array[Dictionary]:
 ## `关键词表 (1).docx` 里每件部件标的 **8 种基础情绪** 分值（喜悦/信任/恐惧/惊讶/
 ## 悲伤/厌恶/愤怒/期待）。它**只给界面标注用**，不参与判定 ——
 ## 判定走上面那 6 个权重（`Emotion.Kind`），两套体系别混。
-## 53 件里命中 50 件（没标的意味着 docx 里没有对应行，卡片上就不显示徽章）。
+## 58 件里命中 55 件（没标的意味着 docx 里没有对应行，卡片上就不显示徽章）。
 const ATTR := {
 "eyes_00": {"信任": 40, "期待": 20},
 	"eyes_01": {"惊讶": 40, "悲伤": 20},
@@ -155,6 +166,9 @@ const ATTR := {
 	"eyes_09": {"喜悦": 20, "信任": 20, "厌恶": 20, "悲伤": 20},
 	"eyes_10": {"喜悦": 40, "愤怒": 10, "期待": 10},
 	"eyes_11": {"惊讶": 30, "恐惧": 20, "愤怒": 10},
+	"eyes_12": {"恐惧": 40, "惊讶": 20},
+	"eyes_13": {"愤怒": 40, "厌恶": 20},
+	"eyes_14": {"喜悦": 20, "信任": 20, "悲伤": 20, "期待": 20},
 	"mouth_00": {"信任": 10, "期待": 10},
 	"mouth_01": {"惊讶": 30, "喜悦": 10, "厌恶": 10},
 	"mouth_02": {"信任": 30, "惊讶": 15},
@@ -181,6 +195,8 @@ const ATTR := {
 	"brows_09": {"悲伤": 40, "恐惧": 10, "愤怒": 10},
 	"brows_10": {"愤怒": 30, "喜悦": 20, "悲伤": 10, "期待": 10},
 	"brows_11": {"愤怒": 30, "惊讶": 20},
+	"brows_12": {"喜悦": 30, "信任": 15, "期待": 5},
+	"brows_13": {"信任": 20, "恐惧": 20, "愤怒": 20, "期待": 20},
 	"extra_00": {"厌恶": 15},
 	"extra_01": {"愤怒": 15, "厌恶": 5},
 	"extra_02": {"惊讶": 10, "信任": 5},

@@ -244,9 +244,9 @@ func _run_all() -> void:
 			else:
 				free_seen += 1
 	_check("已解锁的卡都点得动（%d 件）" % free_seen, free_seen > 0, true)
-	# 真·开局：9 件翻牌（三套）+ 6 件第 3 周 = 15
+	# 真·开局：9 件翻牌（三套）+ 9 件周次门（认真脸×3 第 2 周 + 爆缸/绿豆蛙×6 第 3 周）= 18
 	if game != null and game.state != null and game.state.week() == 1:
-		_check("第 1 周确实有 15 件灰着", locked_seen, 15)
+		_check("第 1 周确实有 18 件灰着", locked_seen, 18)
 	# 「留空」不是部件，永远不该被锁
 	_check("「其他」的留空卡永远可用", _card(PartData.Slot.EXTRA, "").disabled, false)
 
