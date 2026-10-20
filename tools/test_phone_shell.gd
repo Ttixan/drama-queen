@@ -114,6 +114,15 @@ func _test_desktop() -> void:
 	# 顶栏换成美术条之后，四项数值挂在 `_stat_labels`（行动点 / 演技 / 名声 / 钱）
 	_check("手机栏是窄的：天数 + 四个数值",
 			_phone._stat_labels[3].text.is_empty(), false)
+	# 【模拟导出包】那边窗口一开场就是最终尺寸，`HudRow.resized` 可能一次都不来 ——
+	# 只靠信号的话四个数字会堆在 (0,0)，就是「打包后状态栏飘到左上角」。
+	# 把缓存清掉、数字推开，再手动跑一帧 `_process`，应当自己摆回来。
+	_phone._hud_w = -1.0
+	for l: Label in _phone._stat_labels:
+		l.position = Vector2.ZERO
+	_phone._process(0.0)
+	_check("没有 resized 也能自己把数值摆回图标下面",
+			_phone._stat_labels[1].position.x > 1.0, true)
 
 	var bal := BalanceLibrary.data()
 	# 【版面改版后这些 Label 只写数字】单位（元 / 点 / 期）是旁边一个独立小字，

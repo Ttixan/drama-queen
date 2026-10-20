@@ -144,6 +144,9 @@ const TITLE_X := 272.0
 	get_node(P_STATS + "/IconFame"),
 	get_node(P_STATS + "/IconMoney"),
 ]
+## 上一次摆过的屏宽（-1 = 还没摆过）。见 `_process` 里的说明
+var _stats_w := -1.0
+
 @onready var _stat_values: Array[Label] = [
 	get_node(P_STATS + "/ValueAP"),
 	get_node(P_STATS + "/ValueActing"),
@@ -876,6 +879,7 @@ func _layout_stats() -> void:
 	var h := _stats_box.size.y
 	if w <= 1.0 or h <= 1.0:
 		return
+	_stats_w = w
 
 	for i in _stat_values.size():
 		var cx: float = STAT_ANCHORS[i] * w
@@ -883,6 +887,16 @@ func _layout_stats() -> void:
 		value.position = Vector2(cx + STAT_VALUE_OFFSET, 0.0)
 		value.size = Vector2(maxf(90.0, w - cx), h)
 		value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+
+## 【打包后才会犯的毛病】只连 `resized` 在导出包里会漏：窗口一开场就是最终尺寸，
+## 父容器在 `_ready` 之前就布局完了，之后再没有"尺寸变化"——
+## 顶栏四项数值全停在 (0,0)，看起来像状态栏飘到左上角。
+## 每帧看一次宽度，变了才重排（一次 float 比较，可忽略）。
+func _process(_dt: float) -> void:
+	var w := size.x
+	if w > 1.0 and not is_equal_approx(w, _stats_w):
+		_layout_stats()
 
 
 ## 顶栏四项状态。单独跑录像机时 `Game.state` 可能为空

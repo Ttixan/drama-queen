@@ -63,6 +63,8 @@ signal cancelled
 var _day_label: Label
 ## 四个数值：行动点 / 演技 / 名声 / 钱（顺序与条子上的图标一致）
 var _stat_labels: Array[Label] = []
+## 上一次摆过的条宽（-1 = 还没摆过）。见 `_process` 里的说明
+var _hud_w := -1.0
 var _back_button: Button
 var _back_enabled := false
 ## scene_path -> Button（判断某个 App 开着没有、要不要标成选中）
@@ -163,10 +165,24 @@ func _layout_hud_stats() -> void:
 	var w := _hud.size.x
 	if w <= 1.0:
 		return
+	_hud_w = w
 	for l in _stat_labels:
 		var x: float = float(l.get_meta("hud_anchor")) * w
 		l.position = Vector2(x, 0.0)
 		l.size = Vector2(HUD_STAT_W, 107.0)
+
+
+## 【为什么还要每帧看一眼宽度】只连 `HudRow.resized` 在**导出包里会漏**：
+## 那边的窗口一开场就是最终尺寸，父容器在 `_ready` 之前就布局完了，
+## 之后再没有"尺寸变化"这个信号 —— 四个数字永远停在 (0,0)，
+## 表现就是「打包后状态栏飘到了左上角」（编辑器里启动会 resize 一次，所以复现不了）。
+## 一次 float 比较的开销可以忽略；宽度变了才重排。
+func _process(_dt: float) -> void:
+	if _hud == null:
+		return
+	var w := _hud.size.x
+	if w > 1.0 and not is_equal_approx(w, _hud_w):
+		_layout_hud_stats()
 
 
 ## 窄 = 第几天 / 行动点 / 演技 / 名声 / 钱。

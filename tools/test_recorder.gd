@@ -55,6 +55,14 @@ func _run_all() -> void:
 	# 旧断言还在读 `_sequence_label`，属性不存在会中断 _run_all，进程就挂在那里
 	_check("帧序列初始为三连平静", _app._frame_info.text, "帧 1 / 3 · 平静 → 平静 → 平静")
 	_check("部件明细为空", _app._emotion_parts.text, "—")
+	# 【模拟导出包】`resized` 在那边可能一次都不来（窗口一开场就是最终尺寸），
+	# 只靠信号的话顶栏四项数值会堆在 (0,0)。手动跑一帧 `_process`，应当自己摆回来。
+	_app._stats_w = -1.0
+	for v: Label in _app._stat_values:
+		v.position = Vector2.ZERO
+	_app._process(0.0)
+	_check("没有 resized 也能自己把顶栏数值摆回去",
+			_app._stat_values[1].position.x > 1.0, true)
 
 	print("")
 	print("[2] 选件写进当前帧")
