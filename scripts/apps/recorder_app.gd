@@ -1017,6 +1017,31 @@ func _sync_locks() -> void:
 		note.visible = locked
 		note.text = hint
 
+	_reorder_cards()
+
+
+## 每页卡片重排：**能用的排前面，还锁着的垫底**（各自内部仍按 tier 升序）。
+## 【为什么放 _sync_locks 里跟着重算】两种解锁门都会在游戏进行中变 ——
+## 周次推进、翻牌点亮一整套，重排挂在同一条刷新路径上就不会有「卡解锁了还沉在页尾」。
+func _reorder_cards() -> void:
+	for slot: int in _cards:
+		var page: VBoxContainer = _pages[slot]
+		var rows: Array = []
+		for key: String in _cards[slot]:
+			var part: PartData = _card_meta["%d|%s" % [slot, key]]["part"]
+			rows.append({
+				"card": _cards[slot][key],
+				# 「留空」那张没有部件，永远可用、永远排最前
+				"free": part == null or Game.is_part_unlocked(part),
+				"tier": -1 if part == null else part.tier,
+			})
+		rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			if a["free"] != b["free"]:
+				return a["free"]     # 解锁的在前
+			return a["tier"] < b["tier"])
+		for i in rows.size():
+			page.move_child(rows[i]["card"], i)
+
 
 ## 这件为什么现在点不了（空串 = 能用）。
 ## 【两种门要分开写】周次门（爆缸笑脸 / 绿豆蛙）等得起，翻牌门（得意 /
