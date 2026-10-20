@@ -139,6 +139,10 @@ var _choices: Node
 ## 这是本次聊天里的第几组选项（0 起）。**用它当键**去问「玩家当初挑的是第几句」——
 ## 一家可以写好几组选项（连着几行 `选` 就是一组），只按公司存一个序号会串组。
 var _choice_round := 0
+## 当前正在走哪条支线（0 = 还没挑 / 公共行）。
+## 正式文案里三个选项的回复各不相同（md 里写 `HR@1`、`我@2`），播放时只念选中那条，
+## 其它支线的行在原地跳过 —— 顺序播放、不回头，`skip_chat()` 这条快路径也一样适用。
+var _branch := 0
 
 
 func _ready() -> void:
@@ -605,6 +609,7 @@ func _open_chat() -> void:
 	_chat_done = false
 	_chat_aborted = false
 	_choice_round = 0
+	_branch = 0
 	# 【每次进聊天都复位播放间隔】它是「这一次」的设置，不是全局开关 ——
 	# `skip_chat()` 压下去的那个 0 必须留在这一次里（漏出去下一家就没有三选一了）。
 	_chat_step = 0.0 if _fast_forward else CHAT_STEP
@@ -653,7 +658,11 @@ func skip_chat() -> void:
 		if _chat_lines[_chat_index].is_choice():
 			# 【照着他当初挑的那句铺】第二次进同一家走的就是这里（见 `_remembered_choice`）
 			var run := _choice_run_at(_chat_index)
-			_send_choice(run[_remembered_choice(run)].display_text())
+			var pick := _remembered_choice(run)
+			_send_choice(run[pick].display_text(), pick + 1)
+			continue
+		if _skip_branch(_chat_lines[_chat_index]):
+			_chat_index += 1
 			continue
 		_push_line(_chat_lines[_chat_index])
 		_chat_index += 1
@@ -669,6 +678,11 @@ func _play_chat() -> void:
 			# 这几条不是「播放」，是回合切换，不该按计时器往下滚。
 			_show_choices(_choice_run_at(_chat_index))
 			return
+		# 【别的支线的行，原地跳过】不推气泡、也不垫「正在输入」——
+		# 玩家没点那个选项，就不该看见他的回复在打字。
+		if _skip_branch(_chat_lines[_chat_index]):
+			_chat_index += 1
+			continue
 		var line: ChatLine = _chat_lines[_chat_index]
 		# 【对方说每句话之前先"打"一会儿】包括玩家点完选项之后那一条 ——
 		# 原来那条是同一帧推出来的，读起来像查表而不是聊天。
@@ -894,7 +908,7 @@ func _on_choice_pressed(index: int) -> void:
 	var pick := clampi(index, 0, run.size() - 1)
 	if _current != null:
 		Game.set_hr_choice(_current.code, _choice_round, pick)
-	_send_choice(run[pick].display_text())
+	_send_choice(run[pick].display_text(), pick + 1)
 	if _chat_step <= 0.0:
 		skip_chat()
 	else:
@@ -903,16 +917,24 @@ func _on_choice_pressed(index: int) -> void:
 
 ## 把这一句当成玩家发的送出去，并消化掉整组选项。
 ## 【`skip_chat()` 也走这条】只是拾起哪一句由调用方定：玩家点的那句、还是**他当初挑过的那句**。
-func _send_choice(text: String) -> void:
+## `branch` = 选中的是第几个选项 + 1（选项 1 → 1）；之后只播 `branch` 相同的支线行。
+func _send_choice(text: String, branch := 0) -> void:
 	if _choices != null:
 		_chat_feed.remove_child(_choices)
 		_choices.queue_free()
 		_choices = null
 	# 一组消化掉了 —— 往后再遇到选项就是第 `_choice_round` 组（问「他挑过哪句」按它当键）
 	_choice_round += 1
+	_branch = branch
 	_chat_feed.add_child(_bubble_of(text, true))
 	_chat_index += _choice_run_at(_chat_index).size()
 	_scroll_chat()
+
+
+## 这一行是不是「别的选项的支线」——是的话播放时整行跳过。
+## 公共行（`branch == 0`）在哪条支线下都播，所以没标 `@` 的行不用担心。
+func _skip_branch(line: ChatLine) -> bool:
+	return line.has_branch() and line.branch != _branch
 
 
 ## 这一组选项，玩家**当初挑的是第几句**？没挑过（或存档来自更早的版本）才退回第一句。

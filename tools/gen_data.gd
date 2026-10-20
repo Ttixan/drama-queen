@@ -118,6 +118,7 @@ func _gen_companies() -> int:
 		co.posting_note = posting.get("posting_note", "")
 		co.hr_status = posting.get("hr_status", "")
 		co.opening_chat = _chat_lines(posting.get("chat", []))
+		co.wechat_opening = _chat_lines(posting.get("wechat", []))
 
 		if _save(co, "%s/%s.tres" % [COMPANY_DIR, spec["code"]]):
 			n += 1
@@ -144,6 +145,7 @@ func _load_posting(code: String) -> Dictionary:
 	var head := {}
 	var detail: Array[String] = []
 	var chat: Array[Dictionary] = []
+	var wechat: Array[Dictionary] = []
 	var note := ""
 	var state := ""
 
@@ -176,6 +178,10 @@ func _load_posting(code: String) -> Dictionary:
 				# 「点 HR 之后那段有来有回」的对话。它排在「## 招聘页」**之后**，
 				# 所以同时起一个作用：结束详情正文 —— 不然正文会一路吃到文件尾。
 				state = "chat"
+			elif name == "微信开场":
+				# 加进微信后、第一次点开这位 HR 时的记录（正式文案在 docx 的「界面二」）。
+				# 表格式与「初次沟通」完全一样，同样支持 `@n` 分支（这里一般用不上）。
+				state = "wechat"
 			else:
 				state = ""
 			continue
@@ -196,10 +202,18 @@ func _load_posting(code: String) -> Dictionary:
 				var kv := _bold_kv(t)
 				if kv.size() >= 2:
 					head[kv[0]] = kv[1]
-			"chat":
+			"chat", "wechat":
 				var row := _table_row(t)
 				if row.size() >= 2 and _is_chat_who(row[0]):
-					chat.append({"who": _who_of(row[0]), "text": row[1]})
+					var cells := {
+						"who": _who_of(row[0]),
+						"text": row[1],
+						"branch": _branch_of(row[0]),
+					}
+					if state == "chat":
+						chat.append(cells)
+					else:
+						wechat.append(cells)
 			"detail":
 				if t.begins_with(">"):
 					note = t.substr(1).strip_edges().trim_prefix("注：").strip_edges()
@@ -219,6 +233,7 @@ func _load_posting(code: String) -> Dictionary:
 	out["posting_note"] = note
 	out["hr_status"] = _hr_status(str(head.get("HR", "")))
 	out["chat"] = chat
+	out["wechat"] = wechat
 	return out
 
 
@@ -234,14 +249,28 @@ func _hr_status(text: String) -> String:
 ## 表格的**表头行**（`| 谁 | 话 |`）和分隔行也长成表格的样子。
 ## 【必须在这里挡掉】挡不住的话「话」会变成第一条消息真的发出来 —— 一句凭空多的话，
 ## 比直接报错更难发现。所以只认那三个词。
+## 【`HR@2` 也算】`@n` 是「只在这个选项的分支里出现」，判词前先把它剥掉。
 func _is_chat_who(label: String) -> bool:
-	var t := label.strip_edges()
+	var t := _who_label(label)
 	return t == "HR" or t == "hr" or t == "我" or t == "玩家" or t == "系统" or t == "选"
+
+
+## 把 `HR@2` 里的 `@2` 剥掉，只留「谁」
+func _who_label(label: String) -> String:
+	return label.strip_edges().split("@")[0].strip_edges()
+
+
+## `HR@2` → 2；没写 `@` → 0（公共行）
+func _branch_of(label: String) -> int:
+	var parts := label.strip_edges().split("@")
+	if parts.size() < 2:
+		return 0
+	return int(parts[1].strip_edges())
 
 
 ## md 里写「HR / 我 / 系统」，程序里用 "hr" / "me" / "system"
 func _who_of(label: String) -> String:
-	match label.strip_edges():
+	match _who_label(label):
 		"HR", "hr":
 			return "hr"
 		"我", "玩家":
@@ -259,6 +288,7 @@ func _chat_lines(rows: Array) -> Array[ChatLine]:
 		var line := ChatLine.new()
 		line.who = String(row["who"])
 		line.text = String(row["text"])
+		line.branch = int(row.get("branch", 0))
 		out.append(line)
 	return out
 

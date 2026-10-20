@@ -24,31 +24,79 @@ emotion = 1
 
 [sub_resource type="Resource" id="Resource_l0sje"]
 script = ExtResource("2_j0x8g")
-text = "您好，集团直招。弹性工作制、双月一休，能接受吗？"
+who = "me"
+text = "赵女士你好，请问集团目前在招募演员吗？我有一定的表演经验，能吃苦。"
 
 [sub_resource type="Resource" id="Resource_122y7"]
 script = ExtResource("2_j0x8g")
-who = "choice"
-text = "我想先问清楚工作安排。"
+text = "您好，百象影业高度重视人才储备。请问您的抗压能力如何？是否有连续熬夜（24小时待命）的拍摄经验？请发送详细履历。"
 
 [sub_resource type="Resource" id="Resource_rcxd1"]
 script = ExtResource("2_j0x8g")
-who = "choice"
-text = "18—23 小时那条，想确认一下。"
+who = "me"
+text = "（发送简历和一段视频）"
 
 [sub_resource type="Resource" id="Resource_ma7f5"]
 script = ExtResource("2_j0x8g")
-who = "choice"
-text = "双月一休具体怎么执行？"
+text = "收到。请问您之前有过哪些履历？"
 
 [sub_resource type="Resource" id="Resource_e4j7v"]
 script = ExtResource("2_j0x8g")
-text = "细节加微信说，我把完整的工作安排发您。"
+who = "me"
+text = "演过话剧配角，情绪稳定，随时能进组。"
 
 [sub_resource type="Resource" id="Resource_o6qdy"]
-script = ExtResource("3_ux0ye")
+script = ExtResource("2_j0x8g")
+who = "choice"
+text = "问薪水"
 
 [sub_resource type="Resource" id="Resource_7iqpk"]
+script = ExtResource("2_j0x8g")
+who = "choice"
+text = "问签约制度"
+
+[sub_resource type="Resource" id="Resource_1jdqm"]
+script = ExtResource("2_j0x8g")
+who = "choice"
+text = "问怎么试镜"
+
+[sub_resource type="Resource" id="Resource_0kbq5"]
+script = ExtResource("2_j0x8g")
+who = "me"
+text = "请问咱们这个岗位的薪资和排班是？"
+branch = 1
+
+[sub_resource type="Resource" id="Resource_i6ya1"]
+script = ExtResource("2_j0x8g")
+text = "薪资按日结算，优秀者有季度绩效与股票期权。请注意，我司实行弹性工作制，每日工作时长约18-23小时。双月单休，当期末休假视为自愿放弃。我们提供免费三餐、夜宵、行军床及淋浴间，以减少您不必要的通勤时间。"
+branch = 1
+
+[sub_resource type="Resource" id="Resource_0utmi"]
+script = ExtResource("2_j0x8g")
+who = "me"
+text = "请问去了是签劳动合同吗？"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_w3cgb"]
+script = ExtResource("2_j0x8g")
+text = "首期签署“奋斗者合作协议”。我们鼓励主动发现工作，不依赖领导安排。不以“已经下班”作为拒绝配合的借口。表现优异者，将纳入集团核心AIGC短剧人才池。"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_7jsb1"]
+script = ExtResource("2_j0x8g")
+who = "me"
+text = "请问试镜是什么流程？"
+branch = 3
+
+[sub_resource type="Resource" id="Resource_rf28h"]
+script = ExtResource("2_j0x8g")
+text = "无需才艺表演。请添加我的企业微信，发送试戏剧本给您。请于今晚凌晨02:00前录制并回传视频，我们对交付周期有严格要求。"
+branch = 3
+
+[sub_resource type="Resource" id="Resource_cg4l8"]
+script = ExtResource("3_ux0ye")
+
+[sub_resource type="Resource" id="Resource_8milp"]
 script = ExtResource("3_ux0ye")
 tier = 1
 acting_required = 5
@@ -56,13 +104,34 @@ match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_1jdqm"]
+[sub_resource type="Resource" id="Resource_a4b8j"]
 script = ExtResource("3_ux0ye")
 tier = 2
 acting_required = 15
 match_line = 0.7
 acting_gain = 5
 payout_ratio = 3.0
+
+[sub_resource type="Resource" id="Resource_qsq8m"]
+script = ExtResource("2_j0x8g")
+text = "（发送文件：《剧本试镜片段.pdf》）"
+
+[sub_resource type="Resource" id="Resource_r44qt"]
+script = ExtResource("2_j0x8g")
+text = "（发送文件：《百象集团-演员试戏规范V4.0.pdf》）"
+
+[sub_resource type="Resource" id="Resource_7g8kh"]
+script = ExtResource("2_j0x8g")
+text = "（发送长截图：包含《演员夜间拍摄考勤制度》、《片场情绪管理规范》等）"
+
+[sub_resource type="Resource" id="Resource_ipm0l"]
+script = ExtResource("2_j0x8g")
+text = "请录制视频前仔细阅读以上规范。24时内回传试镜视频。期待与您共同成长。"
+
+[sub_resource type="Resource" id="Resource_8qigg"]
+script = ExtResource("2_j0x8g")
+who = "me"
+text = "好的，已下载阅读。"
 
 [resource]
 script = ExtResource("4_r4b8a")
@@ -72,7 +141,7 @@ display_name = "百象影业"
 tier = 4
 acting_threshold = 20
 conditions = Array[ExtResource("1_1q5vd")]([SubResource("Resource_dk8u0"), SubResource("Resource_ya4v8"), SubResource("Resource_ubwe2")])
-roles = Array[ExtResource("3_ux0ye")]([SubResource("Resource_o6qdy"), SubResource("Resource_7iqpk"), SubResource("Resource_1jdqm")])
+roles = Array[ExtResource("3_ux0ye")]([SubResource("Resource_cg4l8"), SubResource("Resource_8milp"), SubResource("Resource_a4b8j")])
 extra_payout = 120
 good_play_chance = 0.8
 tagline = "上市大厂与夸张的压榨制度"
@@ -111,4 +180,5 @@ hint = "百象影业要「反转」。中间那下得掉头 —— 未完成电�
 hr_name = "赵女士"
 hr_title = "高级人才招聘专家"
 hr_status = "刚刚活跃｜今日回复 100+ 次"
-opening_chat = Array[ExtResource("2_j0x8g")]([SubResource("Resource_l0sje"), SubResource("Resource_122y7"), SubResource("Resource_rcxd1"), SubResource("Resource_ma7f5"), SubResource("Resource_e4j7v")])
+opening_chat = Array[ExtResource("2_j0x8g")]([SubResource("Resource_l0sje"), SubResource("Resource_122y7"), SubResource("Resource_rcxd1"), SubResource("Resource_ma7f5"), SubResource("Resource_e4j7v"), SubResource("Resource_o6qdy"), SubResource("Resource_7iqpk"), SubResource("Resource_1jdqm"), SubResource("Resource_0kbq5"), SubResource("Resource_i6ya1"), SubResource("Resource_0utmi"), SubResource("Resource_w3cgb"), SubResource("Resource_7jsb1"), SubResource("Resource_rf28h")])
+wechat_opening = Array[ExtResource("2_j0x8g")]([SubResource("Resource_qsq8m"), SubResource("Resource_r44qt"), SubResource("Resource_7g8kh"), SubResource("Resource_ipm0l"), SubResource("Resource_8qigg")])

@@ -19,31 +19,127 @@ emotion = 1
 
 [sub_resource type="Resource" id="Resource_gw00q"]
 script = ExtResource("2_74mkt")
-text = "小白也行，师傅一对一带，想学就回我一句。"
+who = "me"
+text = "你好，请问贵司招收演员吗？我有一定的表演经验，随时可以进组。"
 
 [sub_resource type="Resource" id="Resource_kc6n1"]
 script = ExtResource("2_74mkt")
-who = "choice"
-text = "我没什么基础，但肯学。"
+text = "招学徒"
 
 [sub_resource type="Resource" id="Resource_esc84"]
 script = ExtResource("2_74mkt")
-who = "choice"
-text = "我拍过一点东西，不算系统。"
+who = "me"
+text = "那您这边还招收短剧演员吗？我真的很需要演戏的机会，哪怕是从零开始。"
 
 [sub_resource type="Resource" id="Resource_nnghs"]
 script = ExtResource("2_74mkt")
-who = "choice"
-text = "师傅让做什么我就做什么。"
+text = "行吧。发个照片和视频来看看。"
 
 [sub_resource type="Resource" id="Resource_tiysw"]
 script = ExtResource("2_74mkt")
-text = "行，加我微信，我把带教的安排发你。"
+who = "me"
+text = "（发送简历和一段视频）"
 
 [sub_resource type="Resource" id="Resource_4ohv7"]
-script = ExtResource("3_s2fnj")
+script = ExtResource("2_74mkt")
+text = "提前说好，我们公司是学徒制。师傅带教，免费教，不收你学费，但学徒期没有工资和片酬，包盒饭。你要踏实、听安排，不能师傅说一句你有十句。"
 
 [sub_resource type="Resource" id="Resource_o7pjj"]
+script = ExtResource("2_74mkt")
+who = "me"
+text = "好的。"
+
+[sub_resource type="Resource" id="Resource_3mp8e"]
+script = ExtResource("2_74mkt")
+who = "choice"
+text = "问薪水"
+
+[sub_resource type="Resource" id="Resource_fohvy"]
+script = ExtResource("2_74mkt")
+who = "choice"
+text = "问签约制度"
+
+[sub_resource type="Resource" id="Resource_nrqxm"]
+script = ExtResource("2_74mkt")
+who = "choice"
+text = "问怎么试镜"
+
+[sub_resource type="Resource" id="Resource_5upvl"]
+script = ExtResource("2_74mkt")
+who = "me"
+text = "请问咱们这个学徒期大概多久？真的一分钱工资都没有吗？"
+branch = 1
+
+[sub_resource type="Resource" id="Resource_ggkyj"]
+script = ExtResource("2_74mkt")
+text = "我主页写得清清楚楚！！至少学习三个月！！！！！只有两个月时间的不要来问！不要聊到最后才说只能来两个月。你上来就问工资多少、几点下班的，我真不知道怎么带你。人品第一，技术第二。你要是只想赚快钱，出门左转去别家，想学真东西就别怕吃苦。"
+branch = 1
+
+[sub_resource type="Resource" id="Resource_njmy5"]
+script = ExtResource("2_74mkt")
+who = "me"
+text = "可是我想入的岗是演员岗，不是摄影学徒。"
+branch = 1
+
+[sub_resource type="Resource" id="Resource_ov03u"]
+script = ExtResource("2_74mkt")
+text = "演员岗有钱。"
+branch = 1
+
+[sub_resource type="Resource" id="Resource_uwaba"]
+script = ExtResource("2_74mkt")
+who = "me"
+text = "哦哦。"
+branch = 1
+
+[sub_resource type="Resource" id="Resource_epvmw"]
+script = ExtResource("2_74mkt")
+who = "me"
+text = "咱们公司是按项目合作，还是能签长期合同？"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_in6tl"]
+script = ExtResource("2_74mkt")
+text = "呃是这样的哈，因为我本身是做文化传播的，因为现在社会嘛，大家都知道经济不景气，整个社会需要公司凝聚力，我就打造了剧是本这个品牌，包括相关短剧。"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_01cwr"]
+script = ExtResource("2_74mkt")
+text = "我是用短剧产品做载体，来传播剧是本文化，因为这种东西它同时也是一种大流量来源，它就给我们短剧产品拉客户。因为我现在情况比较特殊比如说我现在打造这个公司，包括这种短剧的模型，它很适合很多人来打卡。我们中国文化之所以连绵不断，就是靠剧文化一代一代传承下来，它能增强凝聚力、向心力。"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_tkkyv"]
+script = ExtResource("2_74mkt")
+who = "me"
+text = "......"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_378qk"]
+script = ExtResource("2_74mkt")
+who = "me"
+text = "所以是项目合作吗？"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_st5sv"]
+script = ExtResource("2_74mkt")
+text = "是是是，项目合作，日结。对了，演员的服装和化妆你要自备，因为我现在没条件，没有人手哈，当然也缺资金。"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_0kpv3"]
+script = ExtResource("2_74mkt")
+who = "me"
+text = "我明白了，那试镜的话需要准备什么？"
+branch = 3
+
+[sub_resource type="Resource" id="Resource_apdbh"]
+script = ExtResource("2_74mkt")
+text = "加我微信吧，我给你发个试镜的剧本。"
+branch = 3
+
+[sub_resource type="Resource" id="Resource_lldcx"]
+script = ExtResource("3_s2fnj")
+
+[sub_resource type="Resource" id="Resource_miriv"]
 script = ExtResource("3_s2fnj")
 tier = 1
 acting_required = 5
@@ -51,13 +147,39 @@ match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_3mp8e"]
+[sub_resource type="Resource" id="Resource_rruwq"]
 script = ExtResource("3_s2fnj")
 tier = 2
 acting_required = 15
 match_line = 0.7
 acting_gain = 5
 payout_ratio = 3.0
+
+[sub_resource type="Resource" id="Resource_xx0hs"]
+script = ExtResource("2_74mkt")
+text = "（发送文件：《极寒末世-白月光试镜片段.pdf》）"
+
+[sub_resource type="Resource" id="Resource_klcbk"]
+script = ExtResource("2_74mkt")
+text = "这是试戏片段，你自己拿手机录一段发过来。"
+
+[sub_resource type="Resource" id="Resource_gu2wv"]
+script = ExtResource("2_74mkt")
+who = "me"
+text = "好的李姐，我今晚就录。"
+
+[sub_resource type="Resource" id="Resource_a40q5"]
+script = ExtResource("2_74mkt")
+text = "（发送文件：《剧是本：历史重大机遇.docx》）"
+
+[sub_resource type="Resource" id="Resource_gxv7n"]
+script = ExtResource("2_74mkt")
+text = "因为我们主要是新媒体结合短剧产品哈，你试镜之前，先把这个文件看了。这是我自写的公司精神内核。没有文化的人，演得再好也不要。"
+
+[sub_resource type="Resource" id="Resource_bp453"]
+script = ExtResource("2_74mkt")
+who = "me"
+text = "哦哦好的。"
 
 [resource]
 script = ExtResource("4_6htcd")
@@ -67,7 +189,7 @@ display_name = "剧是本影视"
 tier = 1
 acting_threshold = 3
 conditions = Array[ExtResource("1_bgd73")]([SubResource("Resource_13sw3"), SubResource("Resource_cdox5")])
-roles = Array[ExtResource("3_s2fnj")]([SubResource("Resource_4ohv7"), SubResource("Resource_o7pjj"), SubResource("Resource_3mp8e")])
+roles = Array[ExtResource("3_s2fnj")]([SubResource("Resource_lldcx"), SubResource("Resource_miriv"), SubResource("Resource_rruwq")])
 extra_payout = 64
 good_play_chance = 0.35
 tagline = "小公司 HR 与学徒制"
@@ -97,4 +219,5 @@ hint = "剧是本影视要个讨喜的新人。笑一个就行 —— 但别笑�
 hr_name = "李女士"
 hr_title = "人事兼行政"
 hr_status = "今日回复 10+ 次｜回复率高"
-opening_chat = Array[ExtResource("2_74mkt")]([SubResource("Resource_gw00q"), SubResource("Resource_kc6n1"), SubResource("Resource_esc84"), SubResource("Resource_nnghs"), SubResource("Resource_tiysw")])
+opening_chat = Array[ExtResource("2_74mkt")]([SubResource("Resource_gw00q"), SubResource("Resource_kc6n1"), SubResource("Resource_esc84"), SubResource("Resource_nnghs"), SubResource("Resource_tiysw"), SubResource("Resource_4ohv7"), SubResource("Resource_o7pjj"), SubResource("Resource_3mp8e"), SubResource("Resource_fohvy"), SubResource("Resource_nrqxm"), SubResource("Resource_5upvl"), SubResource("Resource_ggkyj"), SubResource("Resource_njmy5"), SubResource("Resource_ov03u"), SubResource("Resource_uwaba"), SubResource("Resource_epvmw"), SubResource("Resource_in6tl"), SubResource("Resource_01cwr"), SubResource("Resource_tkkyv"), SubResource("Resource_378qk"), SubResource("Resource_st5sv"), SubResource("Resource_0kpv3"), SubResource("Resource_apdbh")])
+wechat_opening = Array[ExtResource("2_74mkt")]([SubResource("Resource_xx0hs"), SubResource("Resource_klcbk"), SubResource("Resource_gu2wv"), SubResource("Resource_a40q5"), SubResource("Resource_gxv7n"), SubResource("Resource_bp453")])

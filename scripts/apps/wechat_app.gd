@@ -955,12 +955,18 @@ func _rebuild_chat() -> void:
 		_add_typing_bubble()
 		return
 
-	# 【加上了就先互相报名字】「简历拿来」那一步是「跟 HR 说上话才拿到联系方式」，
-	# 所以微信里这段记录该从「我是谁」开始，而不是一上来只有系统提示。
-	# 这两句是**从既有数据拼的**（公司名与 HR 名在 `CompanyData`，主角名读内容池），
-	# 所以不用往存档里多存一份 —— 每次重建都对得上。
-	_add_bubble("我是%s的%s" % [_current.display_name, _current.hr_name], false)
-	_add_bubble("我是%s" % _player_name(), true)
+	# 【开场记录来自文案】加进微信后第一次点开这位 HR 时那几句
+	# （正式文案在 docx 的「界面二：微信聊天记录」，md 里是「## 微信开场」）。
+	# 没写这段的公司才退回「互报名字」两句 —— 至少让玩家知道对面是谁。
+	if _current.wechat_opening.is_empty():
+		_add_bubble("我是%s的%s" % [_current.display_name, _current.hr_name], false)
+		_add_bubble("我是%s" % _player_name(), true)
+	else:
+		for line: ChatLine in _current.wechat_opening:
+			if line.is_system():
+				_add_note(line.display_text())
+			else:
+				_add_bubble(line.display_text(), line.is_mine())
 
 	# 【正在打字的是哪一条】`mail` 用下标藏履历里的那封回信；`script` 藏「他发剧本」那一段。
 	# 下标是**整份履历**的下标，所以下面要对全部履历计数，不能只数本公司的。

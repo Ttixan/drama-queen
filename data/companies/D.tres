@@ -18,31 +18,88 @@ emotion = 2
 
 [sub_resource type="Resource" id="Resource_3bt7y"]
 script = ExtResource("2_aq84a")
-text = "我们不做流水线。想做作者电影、现实题材，再聊。"
+who = "me"
+text = "徐女士您好，请问贵工作室还招收演员吗？我有一定的表演经验，随时可以进组。"
 
 [sub_resource type="Resource" id="Resource_i578h"]
 script = ExtResource("2_aq84a")
-who = "choice"
-text = "我想做的是能留下来的东西。"
+text = "你好。我们工作室主要做有文学表达的中短篇影像，不是那种流水线短剧。你对“表演”是怎么理解的？"
 
 [sub_resource type="Resource" id="Resource_nani4"]
 script = ExtResource("2_aq84a")
-who = "choice"
-text = "现实题材我一直想碰。"
+who = "me"
+text = "我觉得表演就是真实地呈现角色的情绪，让观众共情。"
 
 [sub_resource type="Resource" id="Resource_y3p7j"]
 script = ExtResource("2_aq84a")
-who = "choice"
-text = "不做快消，这点我们一样。"
+text = "共情……这个说法有些泛滥了。比起共情，我更看重演员能否呈现出人物在时代背景下的“失语”状态。先发一份你的素颜照和一段无滤镜的自我介绍视频吧。"
 
 [sub_resource type="Resource" id="Resource_31u35"]
 script = ExtResource("2_aq84a")
-text = "那加我微信，约个时间当面谈。"
+who = "me"
+text = "（发送简历和一段视频）"
 
 [sub_resource type="Resource" id="Resource_qy2nu"]
-script = ExtResource("3_2n8ow")
+script = ExtResource("2_aq84a")
+text = "外形有一点未经雕琢的粗粝感，眼神里有某种未经世事的空洞，还不错。之前演过什么？"
 
 [sub_resource type="Resource" id="Resource_e0wum"]
+script = ExtResource("2_aq84a")
+who = "me"
+text = "大学时演过一些话剧，我很能吃苦，情绪爆发戏没问题。"
+
+[sub_resource type="Resource" id="Resource_on0mf"]
+script = ExtResource("2_aq84a")
+who = "choice"
+text = "问薪水"
+
+[sub_resource type="Resource" id="Resource_wgoln"]
+script = ExtResource("2_aq84a")
+who = "choice"
+text = "问签约制度"
+
+[sub_resource type="Resource" id="Resource_ypv2t"]
+script = ExtResource("2_aq84a")
+who = "choice"
+text = "问怎么试镜"
+
+[sub_resource type="Resource" id="Resource_t1ido"]
+script = ExtResource("2_aq84a")
+who = "me"
+text = "请问咱们这边的薪资待遇是怎么算的？"
+branch = 1
+
+[sub_resource type="Resource" id="Resource_rtqhb"]
+script = ExtResource("2_aq84a")
+text = "我们是独立工作室，资金主要投入到制作本身。薪水可能没有那些拍竖屏短剧的丰厚，但我能提供给你的是纯粹的艺术氛围。希望你不是那种为了短期利益就随便妥协的人，有些东西比物质重要得多。"
+branch = 1
+
+[sub_resource type="Resource" id="Resource_f533x"]
+script = ExtResource("2_aq84a")
+who = "me"
+text = "请问去了是签劳动合同还是单次项目合作？"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_2yw2o"]
+script = ExtResource("2_aq84a")
+text = "我们不用冷冰冰的雇佣制度来束缚创作者。目前是按单次的项目合作来。在片场，我们需要的是同频的交流，而不是工业流水线上的螺丝钉。能接受这种自由但不确定的合作方式吗？"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_olt3j"]
+script = ExtResource("2_aq84a")
+who = "me"
+text = "请问试镜是什么流程？需要准备才艺吗？"
+branch = 3
+
+[sub_resource type="Resource" id="Resource_k3usy"]
+script = ExtResource("2_aq84a")
+text = "不用准备那些浮夸的才艺。我们需要的是能准确理解导演意图、能用微表情和肢体去传递暗流涌动的人。加我微信吧，我会发一段剧本给你。"
+branch = 3
+
+[sub_resource type="Resource" id="Resource_36goh"]
+script = ExtResource("3_2n8ow")
+
+[sub_resource type="Resource" id="Resource_20se3"]
 script = ExtResource("3_2n8ow")
 tier = 1
 acting_required = 5
@@ -50,13 +107,39 @@ match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_on0mf"]
+[sub_resource type="Resource" id="Resource_fhffx"]
 script = ExtResource("3_2n8ow")
 tier = 2
 acting_required = 15
 match_line = 0.7
 acting_gain = 5
 payout_ratio = 3.0
+
+[sub_resource type="Resource" id="Resource_0vkpd"]
+script = ExtResource("2_aq84a")
+text = "（发送文件：《通用剧本_选段.pdf》）"
+
+[sub_resource type="Resource" id="Resource_8cl42"]
+script = ExtResource("2_aq84a")
+text = "因为版权问题无法给到你公司内部的剧本选段。这是通用剧本试戏片段。你可以阅读后录制视频回传，试镜通过后我们可以再详谈。"
+
+[sub_resource type="Resource" id="Resource_yym6n"]
+script = ExtResource("2_aq84a")
+who = "me"
+text = "好的，我试着体会一下剧本中的情绪。"
+
+[sub_resource type="Resource" id="Resource_q1y6t"]
+script = ExtResource("2_aq84a")
+text = "（发送文件：《本周必读：电影现象学与空间叙事.docx》）"
+
+[sub_resource type="Resource" id="Resource_6r6if"]
+script = ExtResource("2_aq84a")
+text = "对了，这是我们工作室内部的阅片和阅读参考。你在录试镜视频前，最好先看看。我不希望看到一个连塔可夫斯基都没听说过的人，来演我们这种有文学厚度的剧本。录好了发我。"
+
+[sub_resource type="Resource" id="Resource_pil01"]
+script = ExtResource("2_aq84a")
+who = "me"
+text = "好的，我先去补补课。"
 
 [resource]
 script = ExtResource("4_f6nd1")
@@ -66,7 +149,7 @@ display_name = "未完成电影工作室"
 tier = 3
 acting_threshold = 15
 conditions = Array[ExtResource("1_0lt77")]([SubResource("Resource_711sn"), SubResource("Resource_p6y5r")])
-roles = Array[ExtResource("3_2n8ow")]([SubResource("Resource_qy2nu"), SubResource("Resource_e0wum"), SubResource("Resource_on0mf")])
+roles = Array[ExtResource("3_2n8ow")]([SubResource("Resource_36goh"), SubResource("Resource_20se3"), SubResource("Resource_fhffx")])
 extra_payout = 96
 good_play_chance = 0.65
 tagline = "高门槛文艺公司"
@@ -84,4 +167,5 @@ hint = "未完成电影工作室要「幻灭」。第一帧还亮着，最后一
 hr_name = "徐女士"
 hr_title = "制片人"
 hr_status = "本周活跃"
-opening_chat = Array[ExtResource("2_aq84a")]([SubResource("Resource_3bt7y"), SubResource("Resource_i578h"), SubResource("Resource_nani4"), SubResource("Resource_y3p7j"), SubResource("Resource_31u35")])
+opening_chat = Array[ExtResource("2_aq84a")]([SubResource("Resource_3bt7y"), SubResource("Resource_i578h"), SubResource("Resource_nani4"), SubResource("Resource_y3p7j"), SubResource("Resource_31u35"), SubResource("Resource_qy2nu"), SubResource("Resource_e0wum"), SubResource("Resource_on0mf"), SubResource("Resource_wgoln"), SubResource("Resource_ypv2t"), SubResource("Resource_t1ido"), SubResource("Resource_rtqhb"), SubResource("Resource_f533x"), SubResource("Resource_2yw2o"), SubResource("Resource_olt3j"), SubResource("Resource_k3usy")])
+wechat_opening = Array[ExtResource("2_aq84a")]([SubResource("Resource_0vkpd"), SubResource("Resource_8cl42"), SubResource("Resource_yym6n"), SubResource("Resource_q1y6t"), SubResource("Resource_6r6if"), SubResource("Resource_pil01")])

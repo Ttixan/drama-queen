@@ -18,31 +18,84 @@ value = 0.55
 
 [sub_resource type="Resource" id="Resource_fmbot"]
 script = ExtResource("2_ffk1a")
-text = "你好，剪辑岗双休、五险一金，先看作品。"
+who = "me"
+text = "你好，请问贵司还招特约演员吗？"
 
 [sub_resource type="Resource" id="Resource_v02v6"]
 script = ExtResource("2_ffk1a")
-who = "choice"
-text = "我有独立成片，可以发你看看。"
+text = "您好，在招。请发送您的模卡（含身高体重）及一段无滤镜自我介绍视频。"
 
 [sub_resource type="Resource" id="Resource_p05tr"]
 script = ExtResource("2_ffk1a")
-who = "choice"
-text = "PR、AE 我都熟。"
+who = "me"
+text = "（发送简历和一段视频）"
 
 [sub_resource type="Resource" id="Resource_foet6"]
 script = ExtResource("2_ffk1a")
-who = "choice"
-text = "先看作品再谈也行。"
+text = "简历已阅。条件符合我司标准。请简述过往参演经历。"
 
 [sub_resource type="Resource" id="Resource_u46oc"]
 script = ExtResource("2_ffk1a")
-text = "好，加我微信发我，我们微信上聊。"
+who = "me"
+text = "演过话剧配角，能胜任复杂情绪表达。"
 
 [sub_resource type="Resource" id="Resource_b6fd2"]
-script = ExtResource("3_jud2a")
+script = ExtResource("2_ffk1a")
+who = "choice"
+text = "问薪水"
 
 [sub_resource type="Resource" id="Resource_aqyr6"]
+script = ExtResource("2_ffk1a")
+who = "choice"
+text = "问签约制度"
+
+[sub_resource type="Resource" id="Resource_qn5k2"]
+script = ExtResource("2_ffk1a")
+who = "choice"
+text = "问怎么试镜"
+
+[sub_resource type="Resource" id="Resource_i48s3"]
+script = ExtResource("2_ffk1a")
+who = "me"
+text = "请问薪资怎么算？管饭吗？"
+branch = 1
+
+[sub_resource type="Resource" id="Resource_a641m"]
+script = ExtResource("2_ffk1a")
+text = "日薪300，全约艺人签劳务合同，享有底薪五险一金。包工作餐，两荤一素。试用期全薪。"
+branch = 1
+
+[sub_resource type="Resource" id="Resource_67r6t"]
+script = ExtResource("2_ffk1a")
+who = "me"
+text = "请问是劳动合同还是项目合作？"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_tgbko"]
+script = ExtResource("2_ffk1a")
+text = "首签为单次项目合作。表现优异者，期满后走内部流程转签全约艺人。我司流程规范，谢绝越级沟通。"
+branch = 2
+
+[sub_resource type="Resource" id="Resource_sn5ax"]
+script = ExtResource("2_ffk1a")
+who = "me"
+text = "请问试镜流程是什么？"
+branch = 3
+
+[sub_resource type="Resource" id="Resource_4yug3"]
+script = ExtResource("2_ffk1a")
+text = "请添加此微信号，发送试戏片段给您。请在24小时内录制视频回传，通过后安排线下面试。"
+branch = 3
+
+[sub_resource type="Resource" id="Resource_0muo3"]
+script = ExtResource("2_ffk1a")
+text = "vx-676767"
+branch = 3
+
+[sub_resource type="Resource" id="Resource_p0wcm"]
+script = ExtResource("3_jud2a")
+
+[sub_resource type="Resource" id="Resource_yy5mf"]
 script = ExtResource("3_jud2a")
 tier = 1
 acting_required = 5
@@ -50,13 +103,26 @@ match_line = 0.5
 acting_gain = 2
 payout_ratio = 2.0
 
-[sub_resource type="Resource" id="Resource_qn5k2"]
+[sub_resource type="Resource" id="Resource_d1mir"]
 script = ExtResource("3_jud2a")
 tier = 2
 acting_required = 15
 match_line = 0.7
 acting_gain = 5
 payout_ratio = 3.0
+
+[sub_resource type="Resource" id="Resource_j2aih"]
+script = ExtResource("2_ffk1a")
+text = "（发送文件：《极寒末世-白月光试镜片段.pdf》）"
+
+[sub_resource type="Resource" id="Resource_m856f"]
+script = ExtResource("2_ffk1a")
+text = "试戏片段见附件。请于明晚18:00前将视频发送至此。注意着装整洁，光线明亮。"
+
+[sub_resource type="Resource" id="Resource_a00re"]
+script = ExtResource("2_ffk1a")
+who = "me"
+text = "好的，收到。"
 
 [resource]
 script = ExtResource("4_w6wuu")
@@ -66,7 +132,7 @@ display_name = "好日子传媒"
 tier = 2
 acting_threshold = 8
 conditions = Array[ExtResource("1_gtl06")]([SubResource("Resource_d55ta"), SubResource("Resource_k0jyu")])
-roles = Array[ExtResource("3_jud2a")]([SubResource("Resource_b6fd2"), SubResource("Resource_aqyr6"), SubResource("Resource_qn5k2")])
+roles = Array[ExtResource("3_jud2a")]([SubResource("Resource_p0wcm"), SubResource("Resource_yy5mf"), SubResource("Resource_d1mir")])
 extra_payout = 80
 tagline = "正规公司，简短招聘"
 industry = "广播／影视"
@@ -83,4 +149,5 @@ hint = "好日子传媒嘴上说「纯真」。重点在纯 —— 掺一点别�
 hr_name = "陈女士"
 hr_title = "人事"
 hr_status = "今日活跃"
-opening_chat = Array[ExtResource("2_ffk1a")]([SubResource("Resource_fmbot"), SubResource("Resource_v02v6"), SubResource("Resource_p05tr"), SubResource("Resource_foet6"), SubResource("Resource_u46oc")])
+opening_chat = Array[ExtResource("2_ffk1a")]([SubResource("Resource_fmbot"), SubResource("Resource_v02v6"), SubResource("Resource_p05tr"), SubResource("Resource_foet6"), SubResource("Resource_u46oc"), SubResource("Resource_b6fd2"), SubResource("Resource_aqyr6"), SubResource("Resource_qn5k2"), SubResource("Resource_i48s3"), SubResource("Resource_a641m"), SubResource("Resource_67r6t"), SubResource("Resource_tgbko"), SubResource("Resource_sn5ax"), SubResource("Resource_4yug3"), SubResource("Resource_0muo3")])
+wechat_opening = Array[ExtResource("2_ffk1a")]([SubResource("Resource_j2aih"), SubResource("Resource_m856f"), SubResource("Resource_a00re")])

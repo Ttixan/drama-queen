@@ -90,6 +90,11 @@ enum Tier { A_LOW, B_SMALL, C_COMMERCIAL, D_ARTHOUSE, E_MAJOR }
 ## 【为什么开头那几句不能省】它是**从「看招聘页」到「微信里多一个联系人」的那一步**，
 ## 玩家得先跟 HR 说上话，才拿得到联系方式。
 @export var opening_chat: Array[ChatLine] = []
+## 加进微信后、第一次点开这位 HR 时的聊天记录（正式文案在 docx 的「界面二：微信聊天记录」）。
+## 内容在 md 的「## 微信开场」小节，格式与「## 初次沟通」一致。
+## 【为什么和 opening_chat 分开】前者发生在 Boss直聘 App 里（还没加微信），
+## 后者发生在微信里（已经是联系人）—— 两个界面的时间点不一样，不能当一段播。
+@export var wechat_opening: Array[ChatLine] = []
 
 
 func role_of(tier_wanted: RoleRequirement.Tier) -> RoleRequirement:

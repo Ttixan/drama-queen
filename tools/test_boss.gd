@@ -93,35 +93,46 @@ func _run_all() -> void:
 
 	print("")
 	print("[4] 点 HR 进聊天：先听开场，再自己挑一句回过去")
-	_check("A 的对话共 5 条（开场 + 三个选项 + 统一回复）",
-			CompanyLibrary.by_code("A").opening_chat.size(), 5)
-	_app._first_msg_delay = 0.0     # 时延关掉，整条链路同步跑，断言才写得稳
-	_app._open_chat()
+	# 【不再写死条数】正式文案里开场有几句铺垫、支线各几条都由 md 决定，
+	# 测试只验「顺序与分支对不对」，狗牙改文案不该让它变红。
+	var a_lines := CompanyLibrary.by_code("A").opening_chat
+	var a_first := _first_choice_at(a_lines)
+	_check("选项前有铺垫（正式文案不是一句开场就轮到玩家）", a_first > 1, true)
+	var a_branch1 := _branch_lines(a_lines, 1)
+	_check("第一个选项有自己的支线", a_branch1.is_empty(), false)
+	var reached: bool = await _open_chat_until_choices("A")
 	_check("聊天层盖住了详情", _app.chat_open(), true)
+	_check("已经轮到玩家挑", reached, true)
 	_check("详情层收起来了", _app._post_panel.visible, false)
 	_check("聊天头上是这位 HR", _app._chat_name.text, CompanyLibrary.by_code("A").hr_name)
-	# 职位卡 + 开场白 + **刚摆出来的选项** —— 选项是紧跟着开场白出现的，不等计时器
-	_check("职位卡 + 开场白 + 选项", _app._chat_feed.get_child_count(), 3)
-	_check("开场白之后立刻轮到你（不用干等）", _app._choices != null, true)
+	# 职位卡（1）+ 选项之前那几句铺垫 + 刚摆出来的选项框（1）
+	_check("铺垫先铺完，才轮到玩家", _app._chat_feed.get_child_count(), a_first + 2)
 	_check("选项竖着三个", _app._choices.get_child_count(), 3)
 	_check("还没挑/还没放完时不解锁", _game.is_hr_unlocked("A"), false)
-	# 挑第一个（点哪个都行，HR 后面回的是同一句）
+	# 挑第一个
 	(_app._choices.get_child(0) as Button).pressed.emit()
 	_check("选项撤掉了", _app._choices, null)
-	_check("挑中的那句成了我发的消息", _text_of_feed(2),
-			CompanyLibrary.by_code("A").opening_chat[1].display_text())
+	_check("挑中的那句成了我发的消息", _text_of_feed(a_first + 1),
+			a_lines[a_first].display_text())
 	_check("记下他挑的是第几句（0 起）", _game.hr_choice_of("A", 0), 0)
-	_app.skip_chat()          # 把剩下的（HR 的统一回复）放完
-	_check("HR 回的是同一句（挑哪句无关）", _text_of_feed(3),
-			CompanyLibrary.by_code("A").opening_chat[4].display_text())
+	_app.skip_chat()          # 把剩下那条支线放完
+	_check("放完的支线正好是第一个选项那条",
+			_text_of_feed(_app._chat_feed.get_child_count() - 2),
+			a_branch1[a_branch1.size() - 1].display_text())
+	var a_branch2 := _branch_lines(a_lines, 2)
+	_check("别的选项的支线一句都没出现",
+			_feed_has(a_branch2[0].display_text()), false)
 	_check("话说完就解锁了", _game.is_hr_unlocked("A"), true)
 	_check("只发了 1 次 hr_unlocked", _unlock_events.size(), 1)
 	_check("发的就是 A", _unlock_events[0], "A")
-	# 职位卡 + 3 条对话 + 1 条系统提示（「已加进微信联系人」）
-	_check("对话都进了聊天列表", _app._chat_feed.get_child_count(), 5)
+	# 职位卡 + 铺垫 + 自己那句 + 支线 + 系统提示（「已加进微信联系人」）
+	_check("对话都进了聊天列表", _app._chat_feed.get_child_count(),
+			a_first + 1 + a_branch1.size() + 2)
 	# 头像的左右（这一条只有截图才看得出来）：HR = 头像 → 气泡；玩家 = 气泡 → 头像
-	var hr_row: HBoxContainer = _app._chat_feed.get_child(1)
-	var me_row: HBoxContainer = _app._chat_feed.get_child(2)
+	# 【下标不再是 1/2 固定成 HR/我】正式文案第一句是玩家说的（「你好，请问贵司招收演员吗」），
+	# 所以 feed[1] 是我、feed[2] 才是 HR。
+	var me_row: HBoxContainer = _app._chat_feed.get_child(1)
+	var hr_row: HBoxContainer = _app._chat_feed.get_child(2)
 	_check("HR 那行第一块是头像（在最左）", hr_row.get_child(0) is Panel, true)
 	_check("HR 那行气泡在头像右边", hr_row.get_child(1) is PanelContainer, true)
 	_check("玩家那行气泡在前", me_row.get_child(1) is PanelContainer, true)
@@ -136,22 +147,20 @@ func _run_all() -> void:
 	print("")
 	print("[5] 第二次进聊天：内容一模一样，但不再演")
 	_walk_hr_chat("A")            # A 已经解锁过 → 应当直接铺完
-	_check("第二次也是完整对话（职位卡 + 3 条 + 系统提示）",
-			_app._chat_feed.get_child_count(), 5)
-	_check("系统提示换了说法",
-			(_app._chat_feed.get_child(4) as Label).text.contains("已经在你的微信联系人里"), true)
+	_check("第二次也是完整对话（职位卡 + 铺垫 + 自己那句 + 支线 + 系统提示）",
+			_app._chat_feed.get_child_count(),
+			a_first + 1 + a_branch1.size() + 2)
+	var a_sys: Label = _app._chat_feed.get_child(_app._chat_feed.get_child_count() - 1)
+	_check("系统提示换了说法", a_sys.text.contains("已经在你的微信联系人里"), true)
 	_check("且没有重复解锁（还是 1 次）", _unlock_events.count("A"), 1)
 	_app._close_chat()
 
 	print("")
 	print("[6] 话没说完就退出去：不算数")
-	_app._select_company("C")
 	# 【这一节必须关掉快进】要的就是「正等着玩家挑」的中间状态 ——
 	# 快进会一路放完并直接解锁，那就测不到「退出去不算数」了。
-	_app._fast_forward = false
-	_app._first_msg_delay = 0.0
-	_app._open_chat()
-	_check("退出前正等玩家挑（说明确实停在中间）", _app._choices != null, true)
+	var c_reached: bool = await _open_chat_until_choices("C")
+	_check("退出前正等玩家挑（说明确实停在中间）", c_reached and _app._choices != null, true)
 	_app._close_chat()             # 选项刚摆出来就退
 	_check("C 仍然没解锁", _game.is_hr_unlocked("C"), false)
 	_check("也没发过解锁事件", _unlock_events.count("C"), 0)
@@ -208,24 +217,22 @@ func _run_all() -> void:
 	# 【为什么这条非写不可】当时 131 项断言全绿：每一节都在第一家之后就换了话题，
 	# 没人回头看第二家。
 	_game.new_game()
-	_app._fast_forward = false
-	_app._first_msg_delay = 0.0
-	_app._select_company("A")
-	_app._open_chat()
-	_check("第一家：选项在（改之前也是好的）", _app._choices != null, true)
+	var a_ok: bool = await _open_chat_until_choices("A")
+	_check("第一家：选项在（改之前也是好的）", a_ok, true)
 	_app.skip_chat()               # 把这家放完 → 解锁（原来那个「跳过 ▸▸」按钮做的事）
 	_app._close_chat()
 	_app._select_company("A")
 	_app._open_chat()              # 第二次进：直接铺完 —— **这一步就会把 `_chat_step` 压成 0**
 	_check("第二次进：不再演，直接铺完", _app._choices, null)
-	_check("内容一模一样（职位卡 + 3 条 + 系统提示）", _app._chat_feed.get_child_count(), 5)
+	_check("内容一模一样（职位卡 + 铺垫 + 自己那句 + 支线 + 系统提示）",
+			_app._chat_feed.get_child_count(), a_first + 1 + a_branch1.size() + 2)
 	_app._close_chat()
-	_app._select_company("B")
-	_app._open_chat()
-	_check("第二家：选项也在", _app._choices != null, true)
+	var b_ok: bool = await _open_chat_until_choices("B")
+	_check("第二家：选项也在", b_ok and _app._choices != null, true)
 	_check("还是三个", _app._choices.get_child_count(), 3)
-	_check("没替玩家先说话（职位卡 + 开场白 + 选项）",
-			_app._chat_feed.get_child_count(), 3)
+	var b_lines := CompanyLibrary.by_code("B").opening_chat
+	_check("没替玩家先说话（职位卡 + 铺垫 + 选项框）",
+			_app._chat_feed.get_child_count(), _first_choice_at(b_lines) + 2)
 	_app._close_chat()
 	print("   快进只作用于这一次；下一家照常轮到玩家挑")
 
@@ -234,24 +241,72 @@ func _run_all() -> void:
 	# 复现路径：在 C 家挑了**第二句** → 退出去 → 再进来（这一层不演、直接铺完）
 	# → 原先永远铺第一句，玩家会看见一句自己没说过的话。
 	_game.new_game()
-	_app._fast_forward = false
-	_app._first_msg_delay = 0.0
 	var c_lines := CompanyLibrary.by_code("C").opening_chat
-	_app._select_company("C")
-	_app._open_chat()
+	var c_first := _first_choice_at(c_lines)
+	var c_ok: bool = await _open_chat_until_choices("C")
+	_check("C 也走到选项了", c_ok, true)
 	(_app._choices.get_child(1) as Button).pressed.emit()   # 挑第二句
 	_check("记下挑的是第 2 句", _game.hr_choice_of("C", 0), 1)
-	_check("送出去的也是第 2 句", _text_of_feed(2), c_lines[2].display_text())
+	_check("送出去的也是第 2 句", _text_of_feed(c_first + 1),
+			c_lines[c_first + 1].display_text())
 	_app.skip_chat()
 	_app._close_chat()
 	_app._select_company("C")
 	_app._open_chat()          # 第二次进：直接铺完
-	_check("铺出来的还是他挑的那句", _text_of_feed(2), c_lines[2].display_text())
-	_check("不再永远退回第一句", _text_of_feed(2) == c_lines[1].display_text(), false)
+	_check("铺出来的还是他挑的那句", _text_of_feed(c_first + 1),
+			c_lines[c_first + 1].display_text())
+	_check("不再永远退回第一句",
+			_text_of_feed(c_first + 1) == c_lines[c_first].display_text(), false)
 	_app._close_chat()
 	print("   挑过哪句进了进度；第二次进照他挑的铺")
 
 	_finish()
+
+
+## 选某家、进聊天，一直等到「轮到玩家挑」那一刻。
+## 【为什么不能像以前那样一进去就断言选项】正式文案开场有好几句铺垫，
+## 播放是异步的（每条之间要停一下），所以测试得等。
+## 步长在进聊天后压到 0.01 —— `_open_chat` 每次都会复位成 CHAT_STEP，不会漏到下一节。
+func _open_chat_until_choices(code: String) -> bool:
+	_app._select_company(code)
+	_app._fast_forward = false
+	_app._first_msg_delay = 0.0
+	_app._open_chat()
+	_app._chat_step = 0.01
+	return await _await_choices()
+
+
+func _await_choices(timeout := 15.0) -> bool:
+	var waited := 0.0
+	while _app._choices == null and not _app._chat_done and waited < timeout:
+		await create_timer(0.02).timeout
+		waited += 0.02
+	return _app._choices != null
+
+
+## 第一组选项在数组里的下标（`opening_chat` 里前面有几句铺垫）
+func _first_choice_at(lines: Array[ChatLine]) -> int:
+	for i in lines.size():
+		if lines[i].is_choice():
+			return i
+	return lines.size()
+
+
+## 第 n 个选项的支线（按数组顺序）
+func _branch_lines(lines: Array[ChatLine], n: int) -> Array[ChatLine]:
+	var out: Array[ChatLine] = []
+	for line: ChatLine in lines:
+		if line.branch == n:
+			out.append(line)
+	return out
+
+
+## 聊天列表里有没有出现过这句话
+func _feed_has(text: String) -> bool:
+	for i in _app._chat_feed.get_child_count():
+		if _text_of_feed(i) == text:
+			return true
+	return false
 
 
 ## 取聊天列表里第 i 个孩子的文字（气泡、系统提示都能取）

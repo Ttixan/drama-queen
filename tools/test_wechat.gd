@@ -188,36 +188,49 @@ func _run_all() -> void:
 	_check("还没有附件", _app._pending, null)
 	_check("没有附件时发送按钮置灰", _app._send_button.disabled, true)
 
-	# 【加完人就有聊天记录】这段该从「我是谁」开始（提提点名），而不是一上来只有系统提示
+	# 【加完人就有聊天记录】开场来自文案（md 的「## 微信开场」，docx「界面二」），
+	# 不再是以前那两句「我是谁」——所以这里只验「铺的是数据里那几句」。
 	var co := CompanyLibrary.by_code("A")
-	_check("第一条是 HR 自报家门",
-			_chat_text(0), "我是%s的%s" % [co.display_name, co.hr_name])
-	_check("第二条是我回自己的名字", _chat_text(1), "我是" + _player_name())
+	var opening := co.wechat_opening
+	_check("开场记录来自文案数据", opening.is_empty(), false)
+	_check("第一条就是文案第一句", _chat_text(0), opening[0].display_text())
+	_check("末条是我回的那句", _chat_text(opening.size() - 1),
+			opening[opening.size() - 1].display_text())
 
 	# 【气泡的形状与配色】对方在左（灰底、头像在最左）、自己在右（绿底、头像在最右）——
 	# 同一个聊天里只允许这两种底色，不再按成败 / 哪条会话换色
+	# 【为什么不再按下标取】文案第一句是 HR 发的文件条，我那句排最后 ——
+	# 按「第一条对方、第一条自己」去找，比数下标扛得住文案改动。
 	var rows := _bubble_rows()
-	_check("开头就是两条气泡（不是系统提示）", rows.size() >= 2, true)
-	if rows.size() >= 2:
+	_check("开场就是气泡（不是系统提示）", rows.size() >= 2, true)
+	var peer_row: HBoxContainer = null
+	var mine_row: HBoxContainer = null
+	for r: HBoxContainer in rows:
+		if peer_row == null and _bubble_tex(r) == "bubble_peer.png":
+			peer_row = r
+		if mine_row == null and _bubble_tex(r) == "bubble_me.png":
+			mine_row = r
+	_check("对方和我都发过话", peer_row != null and mine_row != null, true)
+	if peer_row != null and mine_row != null:
 		# 一行 = 【头像 + 气泡】两件，外加一个撑开的空控件把整行顶到该去的那一边。
 		# 【为什么连控件类型一起钉】这两处正是最容易写反的地方：
 		# 头像挂错侧 → 对方的头像跑到自己气泡右边；撑开的控件一律挂行尾 →
 		# 自己的气泡被推到左边（看着就是「右边没靠边」）
 		_check("对方那行：头像在最左、气泡紧跟其后",
-				"%s/%s" % [rows[0].get_child(0).get_class(), rows[0].get_child(1).get_class()],
+				"%s/%s" % [peer_row.get_child(0).get_class(), peer_row.get_child(1).get_class()],
 				"Panel/PanelContainer")
-		_check("对方那条：气泡是米色纸片", _bubble_tex(rows[0]), "bubble_peer.png")
+		_check("对方那条：气泡是米色纸片", _bubble_tex(peer_row), "bubble_peer.png")
 		_check("自己那行：气泡 + 头像，最前面是撑开的空控件（把气泡顶到右边）",
 				"%s/%s/%s" % [
-					rows[1].get_child(0).get_class(),
-					rows[1].get_child(1).get_class(),
-					rows[1].get_child(2).get_class(),
+					mine_row.get_child(0).get_class(),
+					mine_row.get_child(1).get_class(),
+					mine_row.get_child(2).get_class(),
 				], "Control/PanelContainer/Panel")
-		_check("自己那条：气泡是青绿纸片", _bubble_tex(rows[1]), "bubble_me.png")
+		_check("自己那条：气泡是青绿纸片", _bubble_tex(mine_row), "bubble_me.png")
 		_check("纸片上压的是深色字（浅底上白字看不见）",
-				_bubble_text_color(rows[1]).get_luminance() < 0.3, true)
+				_bubble_text_color(mine_row).get_luminance() < 0.3, true)
 		_check("短消息的气泡跟着文字收窄，不是一条通栏",
-				_card_of(rows[0]).get_combined_minimum_size().x < 560.0, true)
+				_card_of(peer_row).get_combined_minimum_size().x < 560.0, true)
 
 	# 「去录像机」同样是整屏切走。**录完的回程归手机屏管**（它记着是谁顶开的），
 	# 而表情包由核心层接住 —— 微信那一刻不在场，所以这两件事都不能指望它自己做
@@ -391,11 +404,14 @@ func _run_all() -> void:
 	_check("但这条会话还开着，回完还能回头看", _app._is_event_chat(), true)
 
 	# 事件会话里的气泡走**同一套**配色：他说的灰、我说的绿 —— 不再另开一套青
+	# 【取尾部三条，不取前两条】聊天记录里前面还有 HR 会话的开场与投递记录，
+	# 事件这段永远落在最后：他问 → 我回 → 他答。
 	var ev_rows := _bubble_rows()
-	_check("事件会话里他说的也是米色纸", _bubble_tex(ev_rows[0]), "bubble_peer.png")
-	_check("我回的那句是青绿纸", _bubble_tex(ev_rows[1]), "bubble_me.png")
+	var ev_tail := ev_rows.slice(ev_rows.size() - 3)
+	_check("事件会话里他说的也是米色纸", _bubble_tex(ev_tail[0]), "bubble_peer.png")
+	_check("我回的那句是青绿纸", _bubble_tex(ev_tail[1]), "bubble_me.png")
 	_check("他后面那句还是米色的（不是青绿也不是别的）",
-			_bubble_tex(ev_rows[ev_rows.size() - 1]), "bubble_peer.png")
+			_bubble_tex(ev_tail[2]), "bubble_peer.png")
 	_check("本周不会再来第二件", _game.pending_event(), null)
 	_check("处理完事件那排按钮收起来了", _app._event_buttons[paid].visible, false)
 
@@ -462,10 +478,11 @@ func _run_all() -> void:
 	# 【顺序：邀请 → 我开口 → 他发】提提 10-16 点出来的两件事：
 	# 邀请那句要**留着**（聊天记录是「聊过什么」，不是「还剩什么待办」），
 	# 而「我先说试配角」要排在「这是《…》的桂香剧本」前面。
-	# 数气泡：0/1 是自我介绍，2 是他邀请我挑档，3 是我要的档，4 才是他发的
-	_check("邀请选角色那句话留在记录里", _chat_text(2).contains("试哪类角色"), true)
-	_check("顺序是「我先说试哪一档」", _chat_text(3), "我想试配角。")
-	_check("紧接着才是 HR 发剧本的那句", _chat_text(4).contains(doc.play_title), true)
+	# 【不数下标】前面还有开场那几句（条数由文案决定），按内容找「邀请挑档」那句再往后看
+	var ask_at := _chat_index_of("试哪类角色")
+	_check("邀请选角色那句话留在记录里", ask_at >= 0, true)
+	_check("顺序是「我先说试哪一档」", _chat_text(ask_at + 1), "我想试配角。")
+	_check("紧接着才是 HR 发剧本的那句", _chat_text(ask_at + 2).contains(doc.play_title), true)
 
 	# 文件卡：整张可点，点开铺出橘色的剧本页
 	var card := _script_card()
@@ -587,6 +604,16 @@ func _card_of(row: Node) -> PanelContainer:
 		if node is PanelContainer:
 			return node
 	return null
+
+
+## 第几条气泡里含这段字？找不到返回 -1。
+## 【为什么要有它】开场那几句来自文案，条数会变；按内容定位比数下标稳。
+func _chat_index_of(fragment: String) -> int:
+	var rows := _bubble_rows()
+	for i in rows.size():
+		if _chat_text(i).contains(fragment):
+			return i
+	return -1
 
 
 ## 第 i 条气泡的文字
