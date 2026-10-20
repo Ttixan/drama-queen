@@ -26,15 +26,22 @@ const BTN_X := 760.0
 const BTN_Y := 560.0
 const BTN_W := 380.0
 const BTN_H := 46.0
-## 步进 = 高 + 间距(12)
-const BTN_STEP := 58.0
+## 步进 = 高 + 间距(6)。四条纸片叠在桌上，彼此贴得很近
+const BTN_STEP := 52.0
+## 每个按钮的横向错位 —— 边对边齐会像一张表格，稍微错开才像手工摆的纸条。
+## 顺序与按钮一一对应（继续 / 开始 / 制作 / 离开）。
+const BTN_JITTER := [-16.0, 14.0, -9.0, 19.0]
 
-## 散在两侧的剧照：左上一张压着绿笔记本，右下一张压着那本书
+## 散在两侧的剧照：左上压绿笔记本、左下压在空木纹上，右侧两张压着那本书
 const PHOTO_HOME := [
 	{"path": "res://assets/ui/intro/card_smug.png",
 			"pos": Vector2(56, 92), "height": 286.0, "angle": -8.0, "delay": 0.25},
+	{"path": "res://assets/ui/intro/card_surprise.png",
+			"pos": Vector2(44, 612), "height": 244.0, "angle": 7.0, "delay": 0.38},
 	{"path": "res://assets/ui/intro/card_sorrow.png",
-			"pos": Vector2(1484, 606), "height": 300.0, "angle": 7.0, "delay": 0.4},
+			"pos": Vector2(1492, 92), "height": 232.0, "angle": 6.0, "delay": 0.31},
+	{"path": "res://assets/ui/intro/card_smug.png",
+			"pos": Vector2(1476, 606), "height": 300.0, "angle": -7.0, "delay": 0.45},
 ]
 
 var _dialog: Control
@@ -93,13 +100,13 @@ func _build_actions() -> void:
 		start_y += (4 - specs.size()) * BTN_STEP * 0.5
 	for i in specs.size():
 		_action_button(String(specs[i]["text"]), start_y + i * BTN_STEP,
-				specs[i]["cb"])
+				BTN_JITTER[i], specs[i]["cb"])
 
 
-func _action_button(text: String, y: float, cb: Callable) -> Button:
+func _action_button(text: String, y: float, dx: float, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.position = Vector2(BTN_X, y)
+	b.position = Vector2(BTN_X + dx, y)
 	b.size = Vector2(BTN_W, BTN_H)
 	b.focus_mode = Control.FOCUS_NONE
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -184,12 +191,11 @@ func _show_credits() -> void:
 	var box := _dialog_body(_dialog, "制作人员")
 
 	for row: Array in [
-		["企划 / 剧本", "待填"],
-		["程序 / 系统", "待填"],
-		["美术 / 界面", "待填"],
-		["音频", "待填"],
+		["企划剧本", "犬齿 · 扉三千 · 提提"],
+		["程序系统", "提提"],
+		["美术界面", "扉三千"],
+		["音频", "犬齿"],
 		["引擎", "Godot 4.6"],
-		["字体", "獅尾半月字體 · SIL OFL 1.1"],
 	]:
 		var line := HBoxContainer.new()
 		line.add_theme_constant_override("separation", 24)
