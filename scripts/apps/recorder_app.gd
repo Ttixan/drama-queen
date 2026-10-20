@@ -521,7 +521,11 @@ func _after_frame_count_changed() -> void:
 
 
 func _on_card_toggled(on: bool, slot: int, key: String) -> void:
-	if _syncing or not on:
+	if _syncing:
+		return
+	# toggle 按钮的关闭沿（再点一次已选中的卡）= 撤回这件部件
+	if not on:
+		_cancel_card(slot, key)
 		return
 
 	var part: PartData = null
@@ -547,6 +551,29 @@ func _on_card_toggled(on: bool, slot: int, key: String) -> void:
 
 	_bump_card(_cards[slot][key])
 	_sync_all()
+
+
+## 再点一次已选中的卡 = 撤回：把这件部件从当前帧拿掉。
+## 【只在真的选着它时才撤】防止「点了 A 又秒点 B 没选中时」误清 A；
+## 【肤色撤回 = 回到默认】不是没有肤色 —— 空帧也必须是白纸上的人脸。
+func _cancel_card(slot: int, key: String) -> void:
+	if _selected_key(_clip.frames[_frame], slot) != key:
+		return
+
+	var f: Clip.Frame = _clip.frames[_frame]
+	match slot:
+		PartData.Slot.EYES:
+			f.eyes = null
+		PartData.Slot.MOUTH:
+			f.mouth = null
+		PartData.Slot.BROWS:
+			f.brows = null
+		PartData.Slot.EXTRA:
+			f.extra = null
+		PartData.Slot.SKIN:
+			f.skin = null
+	_sync_all()
+	_flash_face()
 
 
 func _on_clear_pressed() -> void:
