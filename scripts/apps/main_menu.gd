@@ -26,11 +26,8 @@ const BTN_X := 760.0
 const BTN_Y := 560.0
 const BTN_W := 380.0
 const BTN_H := 46.0
-## 步进 = 高 + 间距(6)。四条纸片叠在桌上，彼此贴得很近
-const BTN_STEP := 52.0
-## 每个按钮的横向错位 —— 边对边齐会像一张表格，稍微错开才像手工摆的纸条。
-## 顺序与按钮一一对应（继续 / 开始 / 制作 / 离开）。
-const BTN_JITTER := [-16.0, 14.0, -9.0, 19.0]
+## 步进 = 高 + 间距(22)：四条纸片各自独立，别贴成一摞
+const BTN_STEP := 68.0
 
 ## 散在两侧的剧照：左上压绿笔记本、左下压在空木纹上，右侧两张压着那本书
 const PHOTO_HOME := [
@@ -100,13 +97,13 @@ func _build_actions() -> void:
 		start_y += (4 - specs.size()) * BTN_STEP * 0.5
 	for i in specs.size():
 		_action_button(String(specs[i]["text"]), start_y + i * BTN_STEP,
-				BTN_JITTER[i], specs[i]["cb"])
+				specs[i]["cb"])
 
 
-func _action_button(text: String, y: float, dx: float, cb: Callable) -> Button:
+func _action_button(text: String, y: float, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.position = Vector2(BTN_X + dx, y)
+	b.position = Vector2(BTN_X, y)
 	b.size = Vector2(BTN_W, BTN_H)
 	b.focus_mode = Control.FOCUS_NONE
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
