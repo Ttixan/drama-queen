@@ -212,6 +212,10 @@ func _run() -> void:
 	await _wait(0.05)
 	_check("分类页签的洞",
 			_same_rect(_tut.hole_rect(), (rec._tabs[0] as Control).get_global_rect().grow(10.0)), true)
+	# 【先遮罩、后说话】对话框贴着屏幕底部，和洞抢同一块地方
+	_check("刚进来时只有遮罩，台词还没出来", _tut._dialogue.visible, false)
+	await _wait(1.1)
+	_check("过 1 秒台词才出现", _tut._dialogue.visible, true)
 	_tut._enter(TutorialLayer.Step.LINE_PARTS)
 	await _wait(0.05)
 	var first_card: Control = _tut._first_part_card()

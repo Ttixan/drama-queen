@@ -64,6 +64,10 @@ enum Step {
 ## 刚弹出来就在角上画个框，玩家还没看内容就先去点叉了
 const SCRIPT_READ_SEC := 5.0
 
+## 录像机那几条讲解：先让洞站这么久，再弹对话框
+## 【为什么】对话框贴在屏幕底部，正好压住洞的下沿 —— 同时出现会盖掉一截描边
+const LINE_DELAY_SEC := 1.0
+
 const DIALOGUE_SCENE := "res://scenes/ui/dialogue_box.tscn"
 const MEMORY_SCENE := "res://scenes/ui/memory_draw.tscn"
 const BOSS_SCENE := "res://scenes/apps/boss.tscn"
@@ -114,6 +118,8 @@ var _step := Step.LINE_INTRO
 var _tab_at_entry := -1
 ## 剧本页要放过的时间点（毫秒，见 `SCRIPT_READ_SEC`）
 var _script_read_until := 0
+## 台词协程的票（见 `_enter` 里「等一秒再说话」那段）
+var _line_token := 0
 
 
 func _ready() -> void:
@@ -184,14 +190,22 @@ func _enter(step: int) -> void:
 	if step == Step.TAP_CARD:
 		_open_memory()
 
-	var raw: Array = LINES.get(step, [])
-	var lines: Array[Dictionary] = []
-	for text: String in raw:
-		lines.append({"speaker": "", "text": text})
-	_dialogue.visible = not lines.is_empty()
-	if not lines.is_empty():
-		_dialogue.play_lines(lines)
+	_dialogue.visible = false
+	# 【每次进新拍都换一张票】上一拍那段"等 1 秒再说话"的协程醒来时，
+	# 玩家可能已经走远了 —— 认票不对就不许再弹字
+	_line_token += 1
+	var token := _line_token
+	var lines := _lines_of(step)
 	_update_hole()
+	if lines.is_empty():
+		return
+	if _delay_line(step):
+		# 【先让洞自己站一秒】对话框正好压在洞的下沿，字一出来就把它挡掉一截
+		await get_tree().create_timer(LINE_DELAY_SEC).timeout
+		if token != _line_token:
+			return
+	_dialogue.visible = true
+	_dialogue.play_lines(lines)
 
 
 func _go(step: int) -> void:
@@ -411,6 +425,24 @@ func _update_hole() -> void:
 	_place(1, Rect2(0.0, rect.end.y, screen.size.x, screen.size.y - rect.end.y))     # 下
 	_place(2, Rect2(0.0, rect.position.y, rect.position.x, rect.size.y))             # 左
 	_place(3, Rect2(rect.end.x, rect.position.y, screen.size.x - rect.end.x, rect.size.y))  # 右
+
+
+## 把一拍的多段文案转成对话框要的格式
+func _lines_of(step: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for text: String in LINES.get(step, []):
+		out.append({"speaker": "", "text": text})
+	return out
+
+
+## 这一拍要不要「先显示洞、再说话」。
+## 只针对录像机那五条：它们的洞就在屏幕中下部，和底部对话框抢同一块地方；
+## 前面几拍的洞在页面上方，同时出现不会打架。
+func _delay_line(step: int) -> bool:
+	return step in [
+		Step.LINE_TABS, Step.LINE_PARTS, Step.LINE_SLOTS,
+		Step.LINE_NEED, Step.LINE_HAVE,
+	]
 
 
 ## 这一拍是不是「等某个控件长出来才点」
