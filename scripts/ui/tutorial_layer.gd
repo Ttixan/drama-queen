@@ -36,24 +36,26 @@ enum Step {
 	TAP_SCRIPT_CARD = 10,## 圈住 HR 发来的剧本文件卡
 	TAP_SCRIPT_BACK = 11,## 圈住剧本页的返回
 	TAP_RECORDER = 12,   ## 圈住「去录像机」
-	LINE_TABS = 13,      ## 独白：这里选五官分类
-	TAP_TAB = 14,        ## 圈住一个分类页签（逼玩家点一下）
-	LINE_PARTS = 15,     ## 独白：这里选具体部件
-	TAP_PART = 16,       ## 圈住一张部件卡
-	LINE_SLOTS = 17,     ## 独白：这里调帧数
-	LINE_NEED = 18,      ## 独白：这是需要的情绪浓度
-	LINE_HAVE = 19,      ## 独白：这是你脸上现有的情绪
-	LINE_MEMORY = 20,    ## 独白三段（普鲁奇克 + 内存碎片）→ 弹记忆抽取
-	TAP_CARD = 21,       ## 翻开一张牌
+	TAP_LOAD_SCRIPT = 13,## 圈住底栏「加载剧本」
+	TAP_PICK_SCRIPT = 14,## 圈住弹窗里第一个剧本
+	LINE_TABS = 15,      ## 独白：这里选五官分类
+	TAP_TAB = 16,        ## 圈住一个分类页签（逼玩家点一下）
+	LINE_PARTS = 17,     ## 独白：这里选具体部件
+	TAP_PART = 18,       ## 圈住一张部件卡
+	LINE_SLOTS = 19,     ## 独白：这里调帧数
+	LINE_NEED = 20,      ## 独白：这是需要的情绪浓度
+	LINE_HAVE = 21,      ## 独白：这是你脸上现有的情绪
+	LINE_MEMORY = 22,    ## 独白三段（普鲁奇克 + 内存碎片）→ 弹记忆抽取
+	TAP_CARD = 23,       ## 翻开一张牌
 	# ---- ③ 拼贴 → 投递 → 回桌面 → 日历 ----
-	WAIT_BUILD = 22,     ## 放行：玩家自己把三帧拼完（引导不遮）
-	TAP_SEND = 23,       ## 圈住微信的「发送」（投递）
-	LINE_SUBMITTED = 24, ## 独白：一整套应聘流程做完了
-	TAP_BACK_DESK = 25,  ## 圈住「返回桌面」
-	TAP_CALENDAR = 26,   ## 圈住桌上的日历
-	LINE_EVENING = 27,   ## 独白：闲暇可以做别的事 / 今天先休息 / 拿下 Pswitch
-	TAP_END_DAY = 28,    ## 圈住「确认安排（下一天）」
-	DONE = 29,           ## 引导全部走完
+	WAIT_BUILD = 24,     ## 放行：玩家自己把三帧拼完（引导不遮）
+	TAP_SEND = 25,       ## 圈住微信的「发送」（投递）
+	LINE_SUBMITTED = 26, ## 独白：一整套应聘流程做完了
+	TAP_BACK_DESK = 27,  ## 圈住「返回桌面」
+	TAP_CALENDAR = 28,   ## 圈住桌上的日历
+	LINE_EVENING = 29,   ## 独白：闲暇可以做别的事 / 今天先休息 / 拿下 Pswitch
+	TAP_END_DAY = 30,    ## 圈住「确认安排（下一天）」
+	DONE = 31,           ## 引导全部走完
 }
 
 const DIALOGUE_SCENE := "res://scenes/ui/dialogue_box.tscn"
@@ -246,6 +248,15 @@ func _check_progress() -> void:
 		Step.TAP_RECORDER:
 			var phone3 := _phone()
 			if phone3 != null and phone3.current_app_path() == RECORDER_SCENE:
+				_go(Step.TAP_LOAD_SCRIPT)
+		Step.TAP_LOAD_SCRIPT:
+			# 底栏「加载剧本」→ 弹出选择框（`_dialog_layer` 非空 = 弹窗开着）
+			var rec5 := _recorder()
+			if rec5 != null and rec5.get("_dialog_layer") != null:
+				_go(Step.TAP_PICK_SCRIPT)
+		Step.TAP_PICK_SCRIPT:
+			var rec6 := _recorder()
+			if rec6 != null and rec6.get("_loaded_doc") != null:
 				_go(Step.LINE_TABS)
 		Step.TAP_TAB:
 			var rec := _recorder()
@@ -390,8 +401,8 @@ func _update_hole() -> void:
 func _waits_for_target() -> bool:
 	return _step in [
 		Step.TAP_WECHAT, Step.TAP_HR_ROW, Step.TAP_TIER, Step.TAP_SCRIPT_CARD,
-		Step.TAP_SCRIPT_BACK, Step.TAP_RECORDER, Step.TAP_TAB, Step.TAP_PART,
-		Step.TAP_CARD,
+		Step.TAP_SCRIPT_BACK, Step.TAP_RECORDER, Step.TAP_LOAD_SCRIPT,
+		Step.TAP_PICK_SCRIPT, Step.TAP_TAB, Step.TAP_PART, Step.TAP_CARD,
 		# 收尾这几拍同理：拼贴期间、回微信的路上，都不能被遮罩挡住
 		Step.WAIT_BUILD, Step.TAP_SEND, Step.TAP_BACK_DESK,
 		Step.TAP_CALENDAR, Step.TAP_END_DAY,
@@ -477,6 +488,11 @@ func _target_rect() -> Rect2:
 			if wx5 == null:
 				return Rect2()
 			return _rect_of(wx5.get("_open_recorder_button") as Control)
+		Step.TAP_LOAD_SCRIPT:
+			var rec0 := _recorder()
+			return _rect_of(rec0.get("_script_button") as Control) if rec0 != null else Rect2()
+		Step.TAP_PICK_SCRIPT:
+			return _rect_of(_script_row())
 		Step.LINE_TABS, Step.TAP_TAB:
 			var rec := _recorder()
 			if rec == null:
@@ -491,7 +507,9 @@ func _target_rect() -> Rect2:
 			if rec2 == null:
 				return Rect2()
 			var slots: Array = rec2.get("_slot_buttons")
-			return _rect_of(slots[1] as Control) if slots.size() > 1 else Rect2()
+			# 剧本可能只有 1 场（龙套本常见）——那时只有第 0 个槽，别去取 [1]
+			var idx: int = 1 if slots.size() > 1 else 0
+			return _rect_of(slots[idx] as Control) if slots.size() > idx else Rect2()
 		Step.LINE_NEED:
 			var rec3 := _recorder()
 			if rec3 == null:
@@ -522,6 +540,20 @@ func _target_rect() -> Rect2:
 			var end: Dictionary = cards.get("end", {})
 			return _rect_of(end.get("button") as Control)
 	return Rect2()
+
+
+## 剧本选择弹窗里第一条（「点击第一个剧本」）——
+## 弹窗是运行时现搭的，列表行没有稳定名字，只能按类型在层里找第一个 Button
+func _script_row() -> Control:
+	var rec := _recorder()
+	if rec == null:
+		return null
+	var layer := rec.get("_dialog_layer") as Node
+	if layer == null:
+		return null
+	for node: Node in layer.find_children("*", "Button", true, false):
+		return node as Control
+	return null
 
 
 ## 当前分类页里第一张「真部件」卡（跳过留空那张）

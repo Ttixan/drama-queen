@@ -27,7 +27,7 @@ func _initialize() -> void:
 	# 【超时兜底】`_run` 是协程：中途一句脚本错误就会停在那里，
 	# 而 `SceneTree` 不会自己退出 —— 表现就是「测试跑完不结束，窗口一直挂着」。
 	# 卡到 3 分钟直接判失败退出，别把进程留在那儿。
-	create_timer(90.0).timeout.connect(func() -> void:
+	create_timer(40.0).timeout.connect(func() -> void:
 		print("❌ 测试超时（3 分钟没跑完），强制退出")
 		quit(1))
 	process_frame.connect(_run, CONNECT_ONE_SHOT)
@@ -169,12 +169,29 @@ func _run() -> void:
 			_same_rect(_tut.hole_rect(), tier_btn.get_global_rect().grow(10.0)), true)
 
 	print("")
-	print("[10] 录像机五条讲解的洞")
+	print("[10] 录像机：先加载剧本，再讲五条")
+	# 微信里选过档位后手上会有一份剧本 —— 这里直接塞进状态，
+	# 省掉「等 HR 打字」那几秒（那条链路由 test_wechat 覆盖）
+	_game.state.set_hr_script("A", 1, RoleRequirement.Tier.EXTRA)
+	_tut._enter(TutorialLayer.Step.TAP_RECORDER)
 	phone.open_app(RECORDER_SCENE)
 	await _wait(0.25)
 	_check("录像机打开了", phone.current_app_path(), RECORDER_SCENE)
 	var rec: Node = phone._current
-	_tut._enter(TutorialLayer.Step.LINE_TABS)
+	_check("推进到「加载剧本」", _tut.step(), TutorialLayer.Step.TAP_LOAD_SCRIPT)
+	_check("洞圈在「加载剧本」",
+			_same_rect(_tut.hole_rect(), (rec._script_button as Control).get_global_rect().grow(10.0)), true)
+	rec._open_script_picker()
+	await _wait(0.1)
+	_check("推进到「选第一个剧本」", _tut.step(), TutorialLayer.Step.TAP_PICK_SCRIPT)
+	var first_row: Control = _tut._script_row()
+	_check("弹窗里有剧本行", first_row != null, true)
+	_check("洞圈在第一个剧本",
+			_same_rect(_tut.hole_rect(), first_row.get_global_rect().grow(10.0)), true)
+	(first_row as Button).pressed.emit()
+	await _wait(0.15)
+	_check("剧本加载完成", rec._loaded_doc != null, true)
+	_check("推进到五官讲解", _tut.step(), TutorialLayer.Step.LINE_TABS)
 	await _wait(0.05)
 	_check("分类页签的洞",
 			_same_rect(_tut.hole_rect(), (rec._tabs[0] as Control).get_global_rect().grow(10.0)), true)
@@ -185,8 +202,10 @@ func _run() -> void:
 			_same_rect(_tut.hole_rect(), first_card.get_global_rect().grow(10.0)), true)
 	_tut._enter(TutorialLayer.Step.LINE_SLOTS)
 	await _wait(0.05)
+	var slots: Array = rec._slot_buttons
+	var slot_idx: int = 1 if slots.size() > 1 else 0
 	_check("帧槽的洞",
-			_same_rect(_tut.hole_rect(), (rec._slot_buttons[1] as Control).get_global_rect().grow(10.0)), true)
+			_same_rect(_tut.hole_rect(), (slots[slot_idx] as Control).get_global_rect().grow(10.0)), true)
 	_tut._enter(TutorialLayer.Step.LINE_NEED)
 	await _wait(0.05)
 	_check("所需分数的洞",
