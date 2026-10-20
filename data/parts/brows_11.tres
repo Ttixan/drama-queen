@@ -11,4 +11,8 @@ slot = 2
 tier = 11
 texture = ExtResource("2_35m2y")
 unlock_week = 3
+attributes = {
+"惊讶": 20,
+"愤怒": 30
+}
 awkward = 2.0

@@ -11,5 +11,9 @@ slot = 1
 tier = 12
 texture = ExtResource("2_rdhlc")
 unlock_week = 3
+attributes = {
+"惊讶": 25,
+"愤怒": 5
+}
 joy = 3.0
 shock = 1.0

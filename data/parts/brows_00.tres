@@ -9,3 +9,8 @@ id = &"brows_00"
 display_name = "信任"
 slot = 2
 texture = ExtResource("2_5wbl8")
+attributes = {
+"信任": 30,
+"恐惧": 10,
+"悲伤": 10
+}

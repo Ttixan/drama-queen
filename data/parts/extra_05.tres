@@ -10,3 +10,7 @@ display_name = "眼镜"
 slot = 3
 tier = 5
 texture = ExtResource("2_1e6ci")
+attributes = {
+"厌恶": 5,
+"愤怒": 5
+}

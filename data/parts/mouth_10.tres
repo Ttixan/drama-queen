@@ -11,5 +11,10 @@ slot = 1
 tier = 10
 texture = ExtResource("2_cir6i")
 set_id = &"smirk"
+attributes = {
+"厌恶": 20,
+"喜悦": 20,
+"悲伤": 20
+}
 joy = 1.0
 awkward = 2.0

@@ -10,3 +10,6 @@ display_name = "悲"
 slot = 4
 tier = 6
 texture = ExtResource("2_sp5i4")
+attributes = {
+"悲伤": 5
+}

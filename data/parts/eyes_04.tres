@@ -9,5 +9,10 @@ id = &"eyes_04"
 display_name = "喜悦"
 tier = 4
 texture = ExtResource("2_j7yr0")
+attributes = {
+"厌恶": 10,
+"喜悦": 40,
+"期待": 10
+}
 joy = 3.0
 charm = 1.0

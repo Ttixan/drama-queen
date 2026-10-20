@@ -9,4 +9,7 @@ id = &"extra_00"
 display_name = "要吐了"
 slot = 3
 texture = ExtResource("2_tm186")
+attributes = {
+"厌恶": 15
+}
 awkward = 3.0

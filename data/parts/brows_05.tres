@@ -10,4 +10,8 @@ display_name = "悲伤忧愁"
 slot = 2
 tier = 5
 texture = ExtResource("2_b3r3c")
+attributes = {
+"厌恶": 20,
+"悲伤": 30
+}
 sorrow = 2.0

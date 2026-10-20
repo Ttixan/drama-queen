@@ -9,4 +9,8 @@ id = &"eyes_01"
 display_name = "惊讶"
 tier = 1
 texture = ExtResource("2_vlcn2")
+attributes = {
+"悲伤": 20,
+"惊讶": 40
+}
 shock = 2.0

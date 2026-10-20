@@ -11,4 +11,9 @@ slot = 2
 tier = 9
 texture = ExtResource("2_irw6o")
 set_id = &"late_love"
+attributes = {
+"恐惧": 10,
+"悲伤": 40,
+"愤怒": 10
+}
 sorrow = 2.0

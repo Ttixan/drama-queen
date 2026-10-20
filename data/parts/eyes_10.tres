@@ -10,4 +10,9 @@ display_name = "爆缸笑脸"
 tier = 10
 texture = ExtResource("2_hj1mt")
 unlock_week = 3
+attributes = {
+"喜悦": 40,
+"愤怒": 10,
+"期待": 10
+}
 joy = 3.0

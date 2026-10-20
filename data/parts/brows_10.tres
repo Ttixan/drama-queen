@@ -11,5 +11,11 @@ slot = 2
 tier = 10
 texture = ExtResource("2_tgi6a")
 unlock_week = 3
+attributes = {
+"喜悦": 20,
+"悲伤": 10,
+"愤怒": 30,
+"期待": 10
+}
 joy = 2.0
 shock = 1.0

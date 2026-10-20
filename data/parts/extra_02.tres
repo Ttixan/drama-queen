@@ -10,5 +10,9 @@ display_name = "汗如雨下"
 slot = 3
 tier = 2
 texture = ExtResource("2_ktpon")
+attributes = {
+"信任": 5,
+"惊讶": 10
+}
 shock = 1.0
 awkward = 2.0

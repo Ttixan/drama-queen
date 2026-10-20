@@ -10,3 +10,6 @@ display_name = "受刺激"
 slot = 4
 tier = 8
 texture = ExtResource("2_fqfuu")
+attributes = {
+"惊讶": 5
+}

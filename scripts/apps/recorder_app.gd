@@ -33,20 +33,31 @@ const NEUTRAL_COLOR := UiPalette.TEXT_DIM
 signal cancelled
 
 ## 【部件卡为什么是「一行一条」】右边那栏是**单列列表**（手稿：右栏只列一行内容），
-## 卡片 = 左边一块缩略图 + 右边名字与情绪标签，高度 76 就够。
-## 一格放不下就滚动兜住（嘴有 14 件，一屏只装得下 6 张）—— 不再按 3 列网格摊。
-const CARD_MIN_HEIGHT := 76
-const ART_HEIGHT := 56
+## 卡片 = 左边一块缩略图 + 右边名字与属性徽章。
+## **放大到 112 高**：缩略图 88、右侧一行名字 + 一行属性徽章，
+## 一屏正好摆下四张（原来 76 高能塞六张，但每条只剩两行 13 号字，读不清属性）。
+const CARD_MIN_HEIGHT := 144
+const ART_HEIGHT := 112
 
-## 页签图标（由 `tools/gen_ui_icons.gd` 生成的纯白简笔图）。
-## 颜色不画进图里：Button 的 `icon_normal_color / icon_pressed_color` 负责上色，
-## 同一张图在「未选中（灰）」和「选中（黄）」两态都不用重画。
+## 页签图标：美术给的「未选中（白底）/ 选中（橙底）」两态。
+## 素材是一张 5 行 × 2 列的合并图，由 `tools/_cut_tabs.py` 按行切成 10 张。
+## 颜色已经画在图里，所以按钮**不再上色、也不画底框**（见 `_apply_styles`）。
 const TAB_ICONS := {
-	PartData.Slot.EYES: "res://assets/ui/icons/tab_eyes.png",
-	PartData.Slot.MOUTH: "res://assets/ui/icons/tab_mouth.png",
-	PartData.Slot.BROWS: "res://assets/ui/icons/tab_brows.png",
-	PartData.Slot.EXTRA: "res://assets/ui/icons/tab_extra.png",
-	PartData.Slot.SKIN: "res://assets/ui/icons/tab_skin.png",
+	PartData.Slot.EYES: [
+		"res://assets/ui/icons/tab_eyes_off.png",
+		"res://assets/ui/icons/tab_eyes_on.png"],
+	PartData.Slot.MOUTH: [
+		"res://assets/ui/icons/tab_mouth_off.png",
+		"res://assets/ui/icons/tab_mouth_on.png"],
+	PartData.Slot.BROWS: [
+		"res://assets/ui/icons/tab_brows_off.png",
+		"res://assets/ui/icons/tab_brows_on.png"],
+	PartData.Slot.EXTRA: [
+		"res://assets/ui/icons/tab_extra_off.png",
+		"res://assets/ui/icons/tab_extra_on.png"],
+	PartData.Slot.SKIN: [
+		"res://assets/ui/icons/tab_skin_off.png",
+		"res://assets/ui/icons/tab_skin_on.png"],
 }
 
 ## 底图 —— 不是部件，玩家选不了，所以不从 PartLibrary 取。
@@ -57,9 +68,11 @@ const TEX_PAPER := "res://assets/parts/face_paper.png"
 const TEX_BASE := "res://assets/parts/face_base.png"
 
 
-## 页签键的边长，以及图标在键里的最大显示尺寸
-const TAB_SIZE := 60
-const TAB_ICON_MAX := 38
+## 页签键的边长，以及图标在键里的最大显示尺寸。
+## 新图标是带边框的方块（素材 139×137），比原来那批纯白简笔图大一圈，
+## 键也跟着放大 —— 48 的图标挤在 60 的键里四边全贴着，看着像贴纸没贴正。
+const TAB_SIZE := 76
+const TAB_ICON_MAX := 64
 
 ## 帧槽键的边长。键面上只放一个数字 —— 「帧 1」三个字要 150 宽，数字 44 就够，
 ## 省下来的横向空间正好给右边的 +/-（帧数最多 5 个，5×44 + 4×8 = 252，底栏放得下）
@@ -256,7 +269,11 @@ func _collect_nodes() -> void:
 		var tab := _tabs[i]
 		var slot: int = PartLibrary.TAB_ORDER[i]
 		tab.button_group = tab_group
-		tab.icon = load(TAB_ICONS[slot])
+		var icons: Array = TAB_ICONS[slot]
+		# 常态走 `icon` 属性，选中/悬停走主题覆盖 —— 只设主题的话，未选中的键是空的
+		tab.icon = load(icons[0])
+		tab.add_theme_icon_override("icon_hover", load(icons[1]))
+		tab.add_theme_icon_override("icon_pressed", load(icons[1]))
 		tab.tooltip_text = PartData.SLOT_NAMES[slot]
 		tab.toggled.connect(_on_tab_toggled.bind(slot))
 
@@ -351,7 +368,7 @@ func _make_card(slot: int, part: PartData) -> Button:
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for side in ["left", "top", "right", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 10)
+		margin.add_theme_constant_override("margin_" + side, 12)
 	card.add_child(margin)
 
 	# 一行一条：缩略图钉在左边，名字与情绪标签在右边顺排
@@ -382,18 +399,72 @@ func _make_card(slot: int, part: PartData) -> Button:
 	title.add_theme_color_override("font_color", C_TEXT_DIM if is_blank else C_TEXT)
 	info.add_child(title)
 
-	# 部件自身的情绪标签 —— 缩略图还是占位色块时，这行是玩家唯一能读的信息
-	var tags := Label.new()
-	tags.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tags.text = "不挂附加部件" if is_blank else part.emotion_labels()
-	tags.add_theme_font_size_override("font_size", 13)
-	tags.add_theme_color_override("font_color", C_TEXT_DIM)
-	info.add_child(tags)
+	# 属性徽章：关键词表标的前两项（「信任 +40」「期待 +20」）。
+	# 一个徽章行 + 一个「锁定提示」共用这块位置 —— 锁着的时候属性没意义，
+	# 直接把位置让给「翻牌获得 / 第 3 周解锁」。
+	var badges := HBoxContainer.new()
+	badges.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badges.add_theme_constant_override("separation", 6)
+	info.add_child(badges)
 
-	# 解锁状态要能改文案，所以把这两行字交给 _sync_locks() 管
-	_card_meta["%d|%s" % [slot, key]] = {"part": part, "title": title, "tags": tags}
+	if is_blank:
+		var none := Label.new()
+		none.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		none.text = "不挂附加部件"
+		none.add_theme_font_size_override("font_size", 13)
+		none.add_theme_color_override("font_color", C_TEXT_DIM)
+		badges.add_child(none)
+	else:
+		for pair: Array in _top_attributes(part, 2):
+			badges.add_child(_attr_badge(String(pair[0]), int(pair[1])))
+
+	var note := Label.new()
+	note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	note.visible = false
+	note.add_theme_font_size_override("font_size", 13)
+	note.add_theme_color_override("font_color", UiPalette.TEXT_DISABLED)
+	info.add_child(note)
+
+	# 解锁状态要能换文案，所以这两块交给 _sync_locks() 管
+	_card_meta["%d|%s" % [slot, key]] = {
+		"part": part, "title": title, "badges": badges, "note": note,
+	}
 
 	return card
+
+
+## 关键词表里分值最高的前几项（空字典 = 没标）
+func _top_attributes(part: PartData, limit: int) -> Array:
+	var pairs: Array = []
+	for attr_name: String in part.attributes:
+		pairs.append([attr_name, int(part.attributes[attr_name])])
+	pairs.sort_custom(func(a: Array, b: Array) -> bool:
+		return int(a[1]) > int(b[1]))
+	return pairs.slice(0, mini(limit, pairs.size()))
+
+
+## 一枚属性徽章：浅底 + 细边 + 强调色数字（「信任 +40」）
+func _attr_badge(attr_name: String, value: int) -> Control:
+	var box := PanelContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = C_PANEL_SOFT
+	sb.border_color = C_LINE
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(7)
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 1
+	box.add_theme_stylebox_override("panel", sb)
+
+	var l := Label.new()
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.text = "%s +%d" % [attr_name, value]
+	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_color_override("font_color", C_ACCENT)
+	box.add_child(l)
+	return box
 
 
 # ============================================================
@@ -630,13 +701,15 @@ func _sync_locks() -> void:
 		var locked := not hint.is_empty()
 		var card: Button = _cards[part.slot][String(part.id)]
 		var title: Label = meta["title"]
-		var tags: Label = meta["tags"]
+		var badges: Control = meta["badges"]
+		var note: Label = meta["note"]
 		card.disabled = locked
 		card.tooltip_text = hint
 		title.add_theme_color_override("font_color", C_TEXT_DIM if locked else C_TEXT)
-		tags.text = hint if locked else part.emotion_labels()
-		tags.add_theme_color_override("font_color",
-				UiPalette.TEXT_DISABLED if locked else C_TEXT_DIM)
+		# 锁着 → 属性换成解锁条件；解锁 → 属性回来
+		badges.visible = not locked
+		note.visible = locked
+		note.text = hint
 
 
 ## 这件为什么现在点不了（空串 = 能用）。
@@ -697,7 +770,12 @@ func _show_tab() -> void:
 				_fade_in(page)
 	_syncing = true
 	for i in _tabs.size():
-		_tabs[i].button_pressed = (PartLibrary.TAB_ORDER[i] == _tab)
+		var slot: int = PartLibrary.TAB_ORDER[i]
+		var on := slot == _tab
+		_tabs[i].button_pressed = on
+		# 图标是**两态素材**（白底 / 橙底），不是靠着色区分 ——
+		# 选中与否直接换图，`icon_pressed` 在 toggle 里不一定被走
+		_tabs[i].icon = load(TAB_ICONS[slot][1 if on else 0])
 	_syncing = false
 
 
@@ -861,21 +939,14 @@ func _apply_styles() -> void:
 	_txt(get_node(P_EDIT + "/EmotionStrip/EmotionMargin/EmotionRow/EmotionCaption"), 15, C_TEXT_DIM)
 	_txt(_emotion_parts, 16, C_TEXT_DIM)
 
-	# 页签：一条竖轨上的方形图标键。图形是纯白的（tools/gen_ui_icons.gd），
-	# 颜色全在这里给 —— 未选中灰、选中黄，同一张图两态复用。
+	# 页签：一条竖轨上的方形图标键。**图标自带白底/橙底两态**，
+	# 所以按钮本身不画底框、也不给图标上色（再套一层框就成了双层边）
 	for tab: Button in _tabs:
 		tab.focus_mode = Control.FOCUS_NONE
 		tab.custom_minimum_size = Vector2(TAB_SIZE, TAB_SIZE)
-		tab.add_theme_stylebox_override("normal", _button_sb(C_PANEL_SOFT, C_LINE, 2, 14, 0, 0))
-		tab.add_theme_stylebox_override("hover", _button_sb(Color("35353f"), C_LINE, 2, 14, 0, 0))
-		tab.add_theme_stylebox_override("pressed", _button_sb(C_ACCENT, C_ACCENT, 2, 14, 0, 0))
-		tab.add_theme_stylebox_override("focus", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 14, 0, 0))
+		for state in ["normal", "hover", "pressed", "focus"]:
+			tab.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 		tab.add_theme_constant_override("icon_max_width", TAB_ICON_MAX)
-		# 未选中的图标要「看得见但不出头」——直接用 TEXT_DIM 压在 PANEL_SOFT 上太灰，
-		# 玩家认不出是眼还是眉；提亮一档，选中的黄底压深色（C_INK）
-		tab.add_theme_color_override("icon_normal_color", C_TEXT_DIM.lightened(0.18))
-		tab.add_theme_color_override("icon_hover_color", C_TEXT)
-		tab.add_theme_color_override("icon_pressed_color", C_INK)
 
 	# 帧槽的样式在 _rebuild_slots() 里 —— 那些按钮是现建的，这里的循环够不到
 	# 增删帧：与帧槽同一套纸面配色，但**不铺底**（次要动作不该和帧槽一样重）

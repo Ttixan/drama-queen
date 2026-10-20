@@ -10,4 +10,8 @@ display_name = "喜悦"
 slot = 1
 tier = 3
 texture = ExtResource("2_dh67a")
+attributes = {
+"喜悦": 30,
+"期待": 10
+}
 joy = 3.0

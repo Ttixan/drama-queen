@@ -9,4 +9,8 @@ id = &"eyes_03"
 display_name = "悲伤忧愁"
 tier = 3
 texture = ExtResource("2_gxds2")
+attributes = {
+"厌恶": 10,
+"悲伤": 40
+}
 sorrow = 3.0

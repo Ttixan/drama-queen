@@ -10,4 +10,8 @@ display_name = "脸红"
 slot = 3
 tier = 4
 texture = ExtResource("2_rtkf6")
+attributes = {
+"喜悦": 10,
+"期待": 5
+}
 charm = 3.0

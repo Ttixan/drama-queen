@@ -8,3 +8,7 @@ script = ExtResource("1_x8qy5")
 id = &"eyes_00"
 display_name = "信任"
 texture = ExtResource("2_aaql1")
+attributes = {
+"信任": 40,
+"期待": 20
+}

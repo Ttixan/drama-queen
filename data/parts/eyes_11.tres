@@ -10,4 +10,9 @@ display_name = "绿豆蛙"
 tier = 11
 texture = ExtResource("2_v6c7j")
 unlock_week = 3
+attributes = {
+"恐惧": 20,
+"惊讶": 30,
+"愤怒": 10
+}
 awkward = 2.0

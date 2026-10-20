@@ -10,4 +10,8 @@ display_name = "惊讶"
 slot = 2
 tier = 2
 texture = ExtResource("2_1xhm2")
+attributes = {
+"喜悦": 10,
+"惊讶": 30
+}
 joy = 2.0

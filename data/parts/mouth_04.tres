@@ -10,4 +10,9 @@ display_name = "期待"
 slot = 1
 tier = 4
 texture = ExtResource("2_t0iod")
+attributes = {
+"信任": 20,
+"愤怒": 5,
+"期待": 25
+}
 awkward = 2.0

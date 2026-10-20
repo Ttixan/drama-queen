@@ -10,5 +10,10 @@ display_name = "恐惧"
 slot = 1
 tier = 6
 texture = ExtResource("2_ne6ci")
+attributes = {
+"厌恶": 10,
+"恐惧": 20,
+"悲伤": 20
+}
 sorrow = 2.0
 shock = 1.0

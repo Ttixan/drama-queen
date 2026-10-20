@@ -10,4 +10,8 @@ display_name = "厌恶"
 slot = 2
 tier = 3
 texture = ExtResource("2_4oybf")
+attributes = {
+"厌恶": 20,
+"愤怒": 30
+}
 anger = 2.0

@@ -10,4 +10,9 @@ display_name = "惊讶"
 slot = 1
 tier = 1
 texture = ExtResource("2_iqdim")
+attributes = {
+"厌恶": 10,
+"喜悦": 10,
+"惊讶": 30
+}
 shock = 1.0

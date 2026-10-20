@@ -11,5 +11,9 @@ slot = 1
 tier = 13
 texture = ExtResource("2_q5reg")
 unlock_week = 3
+attributes = {
+"恐惧": 20,
+"惊讶": 30
+}
 shock = 1.0
 awkward = 2.0

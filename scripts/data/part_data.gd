@@ -47,6 +47,10 @@ const SLOT_NAMES := {
 ## 一套三件（眼/嘴/眉）必须同 id —— 半套可用会拼出画面上打架的脸。
 @export var set_id: StringName = &""
 
+## 关键词表里标的展示属性：8 种基础情绪 → 分值（喜悦 40 / 期待 10 …）。
+## **只给界面标注用**，不参与判定 —— 判定走下面那 6 个权重，两套体系别混。
+@export var attributes: Dictionary = {}
+
 @export_group("情绪权重")
 ## 每个部件打 1~3 个情绪标签即可，不必每个都填。
 @export_range(0.0, 5.0, 0.1) var joy: float = 0.0

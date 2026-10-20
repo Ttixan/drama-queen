@@ -9,4 +9,8 @@ id = &"eyes_02"
 display_name = "愤怒"
 tier = 2
 texture = ExtResource("2_orex5")
+attributes = {
+"厌恶": 20,
+"愤怒": 40
+}
 anger = 3.0

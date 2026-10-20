@@ -9,4 +9,7 @@ id = &"eyes_06"
 display_name = "厌恶"
 tier = 6
 texture = ExtResource("2_3vtnq")
+attributes = {
+"厌恶": 50
+}
 awkward = 3.0

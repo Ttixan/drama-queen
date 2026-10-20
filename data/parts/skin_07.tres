@@ -10,3 +10,6 @@ display_name = "恐"
 slot = 4
 tier = 7
 texture = ExtResource("2_1lpph")
+attributes = {
+"恐惧": 5
+}

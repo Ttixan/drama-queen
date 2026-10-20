@@ -10,3 +10,6 @@ display_name = "黑"
 slot = 4
 tier = 2
 texture = ExtResource("2_hjqgk")
+attributes = {
+"厌恶": 5
+}

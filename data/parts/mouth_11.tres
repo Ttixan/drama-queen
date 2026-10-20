@@ -11,5 +11,9 @@ slot = 1
 tier = 11
 texture = ExtResource("2_gemmu")
 set_id = &"late_love"
+attributes = {
+"信任": 10,
+"悲伤": 20
+}
 sorrow = 2.0
 charm = 1.0

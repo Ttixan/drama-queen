@@ -10,5 +10,10 @@ display_name = "期待"
 slot = 2
 tier = 1
 texture = ExtResource("2_lb87g")
+attributes = {
+"信任": 10,
+"喜悦": 15,
+"期待": 25
+}
 joy = 1.0
 shock = 1.0

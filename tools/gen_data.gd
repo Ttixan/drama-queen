@@ -58,6 +58,9 @@ func _gen_parts() -> int:
 		d.unlock_week = int(p.get("week", 1))
 		d.set_id = StringName(p.get("set", ""))
 
+		# 展示属性（关键词表）：只给界面标注，判定不读它
+		d.attributes = Catalog.attributes_of(id)
+
 		var emo: Dictionary = p["emo"]
 		d.joy = emo.get("joy", 0.0)
 		d.anger = emo.get("anger", 0.0)

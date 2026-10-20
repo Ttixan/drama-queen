@@ -10,4 +10,8 @@ display_name = "加载中"
 slot = 3
 tier = 3
 texture = ExtResource("2_lieeo")
+attributes = {
+"信任": 10,
+"厌恶": 5
+}
 shock = 2.0
