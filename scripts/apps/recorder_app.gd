@@ -749,7 +749,7 @@ func _build_top_panels() -> void:
 	_stat_frame.size = Vector2(1398, 80)
 	_stat_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_stat_frame.add_theme_stylebox_override("panel",
-			_frame_style(TEX_FRAME_BEIGE, 40, 26))
+			_closed_frame_style(TEX_FRAME_BEIGE, 40, 26))
 	top.add_child(_stat_frame)
 
 	# 「本帧得分 / 本场需求」小标题：加载剧本后文案会换成「本场需求」
@@ -811,6 +811,20 @@ func _frame_style(tex: Texture2D, mx: float, my: float) -> StyleBoxTexture:
 	sb.content_margin_top = 0
 	sb.content_margin_bottom = 0
 	return sb
+
+
+## 同 _frame_style，但**右端拿左端镜像补上**。
+## 【为什么不是直接用素材】frame_beige.png 右端是「开口」的 —— 只画了上下两个
+## 角笔画、没有竖边（原图当标签纸用，右边故意留白接别的元素）。单独一块顶栏框
+## 立在那儿就显得右边少一截。补在运行时生成的纹理上，不脏共享素材。
+func _closed_frame_style(tex: Texture2D, mx: int, my: int) -> StyleBoxTexture:
+	var img := tex.get_image()
+	var w := img.get_width()
+	var h := img.get_height()
+	var left := img.get_region(Rect2i(0, 0, mx, h))
+	left.flip_x()
+	img.blit_rect(left, Rect2i(0, 0, mx, h), Vector2i(w - mx, 0))
+	return _frame_style(ImageTexture.create_from_image(img), mx, my)
 
 
 ## 本帧得分：把这一帧三件部件的**展示属性**（关键词表那 8 种情绪）加起来，
