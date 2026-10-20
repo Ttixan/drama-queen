@@ -12,6 +12,8 @@ extends SceneTree
 const TUTORIAL_SCENE := "res://scenes/ui/tutorial_layer.tscn"
 const DESK_SCENE := "res://scenes/main/desk_screen.tscn"
 const BOSS_SCENE := "res://scenes/apps/boss.tscn"
+const WECHAT_SCENE := "res://scenes/apps/wechat.tscn"
+const RECORDER_SCENE := "res://scenes/minigame/recorder.tscn"
 
 var _failures: Array[String] = []
 var _checks := 0
@@ -22,6 +24,12 @@ var _tut
 
 func _initialize() -> void:
 	_game = root.get_node_or_null("Game")
+	# 【超时兜底】`_run` 是协程：中途一句脚本错误就会停在那里，
+	# 而 `SceneTree` 不会自己退出 —— 表现就是「测试跑完不结束，窗口一直挂着」。
+	# 卡到 3 分钟直接判失败退出，别把进程留在那儿。
+	create_timer(90.0).timeout.connect(func() -> void:
+		print("❌ 测试超时（3 分钟没跑完），强制退出")
+		quit(1))
 	process_frame.connect(_run, CONNECT_ONE_SHOT)
 
 
@@ -110,7 +118,7 @@ func _run() -> void:
 			"看公司背景，这应该是一家制造流水线烂片的小厂。不管怎么样，先试试和HR沟通吧！")
 
 	print("")
-	print("[7] 点完独白 → 圈住「立刻沟通」→ 点它 = 本批结束")
+	print("[7] 点完独白 → 圈住「立刻沟通」→ 点它 → 进聊天（引导继续）")
 	await _dismiss_dialogue()
 	_check("推进到第 6 步", _tut.step(), TutorialLayer.Step.TAP_CONTACT)
 	_check("洞圈在「立刻沟通」上",
@@ -118,9 +126,7 @@ func _run() -> void:
 	_check("按钮上写的确实是「立刻沟通」", boss._contact_button.text, "立刻沟通")
 	boss._open_chat()
 	await _wait(0.2)
-	_check("进度走到 DONE", _tut.step(), TutorialLayer.Step.DONE)
-	_check("引导层收起来了", _tut.visible, false)
-	_check("存档里记着已完成", _game.state.tutorial_step, TutorialLayer.Step.DONE)
+	_check("聊起来之后进入「去微信聊」那一拍", _tut.step(), TutorialLayer.Step.TAP_WECHAT)
 
 	print("")
 	print("[8] 存档往返与老档")
@@ -128,10 +134,85 @@ func _run() -> void:
 	_check("存档里有 tutorial_step", d.has("tutorial_step"), true)
 	var fresh = load("res://scripts/core/game_state.gd").new()
 	fresh.from_save_dict(d)
-	_check("读档还原到 DONE", fresh.tutorial_step, TutorialLayer.Step.DONE)
+	_check("读档还原到当前这一拍", fresh.tutorial_step, TutorialLayer.Step.TAP_WECHAT)
 	var old := {"money": 10}
 	fresh.from_save_dict(old)
 	_check("老档（没有这个字段）当作已完成", fresh.tutorial_step, -1)
+
+	print("")
+	print("[9] 第二批：去微信聊 → 选 HR → 选档位")
+	_game.state.intro_done = true
+	_tut._enter(TutorialLayer.Step.TAP_WECHAT)
+	boss.skip_chat()                 # 把聊天播完，「去微信聊」才露出来
+	await _wait(0.05)
+	_check("「去微信聊」露出来了", boss._chat_to_wechat.visible, true)
+	_check("洞圈在「去微信聊」",
+			_same_rect(_tut.hole_rect(), boss._chat_to_wechat.get_global_rect().grow(10.0)), true)
+	phone.open_app(WECHAT_SCENE)
+	await _wait(0.3)
+	_check("微信打开了", phone.current_app_path(), WECHAT_SCENE)
+	var wx: Node = phone._current
+	# 【开局可能挂着周初事件】微信会先打开那条"找上门的人"的会话（`_current` 为空）。
+	# 引导这一步本来就是「点王先生」—— 直接把他按下去，走的是真实点击那条路。
+	(wx._rows["A"] as Button).button_pressed = true
+	await _wait(0.2)
+	_check("点了王先生 → 会话切到小登传媒", wx._current.code, "A")
+	_check("推进到「选档位」那一拍", _tut.step(), TutorialLayer.Step.TAP_TIER)
+	# 头一回点开会先"打一会儿字"，档位按钮等那排点落地才长出来
+	var guard := 0
+	while wx._tier_buttons.is_empty() and guard < 60:
+		await _wait(0.1)
+		guard += 1
+	_check("档位按钮长出来了", wx._tier_buttons.size(), 3)
+	var tier_btn: Control = wx._tier_buttons[0]
+	_check("洞圈在第一个档位（龙套）",
+			_same_rect(_tut.hole_rect(), tier_btn.get_global_rect().grow(10.0)), true)
+
+	print("")
+	print("[10] 录像机五条讲解的洞")
+	phone.open_app(RECORDER_SCENE)
+	await _wait(0.25)
+	_check("录像机打开了", phone.current_app_path(), RECORDER_SCENE)
+	var rec: Node = phone._current
+	_tut._enter(TutorialLayer.Step.LINE_TABS)
+	await _wait(0.05)
+	_check("分类页签的洞",
+			_same_rect(_tut.hole_rect(), (rec._tabs[0] as Control).get_global_rect().grow(10.0)), true)
+	_tut._enter(TutorialLayer.Step.LINE_PARTS)
+	await _wait(0.05)
+	var first_card: Control = _tut._first_part_card()
+	_check("部件卡的洞",
+			_same_rect(_tut.hole_rect(), first_card.get_global_rect().grow(10.0)), true)
+	_tut._enter(TutorialLayer.Step.LINE_SLOTS)
+	await _wait(0.05)
+	_check("帧槽的洞",
+			_same_rect(_tut.hole_rect(), (rec._slot_buttons[1] as Control).get_global_rect().grow(10.0)), true)
+	_tut._enter(TutorialLayer.Step.LINE_NEED)
+	await _wait(0.05)
+	_check("所需分数的洞",
+			_same_rect(_tut.hole_rect(), (rec._score_labels[0] as Control).get_global_rect().grow(10.0)), true)
+	_tut._enter(TutorialLayer.Step.LINE_HAVE)
+	await _wait(0.05)
+	_check("现有分数的洞",
+			_same_rect(_tut.hole_rect(), (rec._emotion_value as Control).get_global_rect().grow(10.0)), true)
+
+	print("")
+	print("[11] 记忆抽取：翻开一张就拿到那套，收下即本批结束")
+	_tut._enter(TutorialLayer.Step.TAP_CARD)
+	await _wait(0.15)
+	_check("记忆抽取层弹出来了", _tut._memory != null, true)
+	_tut._memory._cards[0].pressed.emit()
+	await _wait(0.7)
+	_check("翻到的是爆缸笑脸", _tut._memory.picked_id(), "blowup")
+	_check("那套已经记进状态", _game.state.owned_sets.has("blowup"), true)
+	_tut._memory._claim.pressed.emit()
+	await _wait(0.1)
+	_check("收下后本批引导结束", _tut.step(), TutorialLayer.Step.DONE)
+	_check("引导层收起来了", _tut.visible, false)
+	_check("存档写明已完成", _game.state.tutorial_step, TutorialLayer.Step.DONE)
+
+	print("")
+	print("[12] 新局从 0 开始（重开会把界面一起收掉，所以放最后）")
 	_game.new_game()
 	_check("新局从 0 开始", _game.state.tutorial_step, 0)
 
