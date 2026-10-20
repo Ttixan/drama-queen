@@ -449,7 +449,10 @@ func _make_card(slot: int, part: PartData) -> Button:
 		none.add_theme_color_override("font_color", C_TEXT_DIM)
 		badges.add_child(none)
 	else:
-		for pair: Array in _top_attributes(part, 2):
+		# 【全部标出来，不能只取前两项】`mouth_01`（惊讶嘴）是「厌恶 10 + 喜悦 10 + 惊讶 30」，
+		# 按分数取前二只显示「惊讶、厌恶」，玩家点了它看见顶栏「喜悦 +10」会以为加错了 ——
+		# 实际那 10 分一直是这条被藏起来的属性给的。
+		for pair: Array in _top_attributes(part, part.attributes.size()):
 			badges.add_child(_attr_badge(String(pair[0]), int(pair[1])))
 
 	var note := Label.new()
