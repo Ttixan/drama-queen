@@ -16,8 +16,10 @@ extends Node
 ## 第六条 `item_unbox`（开箱）是新加的一拍 —— 现在只在**翻牌**时响
 ## （周结算翻牌与新手礼包的记忆抽取）。
 ##
-## 【还是缺两条】`bgm_main_theme`（背景乐）与 `mail_reply`、`weibo` 这一版没重录，
-## 继续用原来的 wav。等文件到了：`STREAMS` 改路径，界面侧一行都不用动。
+## 【背景乐另走一条通道】`bgm_main_theme` 不是「一次性音效」，它有自己常驻的
+## `AudioStreamPlayer`（见 `_start_bgm`），不进 `STREAMS` 那个池子 ——
+## 否则一次 UI 点击就可能把它顶掉。
+## 还缺 `mail_reply` / `weibo` 这两个重录版，继续用原来的 wav。
 ##
 ## 【废弃的三条没有接】消息提示音 / 消息震动音 / 结局音（表里"已废弃"），
 ## 别在这里补 —— 废弃的意思是那条交互已经没有了。
@@ -53,6 +55,19 @@ const VOLUME_DB: Dictionary = {
 ## 一条 AudioStreamPlayer 会互相打断 —— 所以用一个小池子轮着放。
 const VOICES := 8
 
+# ============================================================
+# 背景乐（全游戏一首）
+# ============================================================
+## 素材：`.document/音效/转学生主角第一天上学偶遇n个女主.wav`
+## —— 导入设置里把 `edit/loop_mode` 改成了 1（向前循环），所以拿到手就是循环流，
+## 运行时不用再手动切 loop（那样每次进游戏都要改一次流，容易忘）。
+## 源文件 26MB，导入成 QOA 后约 2.7MB；以后美术给 ogg 版可再缩。
+const BGM := preload("res://assets/sfx/bgm_main_theme.wav")
+## 比音效低一截：它是背景，玩家不该为了听清台词去调音量
+const BGM_DB := -12.0
+
+var _bgm: AudioStreamPlayer
+
 ## 悬浮音的冷却：鼠标从一排按钮上划过去会连发 mouse_entered，
 ## 不拦的话就是一串"咔咔咔"。
 const HOVER_GAP_MS := 70
@@ -86,6 +101,37 @@ func _ready() -> void:
 	# 才刚开始"打字"（见 `wechat_app._typing`）。这一声得跟着气泡出现走，
 	# 所以由 `wechat_app._finish_typing` 在气泡落地那一刻自己播。
 	EventBus.broadcast_published.connect(_on_broadcast_published)
+
+	_start_bgm()
+
+
+## 背景乐：跟着 Autoload 一起生灭，一局到底只这一条。
+## 【为什么在 `_ready` 就播、不等主场景】桌面上玩家可能先发呆看几秒，
+## 那时候没声音会以为游戏卡了；开场（intro）也压在这上面，同样需要它。
+func _start_bgm() -> void:
+	_bgm = AudioStreamPlayer.new()
+	_bgm.name = "Bgm"
+	_bgm.stream = BGM
+	_bgm.volume_db = BGM_DB
+	_bgm.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(_bgm)
+	_bgm.play()
+
+
+## 背景乐在不在响（测试与调试用）
+func bgm_playing() -> bool:
+	return _bgm != null and _bgm.playing
+
+
+func set_bgm_volume(db: float) -> void:
+	if _bgm != null:
+		_bgm.volume_db = db
+
+
+## 临时压掉背景乐（比如将来要加「剧情静音」的桥段）
+func stop_bgm() -> void:
+	if _bgm != null:
+		_bgm.stop()
 
 
 # ============================================================

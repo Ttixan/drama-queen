@@ -780,6 +780,7 @@ func _test_sfx() -> void:
 	# 【不写死条数】素材会加（10-20 就多了「开箱」那一条）——
 	# 真正要钉住的是「每个代号都配了音量」，否则新加一条会悄悄按 0dB 播
 	_check("每条音都配了音量", sfx.STREAMS.size(), sfx.VOLUME_DB.size())
+	_check("背景乐起来就在播", sfx.bgm_playing(), true)
 	var broken := 0
 	for code: StringName in sfx.STREAMS:
 		if sfx.STREAMS[code] == null:
