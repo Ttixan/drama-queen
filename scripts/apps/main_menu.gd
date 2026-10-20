@@ -18,7 +18,6 @@ extends Control
 
 const MAIN_SCENE := "res://scenes/main_scene.tscn"
 const FONT_CN := preload("res://assets/fonts/main_font.tres")
-const TITLE_FONT := preload("res://assets/fonts/title_font.tres")
 ## 按钮底：`通用框3个.png` 里那个米色框（和演员登记表 / 手机顶栏返回键同一张）
 const FRAME_BEIGE := preload("res://assets/ui/intro/frame_beige.png")
 
@@ -55,14 +54,24 @@ func _ready() -> void:
 # ============================================================
 # 标题
 # ============================================================
+## 美术给的艺术字（原图 1840×604）。宽 760 在 1920 画布上约占四成，
+## 压不到按钮（标题底 521，按钮从 560 起）。
+const TITLE_TEX := preload("res://assets/ui/title.png")
+const TITLE_W := 760.0
+const TITLE_Y := 272.0
+
+
 func _build_title() -> void:
-	var title_label := _label("有瓜有戏", 44, UiPalette.INK,
-			Rect2(BTN_X, 470, 560, 58), TITLE_FONT)
-	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	# 英文放在中文右侧做 lockup：竖排两行时 18 号字夹在标题和按钮之间，
-	# 缩到 1080p 以下就会糊成一团
-	_label("DRAMA QUEEN", 19, Color(UiPalette.INK, 0.62),
-			Rect2(BTN_X + 210, 492, 300, 26))
+	var art := TextureRect.new()
+	art.name = "TitleArt"
+	art.texture = TITLE_TEX
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	art.size = Vector2(TITLE_W, TITLE_W * TITLE_TEX.get_height() / TITLE_TEX.get_width())
+	# 水平居中于按钮列 —— 换分辨率或改按钮宽度都跟着走
+	art.position = Vector2(BTN_X + BTN_W * 0.5 - TITLE_W * 0.5, TITLE_Y)
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(art)
 
 
 # ============================================================
@@ -332,19 +341,6 @@ func _unhandled_key_input(ev: InputEvent) -> void:
 # ============================================================
 # 排版小工具
 # ============================================================
-func _label(text: String, size: int, color: Color, rect: Rect2,
-		font: Font = FONT_CN) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.position = rect.position
-	l.size = rect.size
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	UiPalette.text(l, size, color)
-	l.add_theme_font_override("font", font)
-	add_child(l)
-	return l
-
-
 func _label_into(parent: Node, text: String, size: int, color: Color) -> Label:
 	var l := Label.new()
 	l.text = text
