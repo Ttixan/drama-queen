@@ -28,6 +28,18 @@ const P_CONTENT := "Page/BodyWrap/Body/ContentPanel/ContentMargin/ContentHost"
 
 const DEFAULT_HINT := "悬浮看每个 App 是干什么的"
 
+## 顶栏整条：美术给的手绘纸条，四个图标**画在纸里**（闪电 / 面具 / 星星 / 金币）
+const HUD_BAR_TEX := preload("res://assets/ui/phone/hud_bar.png")
+## 返回桌面压的那张米色通用框（和演员登记表同一张）
+const FRAME_BEIGE := preload("res://assets/ui/intro/frame_beige.png")
+## 四个图标的中心占条宽的比例 —— 量自 1917×107 原图：812 / 1077 / 1359 / 1633。
+## 顺序 = 行动点 / 演技 / 名声 / 钱，数字挂在图标**右侧**（图标本身几乎顶满条子高，
+## 下面是没地方的 —— 量过 bbox：闪电 770~860 × 1~102）。
+const HUD_STAT_ANCHORS := [0.424, 0.562, 0.709, 0.852]
+## 数字起点离图标中心多远：图标半宽 ≈45 + 间隙 8
+const HUD_STAT_OFFSET := 53.0
+const HUD_STAT_W := 110.0
+
 ## 录像机。**只有它**在被别的 App 顶开时才露自己的返回按钮 ——
 ## 它的按钮写着中性的「返回」（回到顶开它的那个 App，正是玩家预期）；
 ## 微信与简历拿来的写着「← 返回桌面」「← 返回微信」——那是它们原来那位宿主的说法，
@@ -40,8 +52,8 @@ const WECHAT_SCENE := "res://scenes/apps/wechat.tscn"
 ## 上层（桌子）离开本屏
 signal cancelled
 
-@onready var _hud_left: HBoxContainer = get_node(P_HUD + "/HudLeft")
-@onready var _hud_right: HBoxContainer = get_node(P_HUD + "/HudRight")
+## 顶栏内部现在是**绝对定位**（四个数字要正对条子上的图标，HBox 排不出来）
+@onready var _hud: Control = get_node(P_HUD)
 @onready var _caption: Label = get_node(P_COLUMN + "/ColumnHead/ColumnCaption")
 @onready var _column_back: Button = get_node(P_COLUMN + "/ColumnHead/ColumnBack")
 @onready var _column_hint: Label = get_node(P_COLUMN + "/ColumnHint")
@@ -50,8 +62,8 @@ signal cancelled
 @onready var _content: Control = get_node(P_CONTENT)
 
 var _day_label: Label
-var _ap_label: Label
-var _money_label: Label
+## 四个数值：行动点 / 演技 / 名声 / 钱（顺序与条子上的图标一致）
+var _stat_labels: Array[Label] = []
 var _back_button: Button
 var _back_enabled := false
 ## scene_path -> Button（判断某个 App 开着没有、要不要标成选中）
@@ -104,31 +116,67 @@ func _ready() -> void:
 # ============================================================
 func _build_hud() -> void:
 	_back_button = Button.new()
-	_back_button.text = "← 桌面"
+	_back_button.text = "返回桌面"
 	_back_button.focus_mode = Control.FOCUS_NONE
 	_back_button.visible = false
+	_back_button.position = Vector2(16, 16)
+	_back_button.size = Vector2(176, 74)
+	_back_button.add_theme_font_override("font", UiPalette.FONT)
+	_back_button.add_theme_font_size_override("font_size", 22)
 	_back_button.pressed.connect(func() -> void: cancelled.emit())
-	_hud_left.add_child(_back_button)
+	_hud.add_child(_back_button)
 
-	_day_label = _chip(_hud_left, 24, UiPalette.TEXT)
-	_ap_label = _chip(_hud_left, 22, UiPalette.POSITIVE)
-	_money_label = _chip(_hud_right, 24, UiPalette.ACCENT)
+	_day_label = _hud_label(Vector2(214, 0), Vector2(340, 107), 23)
+	_day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+
+	# 四个数字：横向跟着锚点、纵向压在图标下方那条空白带上
+	for i in HUD_STAT_ANCHORS.size():
+		var l := _hud_label(Vector2.ZERO, Vector2(HUD_STAT_W, 107), 24)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		l.set_meta("hud_anchor", HUD_STAT_ANCHORS[i])
+		_stat_labels.append(l)
+
+	# 【连 HudRow 自己的 resized】`_ready` 里 HudRow 还挂在容器里没布局完，
+	# 这时它的宽度是 0；而整屏的尺寸从头到尾没变过，连 self.resized 永远不会来 ——
+	# 结果就是四个数字全堆在 (0,0)。等 HudRow 自己量出宽度再摆。
+	_hud.resized.connect(_layout_hud_stats)
+	_layout_hud_stats()
 
 
-func _chip(parent: Node, size: int, color: Color) -> Label:
+## 顶栏上的小字：绝对定位、墨色（条子是浅灰纸，奶白字压上去看不见）
+func _hud_label(pos: Vector2, box: Vector2, font_size: int) -> Label:
 	var l := Label.new()
+	l.position = pos
+	l.size = box
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	UiPalette.text(l, size, color)
-	parent.add_child(l)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_theme_font_override("font", UiPalette.FONT)
+	l.add_theme_font_size_override("font_size", font_size)
+	l.add_theme_color_override("font_color", UiPalette.INK)
+	_hud.add_child(l)
 	return l
 
 
-## 窄 = 只回答「现在是第几天、还能做几件事、还有多少钱」这三件事。
-## 属性（演技 / 知名度 / 风评）不在这儿 —— 它们在日历上，那是做决定的地方。
+## 条子会被横向拉伸（整屏 / 手机右栏两种宽度），数字按比例贴回图标正下方
+func _layout_hud_stats() -> void:
+	var w := _hud.size.x
+	if w <= 1.0:
+		return
+	for l in _stat_labels:
+		var cx: float = float(l.get_meta("hud_anchor")) * w
+		l.position = Vector2(cx + HUD_STAT_OFFSET, 0.0)
+		l.size = Vector2(HUD_STAT_W, 107.0)
+
+
+## 窄 = 第几天 / 行动点 / 演技 / 名声 / 钱。
+## 属性原来只在日历上，现在图标已经画进状态栏了，顺手一起显示。
 func _refresh_hud() -> void:
 	_day_label.text = "第 %d 天 · 第 %d 周" % [Game.day(), Game.week()]
-	_ap_label.text = "行动点 %d" % Game.ap_left()
-	_money_label.text = "%d 元" % Game.money()
+	var texts := [
+		str(Game.ap_left()), str(Game.acting()), str(Game.fame()), str(Game.money()),
+	]
+	for i in _stat_labels.size():
+		_stat_labels[i].text = texts[i]
 
 
 # ============================================================
@@ -488,6 +536,18 @@ func _on_state_reset() -> void:
 ## 没开 App 时退回通用的强调色。
 ## 【为什么周围那圈要跟着换】以前一律用通用的黄 —— 切进微信，里面的图标、气泡都是绿的，
 ## 外面的框却是黄的，看着不像同一台手机（提提点名）。
+## 米色通用框做按钮底：九宫格只拉中间，圆角与手绘描边原地不动
+func _beige_style(tint: Color) -> StyleBoxTexture:
+	var sb := StyleBoxTexture.new()
+	sb.texture = FRAME_BEIGE
+	sb.texture_margin_left = 40
+	sb.texture_margin_right = 40
+	sb.texture_margin_top = 26
+	sb.texture_margin_bottom = 26
+	sb.modulate_color = tint
+	return sb
+
+
 func _accent() -> Color:
 	if _current_path.is_empty():
 		return UiPalette.ACCENT
@@ -501,12 +561,19 @@ func _apply_styles() -> void:
 	get_node("Page/BodyWrap/Body/AppColumn/ScreenMask/ScreenBg").color = UiPalette.BG
 	var accent := _accent()
 
-	# 状态栏只留一条亮色下边线 —— 和录像机 / 日历同一个手法
-	var bar := StyleBoxFlat.new()
-	bar.bg_color = UiPalette.PANEL
-	bar.border_width_bottom = 3
-	bar.border_color = accent
-	get_node("Page/HudBar").add_theme_stylebox_override("panel", bar)
+	# 顶栏整条是美术给的手绘纸：两端卷角钉死、中间横向拉伸
+	var hud_style := StyleBoxTexture.new()
+	hud_style.texture = HUD_BAR_TEX
+	hud_style.texture_margin_left = 46
+	hud_style.texture_margin_right = 46
+	hud_style.texture_margin_top = 10
+	hud_style.texture_margin_bottom = 10
+	# 内容区不缩进：里面全是绝对定位的控件（数字要正对纸上的图标）
+	hud_style.content_margin_left = 0
+	hud_style.content_margin_right = 0
+	hud_style.content_margin_top = 0
+	hud_style.content_margin_bottom = 0
+	get_node("Page/HudBar").add_theme_stylebox_override("panel", hud_style)
 
 	# 【左栏不加描边】它现在是美术图里的手机（`phone-本体.png`）—— 描边由那张图自己带。
 	# 硬给它套一层圆角框只会在手机外面多出一圈线。右栏仍然跟着当前 App 的颜色。
@@ -517,15 +584,14 @@ func _apply_styles() -> void:
 	# 也不许它画到隔壁面板上去 —— 那看着正像「右边的把左边的遮了」
 	_sidebar_host.clip_contents = true
 
-	# 「← 桌面」是这一屏自己那一层的返回，但它在浮起来的时候也在这台手机里 ——
-	# 一样跟着当前 App 的颜色走
-	UiPalette.text(_back_button, 20, UiPalette.TEXT)
-	_back_button.add_theme_stylebox_override("normal",
-			UiPalette.button(UiPalette.PANEL_SOFT, UiPalette.LINE, 2, 12, 0, 12))
-	_back_button.add_theme_stylebox_override("hover",
-			UiPalette.button(UiPalette.PANEL_SOFT.lightened(0.1), accent, 3, 12, 0, 12))
-	_back_button.add_theme_stylebox_override("pressed",
-			UiPalette.button(UiPalette.PANEL_SOFT, accent, 3, 12, 0, 12))
+	# 返回桌面：那张米色通用框当底。浅色系里 hover 不能再往亮里调（白底已经到顶），
+	# 改成压暗一档才看得出按下去过
+	_back_button.add_theme_stylebox_override("normal", _beige_style(Color(1, 1, 1)))
+	_back_button.add_theme_stylebox_override("hover", _beige_style(Color(0.96, 0.95, 0.91)))
+	_back_button.add_theme_stylebox_override("pressed", _beige_style(Color(0.9, 0.89, 0.85)))
+	_back_button.add_theme_color_override("font_color", UiPalette.INK)
+	_back_button.add_theme_color_override("font_hover_color", UiPalette.INK)
+	_back_button.add_theme_color_override("font_pressed_color", UiPalette.INK)
 
 	UiPalette.title(_caption, 26, accent)
 	UiPalette.text(_column_hint, 15, UiPalette.TEXT_DIM)

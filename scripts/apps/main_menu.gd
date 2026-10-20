@@ -15,6 +15,8 @@ extends Control
 const MAIN_SCENE := "res://scenes/main_scene.tscn"
 const FONT_CN := preload("res://assets/fonts/main_font.tres")
 const TITLE_FONT := preload("res://assets/fonts/title_font.tres")
+## 按钮底：`通用框3个.png` 里那个米色框（和演员登记表 / 手机顶栏返回键同一张）
+const FRAME_BEIGE := preload("res://assets/ui/intro/frame_beige.png")
 
 ## 按钮列（1920×1080 绝对坐标，压在左下角那块空木纹上）
 const BTN_X := 132.0
@@ -55,25 +57,21 @@ func _build_title() -> void:
 # 按钮
 # ============================================================
 func _build_actions() -> void:
-	var has_save: bool = Game.loaded_from_save
-	var specs: Array[Dictionary] = [
-		{"text": "继续游戏", "primary": has_save, "enabled": has_save,
-				"cb": _on_continue},
-		{"text": "开始游戏", "primary": not has_save, "enabled": true,
-				"cb": _on_new_game},
-		{"text": "制作人员", "primary": false, "enabled": true,
-				"cb": _show_credits},
-		{"text": "离开游戏", "primary": false, "enabled": true,
-				"cb": _on_quit},
-	]
+	# 【没有存档就不摆「继续游戏」】一个永远点不动的按钮不如不出现 ——
+	# 列表里直接过滤掉，后面的按钮自己往上顶，不用留空位。
+	var specs: Array[Dictionary] = []
+	if Game.loaded_from_save:
+		specs.append({"text": "继续游戏", "cb": _on_continue})
+	specs.append({"text": "开始游戏", "cb": _on_new_game})
+	specs.append({"text": "制作人员", "cb": _show_credits})
+	specs.append({"text": "离开游戏", "cb": _on_quit})
+
 	for i in specs.size():
-		var spec: Dictionary = specs[i]
-		_action_button(String(spec["text"]), BTN_Y + i * BTN_STEP,
-				bool(spec["primary"]), bool(spec["enabled"]), spec["cb"])
+		_action_button(String(specs[i]["text"]), BTN_Y + i * BTN_STEP,
+				specs[i]["cb"])
 
 
-func _action_button(text: String, y: float, primary: bool, enabled: bool,
-		cb: Callable) -> Button:
+func _action_button(text: String, y: float, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.position = Vector2(BTN_X, y)
@@ -85,20 +83,26 @@ func _action_button(text: String, y: float, primary: bool, enabled: bool,
 	b.add_theme_color_override("font_color", UiPalette.INK)
 	b.add_theme_color_override("font_hover_color", UiPalette.INK)
 	b.add_theme_color_override("font_pressed_color", UiPalette.INK)
-	b.add_theme_color_override("font_disabled_color", UiPalette.TEXT_DISABLED)
-
-	var normal := UiPalette.ACCENT if primary else UiPalette.PAPER
-	var hover := Color("ffe071") if primary else UiPalette.PAPER_HOVER
-	var pressed := Color("e6bd35") if primary else UiPalette.PAPER_SOFT
-	b.add_theme_stylebox_override("normal", _btn_style(normal))
-	b.add_theme_stylebox_override("hover", _btn_style(hover))
-	b.add_theme_stylebox_override("pressed", _btn_style(pressed))
-	b.add_theme_stylebox_override("disabled",
-			_btn_style(UiPalette.PAPER_DISABLED, UiPalette.PAPER_LINE, false))
-	b.disabled = not enabled
+	# 底一律是那张米色框：菜单里不再有「主按钮」这个概念（原来给继续游戏上的黄底
+	# 在浅木纹上比别的按钮跳一档，看着像两个界面拼起来的）
+	b.add_theme_stylebox_override("normal", _beige_style(Color(1, 1, 1)))
+	b.add_theme_stylebox_override("hover", _beige_style(Color(0.97, 0.96, 0.92)))
+	b.add_theme_stylebox_override("pressed", _beige_style(Color(0.9, 0.89, 0.85)))
 	b.pressed.connect(cb)
 	add_child(b)
 	return b
+
+
+## 米色通用框做按钮底：九宫格只拉中间，圆角和手绘描边原地不动
+func _beige_style(tint: Color) -> StyleBoxTexture:
+	var sb := StyleBoxTexture.new()
+	sb.texture = FRAME_BEIGE
+	sb.texture_margin_left = 40
+	sb.texture_margin_right = 40
+	sb.texture_margin_top = 26
+	sb.texture_margin_bottom = 26
+	sb.modulate_color = tint
+	return sb
 
 
 ## 纸片按钮：2px 墨线 + 往右下一点的投影，压在木桌上才有实物感

@@ -111,7 +111,9 @@ func _test_desktop() -> void:
 	_check("结算层是隐藏的", _app._report_layer.visible, false)
 	_check("台历上能看到属性（这是做决定的地方）",
 			_app._ps5_label.text.is_empty(), false)
-	_check("手机栏是窄的：只有天数 / 行动点 / 钱", _phone._money_label.text.is_empty(), false)
+	# 顶栏换成美术条之后，四项数值挂在 `_stat_labels`（行动点 / 演技 / 名声 / 钱）
+	_check("手机栏是窄的：天数 + 四个数值",
+			_phone._stat_labels[3].text.is_empty(), false)
 
 	var bal := BalanceLibrary.data()
 	# 【版面改版后这些 Label 只写数字】单位（元 / 点 / 期）是旁边一个独立小字，
@@ -722,7 +724,8 @@ func _test_gm_commands(gm: Node) -> void:
 	_check("数值指令走 add_*：演技 +2", _game.acting(), acting_before + 2)
 	# 【信号那条必须验】直接写 `state.money` 界面不会变；走 `add_money` 才会重画 HUD
 	gm.call("_run", "money 777")
-	_check("GM 改的钱已同步到手机顶栏", _phone._money_label.text, "777 元")
+	# 顶栏只写数字（单位由条子上那枚金币图标表达）
+	_check("GM 改的钱已同步到手机顶栏", _phone._stat_labels[3].text, "777")
 
 
 ## 抄录手册：二级页（贴纸）→ 三级页（单页笔记）→ × 回来。

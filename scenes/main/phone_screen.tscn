@@ -28,31 +28,18 @@ anchor_bottom = 1.0
 theme_override_constants/separation = 0
 
 [node name="HudBar" type="PanelContainer" parent="Page"]
-custom_minimum_size = Vector2(0, 78)
+custom_minimum_size = Vector2(0, 107)
 layout_mode = 2
 
 [node name="HudMargin" type="MarginContainer" parent="Page/HudBar"]
 layout_mode = 2
-theme_override_constants/margin_left = 28
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 28
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 0
 
-[node name="HudRow" type="HBoxContainer" parent="Page/HudBar/HudMargin"]
+[node name="HudRow" type="Control" parent="Page/HudBar/HudMargin"]
 layout_mode = 2
-theme_override_constants/separation = 20
-
-[node name="HudLeft" type="HBoxContainer" parent="Page/HudBar/HudMargin/HudRow"]
-layout_mode = 2
-theme_override_constants/separation = 20
-
-[node name="HudSpacer" type="Control" parent="Page/HudBar/HudMargin/HudRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="HudRight" type="HBoxContainer" parent="Page/HudBar/HudMargin/HudRow"]
-layout_mode = 2
-theme_override_constants/separation = 20
 
 [node name="BodyWrap" type="MarginContainer" parent="Page"]
 layout_mode = 2
