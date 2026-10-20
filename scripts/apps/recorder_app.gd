@@ -171,6 +171,7 @@ const TITLE_X := 272.0
 @onready var _frame_remove: Button = get_node(P_BOTTOM + "/SlotsBox/FrameRemove")
 @onready var _clear_button: Button = get_node(P_BOTTOM + "/ActionsRow/ClearButton")
 @onready var _confirm_button: Button = get_node(P_BOTTOM + "/ActionsRow/ConfirmButton")
+@onready var _script_button: Button = get_node(P_BOTTOM + "/ScriptButton")
 
 # ============================================================
 # 状态
@@ -194,6 +195,12 @@ var _card_meta: Dictionary = {}
 var _card_group: Dictionary = {}      ## slot -> ButtonGroup（同槽位内互斥）
 ## 程序化改按钮状态时会触发 toggled，用这个闸门防止自己把自己绕进去
 var _syncing := false
+
+## 加载的剧本与弹窗层。`_loaded_doc` 非空时：
+## 帧数 = 剧本场数（+/- 锁死，帧槽 = 场景），顶栏显示「本场需求」而不是本帧得分
+var _loaded_doc: ScriptDoc
+var _dialog_layer: Control
+var _score_caption: Label
 
 
 func _ready() -> void:
@@ -296,6 +303,7 @@ func _collect_nodes() -> void:
 
 	_clear_button.pressed.connect(_on_clear_pressed)
 	_confirm_button.pressed.connect(_on_confirm_pressed)
+	_script_button.pressed.connect(_open_script_picker)
 	_back_button.pressed.connect(func() -> void: cancelled.emit())
 	_frame_add.pressed.connect(_on_add_frame)
 	_frame_remove.pressed.connect(_on_remove_frame)
@@ -612,6 +620,121 @@ func _on_confirm_pressed() -> void:
 
 
 # ============================================================
+# 加载剧本：从微信里「已联络的 HR」发来的文件中选一份
+# ============================================================
+## 候选 = `GameState.hr_script` 里有条目的公司（能收剧本的前提就是跟 HR 建立了联系，
+## 「已联络」与「手上有剧本」是同一件事 —— 会话从状态重建，没有独立的消息表可查）。
+func _open_script_picker() -> void:
+	_close_dialog()
+
+	var layer := Control.new()
+	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(layer)
+	_dialog_layer = layer
+
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.45)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	dim.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed:
+			_close_dialog())
+	layer.add_child(dim)
+
+	# 米色通用框做底（与顶栏得分框同款美术）
+	var card := Panel.new()
+	card.position = Vector2(460, 300)
+	card.size = Vector2(1000, 480)
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	card.add_theme_stylebox_override("panel", _frame_style(TEX_FRAME_BEIGE, 40, 26))
+	layer.add_child(card)
+
+	var head := Label.new()
+	head.position = Vector2(60, 60)
+	head.size = Vector2(880, 60)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.text = "选择剧本"
+	head.add_theme_font_override("font", UiPalette.TITLE_FONT)
+	head.add_theme_font_size_override("font_size", 34)
+	head.add_theme_color_override("font_color", C_INK)
+	card.add_child(head)
+
+	var list := VBoxContainer.new()
+	list.position = Vector2(100, 150)
+	list.size = Vector2(800, 260)
+	list.add_theme_constant_override("separation", 12)
+	card.add_child(list)
+
+	for doc: ScriptDoc in _script_candidates():
+		var row := Button.new()
+		row.custom_minimum_size = Vector2(0, 64)
+		row.focus_mode = Control.FOCUS_NONE
+		row.add_theme_stylebox_override("normal",
+				_button_sb(UiPalette.PAPER_SOFT, UiPalette.PAPER_LINE, 2, 10, 6, 4))
+		row.add_theme_stylebox_override("hover",
+				_button_sb(UiPalette.PAPER_HOVER, C_ACCENT, 2, 10, 6, 4))
+		row.add_theme_stylebox_override("pressed",
+				_button_sb(C_INK, C_ACCENT, 3, 10, 6, 4))
+		row.add_theme_color_override("font_color", C_INK)
+		row.text = "%s（%d 场）" % [doc.file_name(), doc.scene_count]
+		row.add_theme_font_size_override("font_size", 20)
+		row.pressed.connect(func() -> void:
+			_close_dialog()
+			_load_script(doc))
+		list.add_child(row)
+
+	if list.get_child_count() == 0:
+		var empty := Label.new()
+		empty.text = "还没有 HR 发来剧本 —— 先去微信私聊"
+		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty.add_theme_font_override("font", UiPalette.TITLE_FONT)
+		empty.add_theme_font_size_override("font_size", 22)
+		empty.add_theme_color_override("font_color", C_TEXT_DIM)
+		list.add_child(empty)
+
+
+## 微信里手上拿着剧本的 HR —— 每家一份（hr_script 按公司各记一份）
+func _script_candidates() -> Array[ScriptDoc]:
+	var out: Array[ScriptDoc] = []
+	if Game.state == null:
+		return out
+	for code: String in Game.state.hr_script:
+		var info: Dictionary = Game.hr_script_of(code)
+		var doc := ScriptLibrary.for_play_tier(int(info.get("play", 0)), int(info.get("tier", 0)))
+		if doc != null:
+			out.append(doc)
+	return out
+
+
+func _close_dialog() -> void:
+	if _dialog_layer != null:
+		_dialog_layer.queue_free()
+		_dialog_layer = null
+
+
+## 选定剧本：帧数锁成场景数，帧槽 = 场景（点击帧槽就是切场景）。
+## 【为什么新建 Clip 而不是改帧数】换剧本就是换一次表演 —— 之前拼的内容跟着作废，
+## 留着旧部件反而会让人以为「这场已经演过了」。
+func _load_script(doc: ScriptDoc) -> void:
+	_loaded_doc = doc
+	_clip = Clip.new()
+	while _clip.frame_count() < doc.scene_count:
+		_clip.add_frame()
+	_frame = 0
+	# 帧数 = 场景数，是剧本定的 —— +/- 改帧会让帧和场景错位，锁死
+	_frame_add.disabled = true
+	_frame_remove.disabled = true
+	_score_caption.text = "本场需求"
+	_rebuild_slots()
+	_sync_all()
+	_flash_face()
+	_status_label.text = "已加载《%s》%s · %d 场戏" % [doc.play_title, doc.role_name, doc.scene_count]
+	_status_label.add_theme_color_override("font_color", C_ACCENT)
+
+
+# ============================================================
 # 顶栏状态（四项数值 + 图标布局）
 # ============================================================
 
@@ -645,11 +768,13 @@ func _build_top_panels() -> void:
 			_frame_style(TEX_FRAME_BEIGE, 40, 26))
 	top.add_child(_stat_frame)
 
-	_top_label(_stat_frame, "本帧得分", 18, C_TEXT_DIM,
+	# 「本帧得分 / 本场需求」小标题：加载剧本后文案会换成「本场需求」
+	_score_caption = _top_label(_stat_frame, "本帧得分", 18, C_TEXT_DIM,
 			Vector2(28, 0), Vector2(110, 80))
-	for i in 2:
-		_score_labels.append(_top_label(_stat_frame, "—", 30, C_INK,
-				Vector2(150 + i * 560, 0), Vector2(430, 80)))
+	# 三个槽：没加载剧本时只用到前两个；剧本一场最多并列三条复合情绪（男主场景 2/3/4）
+	for i in 3:
+		_score_labels.append(_top_label(_stat_frame, "—", 26, C_INK,
+				Vector2(150 + i * 420, 0), Vector2(400, 80)))
 
 	# 两块框是后加的，默认画在 Title 上面 —— 把标题提回最上层，否则「录像机」被框盖住
 	top.move_child(_title, top.get_child_count() - 1)
@@ -715,6 +840,24 @@ func _sync_scores() -> void:
 	for part: PartData in _clip.frames[_frame].parts():
 		for attr_name: String in part.attributes:
 			total[attr_name] = int(total.get(attr_name, 0)) + int(part.attributes[attr_name])
+
+	# 加载了剧本 → 顶栏变成「本场需求」：当前帧那一场景要演出的复合情绪，
+	# 每条进度 = Σ min(本帧该情绪分, 拆解要求)（一项项凑，凑满为止）。
+	if _loaded_doc != null:
+		for label: Label in _score_labels:
+			label.text = "—"
+		var demands: Array = _loaded_doc.scene_demands[_frame] if _frame < _loaded_doc.scene_demands.size() else []
+		for i in mini(demands.size(), _score_labels.size()):
+			var demand: Dictionary = demands[i]
+			var parts: Dictionary = demand.get("parts", {})
+			var got := 0
+			var max_score := 0
+			for emo: String in parts:
+				var need := int(parts[emo])
+				max_score += need
+				got += mini(int(total.get(emo, 0)), need)
+			_score_labels[i].text = "%s %d/%d" % [String(demand.get("name", "?")), got, max_score]
+		return
 
 	var pairs: Array = []
 	for attr_name: String in total:
@@ -838,11 +981,13 @@ func _sync_slots() -> void:
 		# 键面只留数字，情绪退到 tooltip —— 两行字在 44 的键上放不下，
 		# 而情绪本来在右边「当前帧情绪」和顶栏「帧序列」都读得到
 		b.text = str(i + 1)
-		b.tooltip_text = "帧 %d · %s" % [i + 1, _clip.frame_label(i)]
+		var slot_word := "场景" if _loaded_doc != null else "帧"
+		b.tooltip_text = "%s %d · %s" % [slot_word, i + 1, _clip.frame_label(i)]
 		b.button_pressed = (i == _frame)
-	# 到头了就置灰，别让玩家点了没反应还以为是卡了
-	_frame_add.disabled = _clip.frame_count() >= Clip.MAX_FRAME_COUNT
-	_frame_remove.disabled = _clip.frame_count() <= Clip.MIN_FRAME_COUNT
+	# 到头了就置灰，别让玩家点了没反应还以为是卡了。
+	# 【加载了剧本就整对锁死】帧数 = 场景数是剧本定的，+/- 改帧会让帧和场景错位
+	_frame_add.disabled = _loaded_doc != null or _clip.frame_count() >= Clip.MAX_FRAME_COUNT
+	_frame_remove.disabled = _loaded_doc != null or _clip.frame_count() <= Clip.MIN_FRAME_COUNT
 	_syncing = false
 
 
@@ -1141,6 +1286,8 @@ func _apply_styles() -> void:
 	# 「完成」是主操作，字大一号、深底黄边；「清空」是次要的，字小一号、浅底
 	_style_button(_clear_button, UiPalette.PAPER_SOFT, C_INK, C_LINE, 20)
 	_style_button(_confirm_button, C_INK, C_ACCENT, C_ACCENT, 24)
+	# 「加载剧本」与清空同一档：它是开个选单，不是主操作
+	_style_button(_script_button, UiPalette.PAPER_SOFT, C_INK, C_LINE, 20)
 	_confirm_button.add_theme_stylebox_override("disabled",
 			_button_sb(UiPalette.PAPER_DISABLED, Color(0, 0, 0, 0), 0, 14, 0, 14))
 	_confirm_button.add_theme_color_override("font_disabled_color", UiPalette.TEXT_DISABLED)

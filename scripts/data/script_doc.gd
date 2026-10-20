@@ -25,6 +25,13 @@ extends Resource
 @export var scene_count: int = 0           ## 这个视角有几场戏（md 的「场景数」）
 @export_multiline var body: String = ""    ## 正文，原文照搬（见类注释）
 
+## 每场戏的**拼贴需求**（关键词表「三个剧本 - 表情拼贴轮需求数值汇总」那段）。
+## 外层下标 = 场景号 - 1（长度应等于 scene_count）；内层是这场要**同时**演出的几个
+## 复合情绪，每项 `{"name": "支配", "parts": {"愤怒": 25, "信任": 25}}` ——
+## parts 的键是关键词表那 8 种基础情绪，值的和就是这条需求的满分。
+## 【只给录像机 UI 用】真正的试镜判定仍走公司的 AuditionCondition，两套别混。
+@export var scene_demands: Array = []
+
 
 func tier_name() -> String:
 	return String(RoleRequirement.TIER_NAMES.get(tier, "?"))

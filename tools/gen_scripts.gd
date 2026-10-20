@@ -37,6 +37,67 @@ const TIER_BY_VIEW: Array[int] = [
 	RoleRequirement.Tier.LEAD,        ## 视角3
 ]
 
+## 每场戏的拼贴需求 —— 源：`关键词表 (1).docx` 的「三个剧本 - 表情拼贴轮需求数值汇总」。
+## 外层下标 = 场景号 - 1；内层是这场要**同时**演的几个复合情绪：
+## `{"name": 复合名, "parts": {基础情绪: 分}}`，parts 值的和 = 这条需求的满分。
+## 【「或」取主方案】男主场景 1 写着「信任50+期待50 或 痴呆100」—— 取前者，
+## 玩家在录像机里只能同时看到一套明确的数字，别让他猜。
+const DEMANDS := {
+	"play1_v1": [
+		[{"name": "支配", "parts": {"愤怒": 25, "信任": 25}},
+		{"name": "傲慢", "parts": {"厌恶": 25, "愤怒": 25}}],
+	],
+	"play1_v2": [
+		[{"name": "信任", "parts": {"信任": 50}}, {"name": "期待", "parts": {"期待": 50}}],
+		[{"name": "信任", "parts": {"信任": 50}}, {"name": "喜悦", "parts": {"喜悦": 30}},
+		{"name": "恐惧", "parts": {"恐惧": 20}}],
+		[{"name": "害羞", "parts": {"喜悦": 25, "恐惧": 25}},
+		{"name": "喜欢", "parts": {"喜悦": 25, "信任": 25}}],
+	],
+	"play1_v3": [
+		[{"name": "信任", "parts": {"信任": 50}}, {"name": "期待", "parts": {"期待": 50}}],
+		[{"name": "信任", "parts": {"信任": 40}}, {"name": "期待", "parts": {"期待": 30}},
+		{"name": "痴呆", "parts": {"惊讶": 15, "厌恶": 15}}],
+		[{"name": "恐惧", "parts": {"恐惧": 50}}, {"name": "暴怒", "parts": {"惊讶": 15, "愤怒": 15}},
+		{"name": "绝望", "parts": {"恐惧": 10, "悲伤": 10}}],
+		[{"name": "喜欢", "parts": {"喜悦": 20, "信任": 20}}, {"name": "期待", "parts": {"期待": 30}},
+		{"name": "害羞", "parts": {"喜悦": 15, "恐惧": 15}}],
+		[{"name": "破绷", "parts": {"喜悦": 50, "惊讶": 35, "期待": 15}}],
+	],
+	"play2_v1": [
+		[{"name": "信任", "parts": {"信任": 50}}, {"name": "喜悦", "parts": {"喜悦": 50}}],
+	],
+	"play2_v2": [
+		[{"name": "震怒", "parts": {"惊讶": 40, "愤怒": 40}},
+		{"name": "轻蔑", "parts": {"厌恶": 10, "愤怒": 10}}],
+		[{"name": "恐惧", "parts": {"恐惧": 50}}, {"name": "惊讶", "parts": {"惊讶": 50}}],
+		[{"name": "轻蔑", "parts": {"厌恶": 40, "愤怒": 40}}, {"name": "喜悦", "parts": {"喜悦": 20}}],
+	],
+	"play2_v3": [
+		[{"name": "魅惑", "parts": {"厌恶": 50, "喜悦": 50}}],
+		[{"name": "好奇", "parts": {"信任": 30, "惊讶": 30}},
+		{"name": "支配", "parts": {"愤怒": 20, "信任": 20}}],
+		[{"name": "自信", "parts": {"信任": 35, "期待": 35}},
+		{"name": "轻蔑", "parts": {"厌恶": 15, "愤怒": 15}}],
+		[{"name": "释然", "parts": {"喜悦": 50, "信任": 50}}],
+	],
+	"play3_v1": [
+		[{"name": "顺从", "parts": {"信任": 40, "恐惧": 40}},
+		{"name": "支配", "parts": {"愤怒": 10, "信任": 10}}],
+	],
+	"play3_v2": [
+		[{"name": "轻蔑", "parts": {"厌恶": 50, "愤怒": 50}}],
+		[{"name": "绝望", "parts": {"恐惧": 50, "悲伤": 50}}],
+	],
+	"play3_v3": [
+		[{"name": "宿命论", "parts": {"信任": 50, "期待": 50}}],
+		[{"name": "乐观", "parts": {"喜悦": 50, "期待": 50}}],
+		[{"name": "悲愤交加", "parts": {"悲伤": 40, "愤怒": 40}},
+		{"name": "失望", "parts": {"惊讶": 10, "悲伤": 10}}],
+		[{"name": "释然", "parts": {"喜悦": 50, "信任": 50}}],
+	],
+}
+
 var _errors: Array[String] = []
 
 
@@ -152,6 +213,12 @@ func _parse_file(path: String) -> Array[ScriptDoc]:
 		if doc.body.strip_edges().is_empty():
 			_errors.append("%s 的视角「%s」正文是空的" % [path, doc.role_name])
 			continue
+		# 每场需求：数量必须和「场景数」对齐 —— 错位的话录像机第 3 帧会读到空需求
+		var demands: Array = DEMANDS.get(String(doc.id), [])
+		if demands.size() != doc.scene_count:
+			_errors.append("%s（%s）的需求数 %d ≠ 场景数 %d" % [
+				doc.id, doc.role_name, demands.size(), doc.scene_count])
+		doc.scene_demands = demands
 		out.append(doc)
 	return out
 
