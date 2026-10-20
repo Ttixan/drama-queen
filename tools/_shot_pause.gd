@@ -41,6 +41,11 @@ func _run() -> void:
 	menu.call("_on_restart_week")
 	await _wait(0.4)
 	_save(vp, "res://tools/_shot_pause_confirm.png")
+
+	menu.call("_close_dialog")
+	menu.call("_on_back_to_menu")
+	await _wait(0.4)
+	_save(vp, "res://tools/_shot_pause_back.png")
 	quit(0)
 
 

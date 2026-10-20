@@ -13,6 +13,7 @@ extends Control
 
 signal closed
 
+const MENU_SCENE := "res://scenes/ui/main_menu.tscn"
 const BG_TEX := preload("res://assets/ui/main_menu.png")
 const FRAME_BEIGE := preload("res://assets/ui/intro/frame_beige.png")
 const DIALOG_TEX := preload("res://assets/ui/dialog_frame.png")
@@ -50,7 +51,11 @@ func _build_backdrop() -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(0.06, 0.05, 0.04, 0.38)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	# 点空白处关掉菜单（和 ESC 两条路，玩家不用猜）
+	dim.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed:
+			_close())
 	add_child(dim)
 
 
@@ -59,7 +64,7 @@ func _build_buttons() -> void:
 		{"text": "存档", "cb": _on_save},
 		{"text": "重开本周", "cb": _on_restart_week},
 		{"text": "重开游戏", "cb": _on_restart_game},
-		{"text": "返回主界面", "cb": _close},
+		{"text": "返回主界面", "cb": _on_back_to_menu},
 	]
 	for i in actions.size():
 		_menu_button(String(actions[i]["text"]), BTN_TOP + i * BTN_STEP,
@@ -128,22 +133,29 @@ func _show_toast(text: String) -> void:
 
 
 func _on_restart_week() -> void:
-	_confirm("回到本周第一天。这一周赚到的钱、涨的演技都会退回去。",
-			"重开", func() -> void:
-				Game.restart_week()
-				_close())
+	_confirm("确认重新开始？", "重开", func() -> void:
+		Game.restart_week()
+		_close())
 
 
 func _on_restart_game() -> void:
-	_confirm("从取名开始重来一遍，所有进度清空。",
-			"重开", func() -> void:
-				Game.new_game()
-				# 【为什么整场景重载】桌子、手机、微信都还挂着上一局的数据；
-				# 让 `main_scene` 按新状态重建一遍最干净（开场也会跟着回来）。
-				if get_tree().current_scene != null:
-					get_tree().call_deferred("reload_current_scene")
-				else:
-					_close())
+	_confirm("确认重新开始？", "重开", func() -> void:
+		Game.new_game()
+		# 【为什么整场景重载】桌子、手机、微信都还挂着上一局的数据；
+		# 让 `main_scene` 按新状态重建一遍最干净（开场也会跟着回来）。
+		if get_tree().current_scene != null:
+			get_tree().call_deferred("reload_current_scene")
+		else:
+			_close())
+
+
+## 「返回主界面」= 回到开始界面（那个选「继续 / 开始」的画面）。
+## 它等于离开这一局，所以也要确认。
+func _on_back_to_menu() -> void:
+	_confirm("确认返回主界面？", "返回", func() -> void:
+		var err := get_tree().change_scene_to_file(MENU_SCENE)
+		if err != OK:
+			push_error("[PauseMenu] 回不到开始界面：%s" % error_string(err)))
 
 
 func _close() -> void:
@@ -164,7 +176,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 # ============================================================
 # 确认框（底图：通用信息框）
 # ============================================================
-func _confirm(body: String, ok_text: String, on_ok: Callable) -> void:
+## 【为什么没有说明小字】确认框只回答「要不要」，一句标题 + 两个按钮就够；
+## 再补一行解释反而让人先读说明再读标题。这条对以后所有弹窗都成立。
+func _confirm(title: String, ok_text: String, on_ok: Callable) -> void:
 	_close_dialog()
 	var layer := Control.new()
 	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -184,8 +198,8 @@ func _confirm(body: String, ok_text: String, on_ok: Callable) -> void:
 	# 【为什么用 Panel 不用 PanelContainer】里面的标题/正文/按钮都按纸上位置绝对摆，
 	# 容器会把它们全部铺满 —— 青条上的标题就没法只占那一条
 	var card := Panel.new()
-	card.position = Vector2(600, 360)
-	card.size = Vector2(720, 360)
+	card.position = Vector2(600, 380)
+	card.size = Vector2(720, 320)
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
 	var style := StyleBoxTexture.new()
 	style.texture = DIALOG_TEX
@@ -196,41 +210,29 @@ func _confirm(body: String, ok_text: String, on_ok: Callable) -> void:
 	card.add_theme_stylebox_override("panel", style)
 	layer.add_child(card)
 
-	# 标题不再挤在顶部青条里，而是**压在框中央**：加大加粗，一句话说清要发生什么
+	# 标题压在框中央：加大加粗，一句话说清要发生什么（不写说明小字）
 	var head := Label.new()
-	head.position = Vector2(34, 104)
-	head.size = Vector2(652, 56)
+	head.position = Vector2(34, 108)
+	head.size = Vector2(652, 58)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	head.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	head.text = "确认重新开始？"
+	head.text = title
 	head.add_theme_font_override("font", UiPalette.TITLE_FONT)
 	head.add_theme_font_size_override("font_size", 34)
 	head.add_theme_color_override("font_color", UiPalette.INK)
 	card.add_child(head)
 
-	var text := Label.new()
-	text.position = Vector2(34, 168)
-	text.size = Vector2(652, 80)
-	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.add_theme_font_override("font", FONT_CN)
-	text.add_theme_font_size_override("font_size", 19)
-	text.add_theme_color_override("font_color", UiPalette.PAGE_INK_SOFT)
-	text.add_theme_constant_override("line_spacing", 6)
-	text.text = body
-	card.add_child(text)
-
 	# 两个按钮整体居中于卡片中轴：总宽 150+20+150 = 320 → 从 200 起
-	# 顺序是「重开在左、取消在右」—— 主操作挨着正文，取消退到最右
+	# 顺序是「确认在左、取消在右」
 	var ok := _dialog_button(ok_text, true)
-	ok.position = Vector2(200, 258)
+	ok.position = Vector2(200, 212)
 	ok.pressed.connect(func() -> void:
 		_close_dialog()
 		on_ok.call())
 	card.add_child(ok)
 
 	var cancel := _dialog_button("取消", false)
-	cancel.position = Vector2(370, 258)
+	cancel.position = Vector2(370, 212)
 	cancel.pressed.connect(_close_dialog)
 	card.add_child(cancel)
 
