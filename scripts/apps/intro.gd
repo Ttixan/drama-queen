@@ -45,12 +45,7 @@ const PHOTO_NEWS := [
 	{"path": "res://assets/ui/intro/card_sorrow.png",
 			"pos": Vector2(1622, 512), "height": 300.0, "angle": 7.0, "delay": 0.7},
 ]
-const PHOTO_NAME := [
-	{"path": "res://assets/ui/intro/card_surprise.png",
-			"pos": Vector2(248, 320), "height": 306.0, "angle": -8.0, "delay": 0.0},
-	{"path": "res://assets/ui/intro/card_smug.png",
-			"pos": Vector2(1412, 348), "height": 300.0, "angle": 6.0, "delay": 0.12},
-]
+
 
 @onready var _paper_layer: Control = $PaperLayer
 @onready var _paper_text: Control = $PaperLayer/PaperText
@@ -204,7 +199,7 @@ func _build_paper() -> void:
 
 	# 照片最后加，压在报纸上；层序在 Fade 之下，淡入时会跟着一起亮起来
 	for spec: Dictionary in PHOTO_NEWS:
-		_add_photo(_paper_layer, spec)
+		PhotoCard.add(_paper_layer, spec)
 
 
 func _on_fade_in_done() -> void:
@@ -259,10 +254,6 @@ func _build_name_layer() -> void:
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_name_layer.add_child(dim)
-
-	# 照片挂在压暗层之上、登记表之下：不遮输入框，也不被暗罩压灰
-	for spec: Dictionary in PHOTO_NAME:
-		_add_photo(_name_layer, spec)
 
 	# 投影：贴图自带手绘描边但没有阴影，直接压在暗桌面上会显得「浮不起来」。
 	# 单独垫一层板子做硬阴影，比给 StyleBoxTexture 找 shadow 省事（它没有这个属性）。
@@ -416,41 +407,6 @@ func _abort() -> void:
 	_finished = true
 	finished.emit()
 	queue_free()
-
-
-# ============================================================
-# 剧照
-# ============================================================
-## 按高度定尺寸（卡片比例各不相同，按宽定会把欧式框压扁）。
-## 锚点给中心：rotation 绕中心转，不然会绕着左上角甩出去。
-func _add_photo(parent: Node, spec: Dictionary) -> void:
-	var tex := load(spec["path"]) as Texture2D
-	if tex == null:
-		push_warning("[Intro] 缺剧照 %s —— 先跑合成脚本" % spec["path"])
-		return
-
-	var h: float = spec["height"]
-	var r := TextureRect.new()
-	r.texture = tex
-	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	r.size = Vector2(h * tex.get_width() / tex.get_height(), h)
-	r.position = spec["pos"]
-	r.pivot_offset = r.size * 0.5
-	r.rotation = deg_to_rad(spec["angle"])
-	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	r.modulate.a = 0.0
-	parent.add_child(r)
-
-	var fade := create_tween()
-	fade.tween_property(r, "modulate:a", 1.0, 0.45).set_delay(spec["delay"])
-
-	# 照片落桌后还会晃一下：幅度压到 4px、周期 2.2s，只当呼吸，不抢正文
-	var bob := create_tween().set_loops()
-	bob.tween_property(r, "position:y", r.position.y - 4.0, 2.2) \
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	bob.tween_property(r, "position:y", r.position.y, 2.2) \
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 # ============================================================

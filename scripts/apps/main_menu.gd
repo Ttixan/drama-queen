@@ -9,8 +9,12 @@ extends Control
 ## 【headless 直接进游戏】冒烟测试与导出校验不该卡在菜单上等点击。
 ## 与 `main.gd` 里「headless 不挂开场」是同一条口径。
 ##
-## 【底图】`.document/second/主界面-清晰.png` → `assets/ui/main_menu.png`（1920×1080）。
-## 素材在左边留了一大片空木纹，按钮就摆在那儿，不遮笔记本、手机和右侧那本。
+## 【底图】`.document/second/主界面-模糊.png` → `assets/ui/main_menu.png`（1920×1080）。
+## 整张是虚焦的桌面，物件比清晰版大一圈 —— 所以按钮改摆画面中间那片木纹，
+## 不再挤在左下角。
+##
+## 【两侧的剧照】和开场压在报纸上的是同一套卡片（`PhotoCard`），
+## 摆位避开中间那一列按钮。
 
 const MAIN_SCENE := "res://scenes/main_scene.tscn"
 const FONT_CN := preload("res://assets/fonts/main_font.tres")
@@ -18,14 +22,21 @@ const TITLE_FONT := preload("res://assets/fonts/title_font.tres")
 ## 按钮底：`通用框3个.png` 里那个米色框（和演员登记表 / 手机顶栏返回键同一张）
 const FRAME_BEIGE := preload("res://assets/ui/intro/frame_beige.png")
 
-## 按钮列（1920×1080 绝对坐标，压在左下角那块空木纹上）
-const BTN_X := 132.0
-const BTN_Y := 796.0
+## 按钮列：画面中间偏左（手机和笔记本之间那条空木纹），红笔示意的那块
+const BTN_X := 760.0
+const BTN_Y := 560.0
 const BTN_W := 380.0
-const BTN_H := 54.0
-## 步进 = 高 + 间距(16)。原来间距只有 8，四个按钮叠成一根柱子；
-## 阴影又往下压 4px，视觉上几乎连在一起。
-const BTN_STEP := 70.0
+const BTN_H := 46.0
+## 步进 = 高 + 间距(12)
+const BTN_STEP := 58.0
+
+## 散在两侧的剧照：左上一张压着绿笔记本，右下一张压着那本书
+const PHOTO_HOME := [
+	{"path": "res://assets/ui/intro/card_smug.png",
+			"pos": Vector2(56, 92), "height": 286.0, "angle": -8.0, "delay": 0.25},
+	{"path": "res://assets/ui/intro/card_sorrow.png",
+			"pos": Vector2(1484, 606), "height": 300.0, "angle": 7.0, "delay": 0.4},
+]
 
 var _dialog: Control
 
@@ -34,6 +45,9 @@ func _ready() -> void:
 	if OS.has_feature("headless"):
 		call_deferred("_enter_game")
 		return
+	# 照片先加：它们要压在标题和按钮**下面**（后加的节点画在上面）
+	for spec: Dictionary in PHOTO_HOME:
+		PhotoCard.add(self, spec)
 	_build_title()
 	_build_actions()
 
@@ -42,15 +56,13 @@ func _ready() -> void:
 # 标题
 # ============================================================
 func _build_title() -> void:
-	# 【为什么压在 700 以下】底图左上那本绿笔记本一直画到 y≈690，
-	# 标题落在它上面会被绿色吃掉一半，字读不清
 	var title_label := _label("有瓜有戏", 44, UiPalette.INK,
-			Rect2(BTN_X, 700, 560, 58), TITLE_FONT)
+			Rect2(BTN_X, 470, 560, 58), TITLE_FONT)
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	# 英文放在中文右侧做 lockup：竖排两行时 18 号字夹在标题和按钮之间，
 	# 缩到 1080p 以下就会糊成一团
 	_label("DRAMA QUEEN", 19, Color(UiPalette.INK, 0.62),
-			Rect2(BTN_X + 210, 718, 300, 26))
+			Rect2(BTN_X + 210, 492, 300, 26))
 
 
 # ============================================================
@@ -66,8 +78,12 @@ func _build_actions() -> void:
 	specs.append({"text": "制作人员", "cb": _show_credits})
 	specs.append({"text": "离开游戏", "cb": _on_quit})
 
+	# 少一个按钮时整列往下挪半格 —— 否则 3 个按钮会贴着标题、下面空一大块
+	var start_y := BTN_Y
+	if specs.size() < 4:
+		start_y += (4 - specs.size()) * BTN_STEP * 0.5
 	for i in specs.size():
-		_action_button(String(specs[i]["text"]), BTN_Y + i * BTN_STEP,
+		_action_button(String(specs[i]["text"]), start_y + i * BTN_STEP,
 				specs[i]["cb"])
 
 
