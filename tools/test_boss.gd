@@ -113,8 +113,14 @@ func _run_all() -> void:
 	# 挑第一个
 	(_app._choices.get_child(0) as Button).pressed.emit()
 	_check("选项撤掉了", _app._choices, null)
-	_check("挑中的那句成了我发的消息", _text_of_feed(a_first + 1),
-			a_lines[a_first].display_text())
+	# 【选项本身不进聊天记录】紧随其后的那句就是它的具体说法
+	var guard := 0
+	while not _feed_has(a_branch1[0].display_text()) and guard < 40:
+		await create_timer(0.02).timeout
+		guard += 1
+	_check("挑完直接接上那条支线的第一句", _feed_has(a_branch1[0].display_text()), true)
+	_check("选项上的字没被当成我说的话发出去",
+			_feed_has(a_lines[a_first].display_text()), false)
 	_check("记下他挑的是第几句（0 起）", _game.hr_choice_of("A", 0), 0)
 	_app.skip_chat()          # 把剩下那条支线放完
 	_check("放完的支线正好是第一个选项那条",
@@ -126,9 +132,9 @@ func _run_all() -> void:
 	_check("话说完就解锁了", _game.is_hr_unlocked("A"), true)
 	_check("只发了 1 次 hr_unlocked", _unlock_events.size(), 1)
 	_check("发的就是 A", _unlock_events[0], "A")
-	# 职位卡 + 铺垫 + 自己那句 + 支线 + 系统提示（「已加进微信联系人」）
+	# 职位卡 + 铺垫 + 支线 + 系统提示（「已加进微信联系人」）
 	_check("对话都进了聊天列表", _app._chat_feed.get_child_count(),
-			a_first + 1 + a_branch1.size() + 2)
+			a_first + a_branch1.size() + 2)
 	# 头像的左右（这一条只有截图才看得出来）：HR = 头像 → 气泡；玩家 = 气泡 → 头像
 	# 【下标不再是 1/2 固定成 HR/我】正式文案第一句是玩家说的（「你好，请问贵司招收演员吗」），
 	# 所以 feed[1] 是我、feed[2] 才是 HR。
@@ -148,9 +154,9 @@ func _run_all() -> void:
 	print("")
 	print("[5] 第二次进聊天：内容一模一样，但不再演")
 	_walk_hr_chat("A")            # A 已经解锁过 → 应当直接铺完
-	_check("第二次也是完整对话（职位卡 + 铺垫 + 自己那句 + 支线 + 系统提示）",
+	_check("第二次也是完整对话（职位卡 + 铺垫 + 支线 + 系统提示）",
 			_app._chat_feed.get_child_count(),
-			a_first + 1 + a_branch1.size() + 2)
+			a_first + a_branch1.size() + 2)
 	var a_sys: Label = _app._chat_feed.get_child(_app._chat_feed.get_child_count() - 1)
 	_check("系统提示换了说法", a_sys.text.contains("已经在你的微信联系人里"), true)
 	_check("且没有重复解锁（还是 1 次）", _unlock_events.count("A"), 1)
@@ -225,8 +231,8 @@ func _run_all() -> void:
 	_app._select_company("A")
 	_app._open_chat()              # 第二次进：直接铺完 —— **这一步就会把 `_chat_step` 压成 0**
 	_check("第二次进：不再演，直接铺完", _app._choices, null)
-	_check("内容一模一样（职位卡 + 铺垫 + 自己那句 + 支线 + 系统提示）",
-			_app._chat_feed.get_child_count(), a_first + 1 + a_branch1.size() + 2)
+	_check("内容一模一样（职位卡 + 铺垫 + 支线 + 系统提示）",
+			_app._chat_feed.get_child_count(), a_first + a_branch1.size() + 2)
 	_app._close_chat()
 	var b_ok: bool = await _open_chat_until_choices("B")
 	_check("第二家：选项也在", b_ok and _app._choices != null, true)
@@ -248,16 +254,22 @@ func _run_all() -> void:
 	_check("C 也走到选项了", c_ok, true)
 	(_app._choices.get_child(1) as Button).pressed.emit()   # 挑第二句
 	_check("记下挑的是第 2 句", _game.hr_choice_of("C", 0), 1)
-	_check("送出去的也是第 2 句", _text_of_feed(c_first + 1),
-			c_lines[c_first + 1].display_text())
+	var c_branch1 := _branch_lines(c_lines, 1)
+	var c_branch2 := _branch_lines(c_lines, 2)
+	var guard2 := 0
+	while not _feed_has(c_branch2[0].display_text()) and guard2 < 40:
+		await create_timer(0.02).timeout
+		guard2 += 1
+	_check("送出去的是第二条支线的第一句", _feed_has(c_branch2[0].display_text()), true)
+	_check("选项上的字没进记录", _feed_has(c_lines[c_first + 1].display_text()), false)
 	_app.skip_chat()
 	_app._close_chat()
 	_app._select_company("C")
 	_app._open_chat()          # 第二次进：直接铺完
-	_check("铺出来的还是他挑的那句", _text_of_feed(c_first + 1),
-			c_lines[c_first + 1].display_text())
-	_check("不再永远退回第一句",
-			_text_of_feed(c_first + 1) == c_lines[c_first].display_text(), false)
+	_check("铺出来的还是他挑的那条支线", _text_of_feed(c_first + 1),
+			c_branch2[0].display_text())
+	_check("不再永远退回第一条支线",
+			_text_of_feed(c_first + 1) == c_branch1[0].display_text(), false)
 	_app._close_chat()
 	print("   挑过哪句进了进度；第二次进照他挑的铺")
 
@@ -315,9 +327,17 @@ func _text_of_feed(i: int) -> String:
 	var node: Node = _app._chat_feed.get_child(i)
 	if node is Label:
 		return (node as Label).text
-	# 气泡那一行是 [空档/头像, 面板, 头像/空档]，面板里是 [边距, 文字]
+	# 气泡那一行是 [空档/头像, 面板, 头像/空档]，面板里是 [边距, 文字]；
+	# 职位卡 / 选项框不是这个形状 —— 返回空串，别让遍历（`_feed_has`）在这里崩
+	if node.get_child_count() < 2:
+		return ""
 	var panel: Node = node.get_child(1)
-	return (panel.get_child(0).get_child(0) as Label).text
+	if panel == null or panel.get_child_count() == 0:
+		return ""
+	var inner: Node = panel.get_child(0)
+	if inner == null or inner.get_child_count() == 0:
+		return ""
+	return (inner.get_child(0) as Label).text if inner.get_child(0) is Label else ""
 
 
 ## 走完「点开一家 → 点 HR → 聊完」这条链路。

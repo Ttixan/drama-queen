@@ -663,7 +663,7 @@ func skip_chat() -> void:
 			# 【照着他当初挑的那句铺】第二次进同一家走的就是这里（见 `_remembered_choice`）
 			var run := _choice_run_at(_chat_index)
 			var pick := _remembered_choice(run)
-			_send_choice(run[pick].display_text(), pick + 1)
+			_send_choice(pick + 1)
 			continue
 		if _skip_branch(_chat_lines[_chat_index]):
 			_chat_index += 1
@@ -912,17 +912,20 @@ func _on_choice_pressed(index: int) -> void:
 	var pick := clampi(index, 0, run.size() - 1)
 	if _current != null:
 		Game.set_hr_choice(_current.code, _choice_round, pick)
-	_send_choice(run[pick].display_text(), pick + 1)
+	_send_choice(pick + 1)
 	if _chat_step <= 0.0:
 		skip_chat()
 	else:
 		_play_chat()
 
 
-## 把这一句当成玩家发的送出去，并消化掉整组选项。
-## 【`skip_chat()` 也走这条】只是拾起哪一句由调用方定：玩家点的那句、还是**他当初挑过的那句**。
-## `branch` = 选中的是第几个选项 + 1（选项 1 → 1）；之后只播 `branch` 相同的支线行。
-func _send_choice(text: String, branch := 0) -> void:
+## 消化掉整组选项，切到玩家挑的那条支线。
+## `branch` = 选中的是第几个选项（1 起）；之后只播 `branch` 相同的支线行。
+##
+## 【为什么不把选项本身也发一条】正式文案里每个选项后面紧跟的，就是这句的具体说法
+## （「问问薪水」→「请问咱们这个龙套岗的薪资怎么算？」）—— 两句连着出现像在复读。
+## 选项上的字只属于按钮，不该进聊天记录。
+func _send_choice(branch: int) -> void:
 	if _choices != null:
 		_chat_feed.remove_child(_choices)
 		_choices.queue_free()
@@ -930,7 +933,6 @@ func _send_choice(text: String, branch := 0) -> void:
 	# 一组消化掉了 —— 往后再遇到选项就是第 `_choice_round` 组（问「他挑过哪句」按它当键）
 	_choice_round += 1
 	_branch = branch
-	_chat_feed.add_child(_bubble_of(text, true))
 	_chat_index += _choice_run_at(_chat_index).size()
 	_scroll_chat()
 
