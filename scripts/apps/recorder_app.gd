@@ -167,8 +167,8 @@ const TITLE_X := 272.0
 @onready var _status_label: Label = get_node(P_BOTTOM + "/StatusBox/StatusLabel")
 @onready var _status_hint: Label = get_node(P_BOTTOM + "/StatusBox/StatusHint")
 @onready var _slots_row: HBoxContainer = get_node(P_BOTTOM + "/SlotsBox/SlotsRow")
-@onready var _frame_add: Button = get_node(P_BOTTOM + "/SlotsBox/FrameAdd")
-@onready var _frame_remove: Button = get_node(P_BOTTOM + "/SlotsBox/FrameRemove")
+@onready var _frame_prev: Button = get_node(P_BOTTOM + "/SlotsBox/FramePrev")
+@onready var _frame_next: Button = get_node(P_BOTTOM + "/SlotsBox/FrameNext")
 @onready var _clear_button: Button = get_node(P_BOTTOM + "/ActionsRow/ClearButton")
 @onready var _confirm_button: Button = get_node(P_BOTTOM + "/ActionsRow/ConfirmButton")
 @onready var _script_button: Button = get_node(P_BOTTOM + "/ScriptButton")
@@ -305,8 +305,8 @@ func _collect_nodes() -> void:
 	_confirm_button.pressed.connect(_on_confirm_pressed)
 	_script_button.pressed.connect(_open_script_picker)
 	_back_button.pressed.connect(func() -> void: cancelled.emit())
-	_frame_add.pressed.connect(_on_add_frame)
-	_frame_remove.pressed.connect(_on_remove_frame)
+	_frame_prev.pressed.connect(func() -> void: _step_frame(-1))
+	_frame_next.pressed.connect(func() -> void: _step_frame(1))
 
 
 ## 让调用方把录像机嵌进来时打开「返回」（见 wechat_app.gd 的「去录像机」）
@@ -513,27 +513,13 @@ func _on_slot_toggled(on: bool, index: int) -> void:
 	_flash_face()
 
 
-## 末尾加一帧并跳过去 —— 「多演一帧」是这个动作的全部意义，加完还停在原地很奇怪
-func _on_add_frame() -> void:
-	if _clip.add_frame() < 0:
+## 箭头切帧：帧数由剧本（或默认 3 帧）定死，UI 不提供增删 —— 只有左右切换。
+func _step_frame(delta: int) -> void:
+	var next := clampi(_frame + delta, 0, _clip.frame_count() - 1)
+	if next == _frame:
 		return
-	_frame = _clip.frame_count() - 1
-	_after_frame_count_changed()
-
-
-## 删的是**当前这一帧**，不是末尾：玩家点着第 2 帧按减号，期待消失的就是第 2 帧
-func _on_remove_frame() -> void:
-	if not _clip.remove_frame(_frame):
-		return
-	_frame = clampi(_frame, 0, _clip.frame_count() - 1)
-	_after_frame_count_changed()
-
-
-## 帧数变了：按钮先重建（数量变了），再整体刷一遍；换帧那一下给个闪，让眼睛跟得上
-func _after_frame_count_changed() -> void:
-	_rebuild_slots()
+	_frame = next
 	_sync_all()
-	_flash_face()
 
 
 func _on_card_toggled(on: bool, slot: int, key: String) -> void:
@@ -719,13 +705,11 @@ func _close_dialog() -> void:
 ## 留着旧部件反而会让人以为「这场已经演过了」。
 func _load_script(doc: ScriptDoc) -> void:
 	_loaded_doc = doc
-	_clip = Clip.new()
+	# 【从 0 帧开始补】Clip.new() 默认 3 帧 —— 只加不减的话，1 场的龙套剧本会剩下 3 帧
+	_clip = Clip.new(0)
 	while _clip.frame_count() < doc.scene_count:
 		_clip.add_frame()
 	_frame = 0
-	# 帧数 = 场景数，是剧本定的 —— +/- 改帧会让帧和场景错位，锁死
-	_frame_add.disabled = true
-	_frame_remove.disabled = true
 	_score_caption.text = "本场需求"
 	_rebuild_slots()
 	_sync_all()
@@ -948,7 +932,7 @@ func _sync_preview() -> void:
 	_layer_mouth.texture = null if f.mouth == null else f.mouth.texture
 	_layer_mouth.material = _mul_mat if _needs_mul(f.mouth) else null
 	_layer_extra.texture = null if f.extra == null else f.extra.texture
-	_frame_badge.text = "帧 %d" % (_frame + 1)
+	_frame_badge.text = "%s %d" % ["场景" if _loaded_doc != null else "帧", _frame + 1]
 	# 空帧时给一句提示，否则取景框是一整块黑，看起来像坏了
 	_face_hint.visible = f.parts().is_empty()
 
@@ -984,10 +968,12 @@ func _sync_slots() -> void:
 		var slot_word := "场景" if _loaded_doc != null else "帧"
 		b.tooltip_text = "%s %d · %s" % [slot_word, i + 1, _clip.frame_label(i)]
 		b.button_pressed = (i == _frame)
-	# 到头了就置灰，别让玩家点了没反应还以为是卡了。
-	# 【加载了剧本就整对锁死】帧数 = 场景数是剧本定的，+/- 改帧会让帧和场景错位
-	_frame_add.disabled = _loaded_doc != null or _clip.frame_count() >= Clip.MAX_FRAME_COUNT
-	_frame_remove.disabled = _loaded_doc != null or _clip.frame_count() <= Clip.MIN_FRAME_COUNT
+	# 切换箭头：只有一帧时没有「别的帧」可去，整对藏掉
+	var multi := _clip.frame_count() > 1
+	_frame_prev.visible = multi
+	_frame_next.visible = multi
+	_frame_prev.disabled = _frame <= 0
+	_frame_next.disabled = _frame >= _clip.frame_count() - 1
 	_syncing = false
 
 
@@ -1293,19 +1279,16 @@ func _apply_styles() -> void:
 		tab.add_theme_constant_override("icon_max_width", TAB_ICON_MAX)
 
 	# 帧槽的样式在 _rebuild_slots() 里 —— 那些按钮是现建的，这里的循环够不到
-	# 增删帧：与帧槽同一套纸面配色，但**不铺底**（次要动作不该和帧槽一样重）
-	for b: Button in [_frame_remove, _frame_add]:
+	# 切换箭头：无底框的实心三角，到头就淡掉（不是消失 —— 位置不跳更好追）
+	for b: Button in [_frame_prev, _frame_next]:
 		b.focus_mode = Control.FOCUS_NONE
-		b.add_theme_font_size_override("font_size", 26)
-		b.add_theme_stylebox_override("normal", _button_sb(Color(0, 0, 0, 0), UiPalette.PAPER_LINE, 2, 10, 0, 0))
-		b.add_theme_stylebox_override("hover", _button_sb(C_ACCENT, C_ACCENT, 2, 10, 0, 0))
-		b.add_theme_stylebox_override("pressed", _button_sb(C_INK, C_ACCENT, 2, 10, 0, 0))
-		b.add_theme_stylebox_override("focus", _button_sb(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 10, 0, 0))
-		b.add_theme_stylebox_override("disabled", _button_sb(Color(0, 0, 0, 0), UiPalette.PAPER_DISABLED, 2, 10, 0, 0))
-		b.add_theme_color_override("font_color", C_INK)
-		b.add_theme_color_override("font_hover_color", C_INK)
-		b.add_theme_color_override("font_pressed_color", C_ACCENT)
-		b.add_theme_color_override("font_disabled_color", UiPalette.TEXT_DISABLED)
+		b.add_theme_font_size_override("font_size", 24)
+		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+			b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+		b.add_theme_color_override("font_color", C_ACCENT)
+		b.add_theme_color_override("font_hover_color", C_ACCENT)
+		b.add_theme_color_override("font_pressed_color", C_INK)
+		b.add_theme_color_override("font_disabled_color", UiPalette.PAPER_DISABLED)
 
 	# 底部按钮（纸面带上，用深色按钮压住）。两个都是文字键：
 	# 「完成」是主操作，字大一号、深底黄边；「清空」是次要的，字小一号、浅底
