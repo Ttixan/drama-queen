@@ -39,6 +39,12 @@ var _fame: Label
 
 
 func _ready() -> void:
+	# 【导出包会丢这里的位置】`scenes/ui/sticky_stats.tscn` 里根节点写了 offset
+	# (1299,15)，编辑器加载文本 tscn 时是对的；但 4.6 导出重存场景时会把
+	# 根节点的 offset_left/top 清零（变成 0,0，贴在左上角）。改 tscn 属性名 /
+	# 在父场景加覆盖都救不回来 —— 那是导出管线丢的。所以直接在代码里钉死，
+	# 编辑器与导出包跑同一份代码，两边必然一致。
+	position = Vector2(1299, 15)
 	_build()
 	EventBus.ap_changed.connect(_on_ap_changed)
 	EventBus.money_changed.connect(_on_value_changed)
