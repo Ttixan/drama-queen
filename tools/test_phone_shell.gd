@@ -790,6 +790,9 @@ func _test_sfx() -> void:
 	# 真正要钉住的是「每个代号都配了音量」，否则新加一条会悄悄按 0dB 播
 	_check("每条音都配了音量", sfx.STREAMS.size(), sfx.VOLUME_DB.size())
 	_check("背景乐起来就在播", sfx.bgm_playing(), true)
+	# 【循环必须落在导入设置里】只靠 `play()` 播一遍就停；`loop` 是导入参数，
+	# 改了素材重新导入时容易被重置回 false —— 这条就是盯它别被改回去
+	_check("背景乐是循环流", bool(sfx.BGM.get("loop")), true)
 	var broken := 0
 	for code: StringName in sfx.STREAMS:
 		if sfx.STREAMS[code] == null:
