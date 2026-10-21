@@ -298,9 +298,11 @@ func _run() -> void:
 			_same_rect(_tut.hole_rect(), end_btn.get_global_rect().grow(10.0)), true)
 	end_btn.pressed.emit()
 	await _wait(0.5)
-	_check("点完下一天 → 引导结束", _tut.step(), TutorialLayer.Step.DONE)
-	_check("引导层收起来了", _tut.visible, false)
+	# 【引导层会把自己 free 掉】所以这里不能再摸它的属性，只能看存档与节点有效性
 	_check("存档写明已完成", _game.state.tutorial_step, TutorialLayer.Step.DONE)
+	_check("引导层已经销毁",
+			is_instance_valid(_tut) and _tut.is_inside_tree(), false)
+	_check("下一天后回到桌面（不再停在日历）", _desk().has_open_screen(), false)
 
 	print("")
 	print("[13] GM：跳过 / 重置引导（走的同一个入口）")

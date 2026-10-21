@@ -696,6 +696,18 @@ func _on_end_day_pressed() -> void:
 	if layer != null:
 		layer.call("announce", Game.day())
 
+	# 过了这一天就回桌面 —— 新的一天从桌上开始。
+	# 【为什么要等浮层】周报与翻牌是挂在日历里的（`_report_layer`），
+	# 日历一关它们跟着销毁，玩家就再也看不到结算和奖励了。
+	_leave_day_if_idle()
+
+
+## 没有浮层挡着就退回桌面（周报 / 翻牌各自关掉之后也会再问一次）
+func _leave_day_if_idle() -> void:
+	if _report != null or _reward != null:
+		return
+	cancelled.emit()
+
 
 ## 桌面点下去被核心层拒绝时，把原因显示出来。
 ## 【为什么这里还能被拒】按钮的可用状态是**同一套纯函数**算出来的，正常不会不一致；
@@ -731,6 +743,8 @@ func _close_report() -> void:
 	_refresh_all()
 	# 周末这一支：报纸是在「下一天」里先弹的，牌早就排好了，等报纸翻完再让玩家翻
 	_maybe_open_reward()
+	# 报纸看完、也没有牌要翻 → 这一趟就算走完了，回桌面
+	_leave_day_if_idle()
 
 
 # ============================================================
@@ -763,6 +777,8 @@ func _on_reward_finished() -> void:
 	_refresh_all()
 	# 一周里可能连拿两三个档位：这张收下了就接着问下一张
 	_maybe_open_reward()
+	# 后面没有牌了 → 回桌面
+	_leave_day_if_idle()
 
 
 func _close_reward() -> void:
@@ -771,6 +787,7 @@ func _close_reward() -> void:
 	_reward.queue_free()
 	_reward = null
 	_report_layer.visible = false
+	_leave_day_if_idle()
 
 
 # ============================================================

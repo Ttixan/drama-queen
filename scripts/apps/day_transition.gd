@@ -40,7 +40,12 @@ func _style() -> void:
 ## 渐隐到黑。**不 await** —— 调用方紧接着就要跑 `Game.end_day()`。
 func cover(duration := 0.3) -> void:
 	if _running:
-		return
+		# 【上一次没走完就先复位】`announce()` 半路被打断（切场景 / 节点被释放）时
+		# `_running` 会一直挂着，黑幕这时是「看不见但全屏 STOP」——
+		# 表现就是「界面卡住，只有 ESC 有反应」。这里直接把状态推回可用再重来。
+		visible = false
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_running = false
 	_running = true
 	visible = true
 	mouse_filter = Control.MOUSE_FILTER_STOP

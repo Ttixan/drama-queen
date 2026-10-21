@@ -228,6 +228,10 @@ func _finish() -> void:
 	visible = false
 	set_process(false)
 	finished.emit()
+	# 【走完就别再挂在树上】本层带着一堆全屏 STOP 子节点（四块 dim + 对话框）。
+	# 只 `visible = false` 时，导出包里出现过「点哪都没反应、只有 ESC 有用」的报告 ——
+	# 引导没有第二次复用的场景，直接释放最干净。
+	queue_free()
 
 
 ## 玩家把这一步的目标点了没？**看状态，不拦点击** ——
