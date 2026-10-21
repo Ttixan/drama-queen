@@ -28,6 +28,10 @@ var intro_done: bool = false
 ## 【为什么存在状态层而不是直接写 CastingPool】名字必须跟着存档走；
 ## `CastingPool` 是磁盘上的模板资源，往它身上写只在本进程有效。
 var player_name: String = ""
+## 试镜通过后「要去片场」的那一天（0 = 没有）。到那一天整天跳过 ——
+## 玩家在片场拍戏，日历上什么也做不了，停在那儿只是多一次点击。
+## 由 `DailyActions.submit` 在试镜通过时写成 `day + 1`，`Game._skip_shoot_days` 消费掉。
+var shoot_day: int = 0
 ## 新手引导走到哪一步（见 `TutorialLayer.Step`）。
 ## 【0 = 没开始，`Step.DONE` = 全部走完，-1 = 老档视为已完成】
 ## 与 `intro_done` 同一套口径：字段缺失时默认 `-1`，老玩家不会被按着重新看一遍。
@@ -495,6 +499,7 @@ func to_save_dict() -> Dictionary:
 		"reputation": reputation, "negative_exposure": negative_exposure,
 		"intro_done": intro_done, "player_name": player_name,
 		"tutorial_step": tutorial_step,
+		"shoot_day": shoot_day,
 		"day": day, "ap_left_today": ap_left_today,
 		"submissions_total": submissions_total, "successes_total": successes_total,
 		"submissions_this_week": submissions_this_week,
@@ -537,6 +542,7 @@ func from_save_dict(d: Dictionary) -> void:
 	# 【老档默认 -1 = 已完成】理由同 `intro_done`：这是 10-20 才加进来的字段，
 	# 默认 0 会把所有老玩家拉回「点了手机才刚开始」的状态。
 	tutorial_step = int(d.get("tutorial_step", -1))
+	shoot_day = int(d.get("shoot_day", 0))
 	player_name = String(d.get("player_name", "")).strip_edges()
 	day = int(d.get("day", 1))
 	ap_left_today = int(d.get("ap_left_today", AP_PER_DAY))

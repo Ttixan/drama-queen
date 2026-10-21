@@ -694,7 +694,11 @@ func _on_end_day_pressed() -> void:
 
 	# 黑幕里打字「第 X 天」，打完自己淡出。周报/翻牌都在它底下，先让玩家看见日期
 	if layer != null:
-		layer.call("announce", Game.day())
+		if res.has("shoot_skipped"):
+			# 拍戏日：这一天已经被整天跳过了，黑幕上要说明它去哪了
+			layer.call("announce", int(res["shoot_skipped"]), "去演戏了，跳过此天")
+		else:
+			layer.call("announce", Game.day())
 
 	# 过了这一天就回桌面 —— 新的一天从桌上开始。
 	# 【为什么要等浮层】周报与翻牌是挂在日历里的（`_report_layer`），

@@ -19,6 +19,9 @@ const HOLD := 0.55
 @onready var _dim: ColorRect = $Dim
 @onready var _label: Label = $DayLabel
 
+## 副标题（「去演戏了，跳过此天」这种）。场景里没有，跟着主标题一起建 ——
+## 只有拍戏日那一种情况会用到，写进 .tscn 会让每个场景都多一个空 Label。
+var _note: Label
 var _running := false
 
 
@@ -35,6 +38,19 @@ func _style() -> void:
 	_label.add_theme_color_override("font_color", INK_PAPER)
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+	_note = Label.new()
+	_note.name = "DayNote"
+	_note.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# 压在「第 N 天」下面一行：主标题 96 号居中，副标题从中心往下挪一段
+	_note.offset_top = 150.0
+	_note.add_theme_font_override("font", UiPalette.FONT_CN)
+	_note.add_theme_font_size_override("font_size", 30)
+	_note.add_theme_color_override("font_color", Color(INK_PAPER, 0.78))
+	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_note.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_note)
 
 
 ## 渐隐到黑。**不 await** —— 调用方紧接着就要跑 `Game.end_day()`。
@@ -57,9 +73,12 @@ func cover(duration := 0.3) -> void:
 
 
 ## 黑幕里打字「第 X 天」，停一拍，再淡出。异步跑完自己收尾。
-func announce(day: int) -> void:
+## `note` 是副标题（拍戏日那种「去演戏了，跳过此天」），平时留空。
+func announce(day: int, note := "") -> void:
 	visible = true
 	_label.modulate.a = 1.0
+	_note.text = note
+	_note.modulate.a = 1.0 if not note.is_empty() else 0.0
 	var text := "第 %d 天" % day
 	_label.text = ""
 	for i in text.length():
@@ -71,6 +90,7 @@ func announce(day: int) -> void:
 	tw.set_parallel(true)
 	tw.tween_property(_dim, "color:a", 0.0, 0.5)
 	tw.tween_property(_label, "modulate:a", 0.0, 0.3)
+	tw.tween_property(_note, "modulate:a", 0.0, 0.3)
 	await tw.finished
 	visible = false
 	mouse_filter = Control.MOUSE_FILTER_IGNORE

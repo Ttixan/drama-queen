@@ -549,12 +549,46 @@ func end_day() -> Dictionary:
 		EventBus.save_requested.emit()
 		# 【第 21 天不再推进】day 会被夹在 21 上，is_week_end() 永远为真，
 		# 靠 state.finished 挡住重复结算（见 GameState.advance_day 的注释）
-		if not state.finished:
-			_advance()
-		return {"settled": true, "report": report}
+		if state.finished:
+			return {"settled": true, "report": report}
+		_advance()
+		var settled := {"settled": true, "report": report}
+		_skip_shoot_days(settled)
+		return settled
 
 	_advance()
-	return {"settled": false, "report": {}}
+	var plain := {"settled": false, "report": {}}
+	_skip_shoot_days(plain)
+	return plain
+
+
+## 拍戏日：整天跳过，并在 `res` 里留一条 `shoot_skipped = 第几天`，
+## 界面据此在黑幕上写「去演戏了，跳过此天」。
+##
+## 【为什么要连推】那一天唯一的内容就是「去片场」，日历上什么都做不了。
+## 停在上面玩家只会疑惑「为什么今天点什么都不行」，不如直接翻过去。
+##
+## 【周尾不能跟着跳】拍戏日若正好是周日，那天的结算（片酬 / 演技 / 周报）
+## 必须照发 —— 所以先补一遍结算再推进，而不是简单地 +1。
+func _skip_shoot_days(res: Dictionary) -> void:
+	if state.shoot_day <= 0 or state.day != state.shoot_day or state.finished:
+		return
+	res["shoot_skipped"] = state.day
+	state.shoot_day = 0
+	if state.is_week_end():
+		DailyActions.miss_pending_events(state)
+		var report := WeekCycle.settle(state, state.week())
+		EventBus.week_settled.emit(report)
+		EventBus.broadcast_published.emit(state.week(), report.get("headlines", []))
+		if report.get("black_fame", false):
+			EventBus.black_fame_triggered.emit()
+		EventBus.save_requested.emit()
+		res["settled"] = true
+		res["report"] = report
+		if state.finished:
+			EventBus.game_finished.emit(state.ending_id)
+			return
+	_advance()
 
 
 func _advance() -> void:

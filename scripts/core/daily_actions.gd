@@ -105,6 +105,12 @@ static func submit(state: GameState, clip: Clip, company: CompanyData,
 		"clip": clip.save_dict(),
 	})
 
+	# 【通过试镜 = 约好了明天进组】记下那一天，推进到它时会被整天跳过
+	# （玩家在片场，日历上没什么可做的）。落选的投递不动这个字段。
+	if result["passed"]:
+		state.shoot_day = state.day + 1
+	result["shoot_day"] = state.shoot_day
+
 	# 这两项由 Game 那一层转成 EventBus.clip_recorded / ap_changed
 	result["clip_summary"] = clip.summarize()
 	result["labels"] = clip.all_labels()
