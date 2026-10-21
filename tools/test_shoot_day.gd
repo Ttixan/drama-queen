@@ -48,7 +48,20 @@ func _run() -> void:
 	_check("跳过的是第 7 天", int(res3.get("shoot_skipped", -1)), 7)
 
 	print("")
-	print("[3] 存档往返")
+	print("[3] 每天结束都自动存档")
+	var saves: Array[int] = []
+	var bus := root.get_node_or_null("EventBus")
+	if bus != null:
+		bus.save_requested.connect(func() -> void: saves.append(int(game.day())))
+	game.new_game()
+	game.end_day()
+	_check("推进一天就发一次存档请求", saves.size() >= 1, true)
+	var before := saves.size()
+	game.end_day()
+	_check("再推一天又多一次", saves.size(), before + 1)
+
+	print("")
+	print("[4] 存档往返")
 	game.new_game()
 	game.state.shoot_day = 5
 	var fresh = load("res://scripts/core/game_state.gd").new()

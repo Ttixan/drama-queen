@@ -554,11 +554,15 @@ func end_day() -> Dictionary:
 		_advance()
 		var settled := {"settled": true, "report": report}
 		_skip_shoot_days(settled)
+		EventBus.save_requested.emit()
 		return settled
 
 	_advance()
 	var plain := {"settled": false, "report": {}}
 	_skip_shoot_days(plain)
+	# 【每天自动存档】以前只在周末结算时存，玩家平日攒了几天进度、随手关掉就全丢了。
+	# 现在每次「结束今天」都把新一天的状态落盘（跳过的拍戏日也一样，跳完就是新一天）。
+	EventBus.save_requested.emit()
 	return plain
 
 
