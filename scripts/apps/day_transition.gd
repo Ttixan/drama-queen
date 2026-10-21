@@ -44,7 +44,7 @@ func _style() -> void:
 	_note.set_anchors_preset(Control.PRESET_FULL_RECT)
 	# 压在「第 N 天」下面一行：主标题 96 号居中，副标题从中心往下挪一段
 	_note.offset_top = 150.0
-	_note.add_theme_font_override("font", UiPalette.FONT_CN)
+	_note.add_theme_font_override("font", UiPalette.FONT)
 	_note.add_theme_font_size_override("font_size", 30)
 	_note.add_theme_color_override("font_color", Color(INK_PAPER, 0.78))
 	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
