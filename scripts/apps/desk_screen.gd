@@ -24,7 +24,10 @@ const PHONE_SCENE := "res://scenes/main/phone_screen.tscn"
 ## GM 控制台脚本。**用 `preload` 而不是 `class_name`** —— 那个脚本满篇 `Game.state`，
 ## 一旦它有了全局类名，`tools/*.gd`（`--script` 跑的，编译早于 autoload 注册）
 ## 一引用这个类型就会把连带编译搞崩。preload 在这里是运行时才展开的。
-const GM_CONSOLE := preload("res://scripts/debug/gm_console.gd")
+## 【不 preload，只记路径】`scripts/debug/*` 在导出预设的 `exclude_filter` 里 ——
+## release 包里这个文件**根本不存在**。写成 `preload` 的话，导出阶段就会因为
+## 「资源找不到」直接构建失败；字符串 + 运行时 `load()` 才能让它在包里彻底消失。
+const GM_CONSOLE_PATH := "res://scripts/debug/gm_console.gd"
 
 ## 未选择时的那张底图（四张里「什么都不亮」的那张）
 @export var off_texture: Texture2D
@@ -62,13 +65,17 @@ func _ready() -> void:
 		h.hovered.connect(_on_hovered)
 		h.unhovered.connect(_on_unhovered)
 		h.activated.connect(_on_activated)
-	# 【GM 控制台只活在调试构建里】它是开发期工具，不是玩法 ——
-	# release 导出包里 `OS.is_debug_build()` 为假，这一段整个不存在。
+	# 【GM 控制台只活在调试构建里】两道锁：
+	#   1. release 导出包里 `OS.is_debug_build()` 为假；
+	#   2. 更硬的一层：`scripts/debug/*` 被 `exclude_filter` 排除，包里**没有这个文件**，
+	#      `ResourceLoader.exists()` 直接为假 —— 就算有人改了判断条件也无从加载。
 	# 动态 new 而不是写进 `.tscn`：桌子场景不该为了调试多一个节点。
-	if OS.is_debug_build():
-		var gm: Node = GM_CONSOLE.new()
-		gm.name = "GmConsole"
-		add_child(gm)
+	if OS.is_debug_build() and ResourceLoader.exists(GM_CONSOLE_PATH):
+		var script: GDScript = load(GM_CONSOLE_PATH)
+		if script != null:
+			var gm: Node = script.new()
+			gm.name = "GmConsole"
+			add_child(gm)
 
 	_build_menu_button()
 

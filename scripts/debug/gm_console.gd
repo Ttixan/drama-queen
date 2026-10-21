@@ -4,15 +4,21 @@ extends CanvasLayer
 ## 【为什么没有 `class_name`】`tools/*.gd` 是 `--script` 跑起来的：那份主脚本会在 autoload
 ## （`Game` / `EventBus`）注册**之前**编译。只要工具脚本里引用了这个类型，本脚本就会在那个
 ## 时间点被连带编译，而它满篇 `Game.state` —— 编译当场失败，之后一律报
-## 「Nonexistent function 'new' in base 'GDScript'」。桌子用 `preload` 拿它即可，
+## 「Nonexistent function 'new' in base 'GDScript'」。桌子用字符串路径 `load()` 拿它即可，
 ## 加载时机在 autoload 之后，不存在这个问题。
+##
+## 【打包后要"没有"它，不是"不启用"它】`export_presets.cfg` 的两个预设都把
+## `scripts/debug/*` 放进了 `exclude_filter` —— release 包里这个文件**压根不存在**。
+## 所以：
+##   · 谁都不能 `preload` 本脚本（导出阶段会因资源缺失直接构建失败），只能运行时 `load()`；
+##   · 桌子那边还有 `OS.is_debug_build()` + `ResourceLoader.exists()` 两道锁。
 ##
 ## 【为什么需要它】随机事件看完一段文案要「结束今天」推进到周一、还要等调度器抽中，
 ## 而事件表有 4 条、选项各带一套数值 —— 靠手玩逐条核对等于把整局跑四五遍。
 ## 这里的指令让「排哪条 / 选哪一项 / 数值变成多少」都能一步到位。
 ##
 ## 【挂在哪】`desk_screen.gd` 的 `_ready()` 里按 `OS.is_debug_build()` 动态加进来：
-## 不写进 `.tscn`（它是工具，不是场景的一部分），release 导出包里也不会存在。
+## 不写进 `.tscn`（它是工具，不是场景的一部分），release 包里连文件都没有（见上）。
 ## 用 `CanvasLayer` 是为了不受 Control 布局与 `overlay_parent` 的层级影响 ——
 ## 手机 / 日历不管开没开，它都盖在最上面。
 ##
