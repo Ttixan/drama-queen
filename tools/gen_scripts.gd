@@ -266,10 +266,13 @@ func _body_of(lines: Array) -> String:
 			var cells := _table_cells(t)
 			# 表头（`| 字段 | 内容 |`）不是内容，丢掉；分隔行由 _table_cells 返回空
 			if cells.size() >= 2 and not (cells[0] == "字段" and cells[1] == "内容"):
-				out.append("%s：%s" % [cells[0], cells[1]])
+				# 【场景代号是内部 id】分镜、调试、需求表都靠它对位，但玩家读的剧本里
+				# 出现「场景代号：play2_v1_s1」只会莫名其妙 —— 不进正文
+				if cells[0] != "场景代号":
+					out.append("%s：%s" % [cells[0], cells[1]])
 			continue
 		if s.begins_with(">"):
-			out.append(s.substr(1).strip_edges())
+			out.append(_strip_codes(s.substr(1).strip_edges()))
 			continue
 		if s.begins_with("#"):
 			out.append(s.lstrip("#").strip_edges())
@@ -284,6 +287,24 @@ func _body_of(lines: Array) -> String:
 	while not cleaned.is_empty() and cleaned[-1].strip_edges().is_empty():
 		cleaned.remove_at(cleaned.size() - 1)
 	return "\n".join(cleaned)
+
+
+## 把正文里的内部代号洗掉：`【拼贴表情轮 → 条件见 `play1_v1_s1`】` → `【拼贴表情轮】`
+##
+## 【为什么要在生成这一层做】玩家不该看见 `play1_v1_s1` 这种东西；但策划写分镜时
+## 又必须标出来（需求数值表靠它对位），所以留在 md 里、进正文前摘掉。
+## 反引号里的一律当"内部引用"，去掉之后如果尾巴变成半句话（`条件见 】`），一起收拾干净。
+func _strip_codes(text: String) -> String:
+	var re := RegEx.new()
+	re.compile("`[A-Za-z0-9_]+`")
+	var s := re.sub(text, "", true)
+	# 去掉代号后残下的半截提示语
+	for junk: String in ["条件见 】", "条件见】", " → 】", "→】", "条件见 "]:
+		s = s.replace(junk, "】" if junk.contains("】") else "")
+	s = s.replace("  ", " ").strip_edges()
+	# 「【X → 】」这种中间只剩箭头的，把箭头也去掉
+	s = s.replace(" → 】", "】").replace("→】", "】")
+	return s
 
 
 ## `| a | b |` → ["a", "b"]；分隔行（全是 - / :）返回空数组
