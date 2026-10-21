@@ -81,7 +81,8 @@ func _build_week() -> void:
 	_clear()
 	var week := int(report.get("week", 1))
 	_edition.text = "第 %d 期" % week
-	_title.text = "《有瓜有戏》"
+	# 【报头不印刊名了】按需求去掉「有瓜有戏」——版面靠版次与日期已经足够说明这是什么
+	_title.text = ""
 	_day_label.text = "第 %d 天 · 第 %d 周结算" % [int(report.get("day", 0)), week]
 
 	_build_face()
@@ -291,11 +292,11 @@ func _build_ledger() -> void:
 
 	var paid := int(report.get("ps5_paid", 0))
 	if paid > 0:
-		_ledger_row("PS5 分期", "−%d 元" % paid, MONEY_BAD)
+		_ledger_row("PSwitch box2 分期", "−%d 元" % paid, MONEY_BAD)
 	elif bool(report.get("ps5_overdue", false)):
 		# 【故意不扣钱】逾期只是"这笔没交出去"，扣钱又记逾期等于一罚两遍。
 		var penalty := int(report.get("ps5_penalty", 0))
-		_ledger_row("PS5 分期", "付不出，这一期没交", MONEY_BAD)
+		_ledger_row("PSwitch box2 分期", "付不出，这一期没交", MONEY_BAD)
 		if penalty > 0:
 			_ledger_row("逾期惩罚", "风评 −%d" % penalty, MONEY_BAD)
 
@@ -318,7 +319,7 @@ func _build_deltas() -> void:
 	_delta_row("负面曝光（隐藏）", int(before.get("neg", 0)), int(after.get("neg", 0)))
 	var paid := Game.ps5_paid()
 	var total := Economy.ps5_total()
-	_ledger_row("PS5 已凑", "%d / %d 元" % [paid, total],
+	_ledger_row("PSwitch box2 已凑", "%d / %d 元" % [paid, total],
 			MONEY_GOOD if Game.ps5_paid_off() else UiPalette.PAGE_INK_SOFT)
 
 
@@ -331,7 +332,7 @@ func _build_ending() -> void:
 	var ending: Dictionary = report.get("ending", {})
 	# 【报头变成"结局 ｜ 名字"】这一页的主角不是报纸，是这三周的下场 ——
 	# 名字要在最显眼的位置（原来那版也是这么排的）。
-	_edition.text = "《有瓜有戏》号外"
+	_edition.text = "号外"
 	_title.text = "结局 ｜ " + String(ending.get("name", "?"))
 	_day_label.text = "第 %d 天 · 本局终" % GameState.TOTAL_DAYS
 	_build_face()

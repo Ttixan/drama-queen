@@ -1274,14 +1274,11 @@ func _start_typing(code: String, index: int, text: String) -> void:
 	_scroll_chat_to_bottom()
 
 
-## 到点：回信落地，顺手把那声"叮"放在这一刻。
-## 【提示音为什么从 `Sfx` 挪到这儿】声音得跟着**气泡出现**走，而不是跟着核心层的
-## `hr_replied` 信号 —— 那条信号在玩家点发送的同一帧就发了，那时对方还在打字。
+## 到点：回信落地（10-21 起不再配音 —— 收到消息那声"叮"按需求删掉了）
 func _finish_typing() -> void:
 	if _typing.is_empty():
 		return
 	_typing.clear()
-	Sfx.play(&"mail_reply")
 	_rebuild_chat()
 	_refresh_all()
 	_scroll_chat_to_bottom()

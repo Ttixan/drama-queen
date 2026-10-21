@@ -846,9 +846,10 @@ func _test_sfx() -> void:
 	sfx.played_log.clear()
 	bus.broadcast_published.emit(1, [])
 	_check("没有头条的周报不响", sfx.played_log.size(), 0)
+	# 【10-21 按需求删掉了周报发刊音】有头条也不再响
 	bus.broadcast_published.emit(2, [{"title": "x"}])
-	_check("有头条：围脖提示音", sfx.played_log.back(), &"weibo")
-	print("   按钮自动挂点击/悬浮；钱·演技·投递·围脖由信号触发（回信音等气泡出现）")
+	_check("周报发刊不再配音", sfx.played_log.size(), 0)
+	print("   按钮自动挂点击/悬浮；钱·演技·投递由信号触发（周报与回信都不配音）")
 
 
 func _snapshot_save() -> Dictionary:

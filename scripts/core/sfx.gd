@@ -100,7 +100,8 @@ func _ready() -> void:
 	# 【回信音不在这里接了】`hr_replied` 是玩家点发送的**同一帧**发的，那时对方
 	# 才刚开始"打字"（见 `wechat_app._typing`）。这一声得跟着气泡出现走，
 	# 所以由 `wechat_app._finish_typing` 在气泡落地那一刻自己播。
-	EventBus.broadcast_published.connect(_on_broadcast_published)
+	# 【每周结算那一声已删】《有瓜有戏》发刊不再配音 —— 周报是"看"的东西，
+	# 一周一次的提示音反而像系统通知。`weibo` 这个代号先留在表里，别的界面可能还要用。
 
 	_start_bgm()
 
@@ -220,9 +221,4 @@ func _on_audition_submitted(_result: Dictionary) -> void:
 ## 回信真的落到屏幕上（`wechat_app._finish_typing`）。挂在信号上会早整整一段打字时间。
 
 
-## 周报发刊 = 围脖上有新东西。**没有标题的那一周不响**（比如第 1 周），
-## 免得每周固定"叮"一声、玩家把它当背景音。
-func _on_broadcast_published(_week: int, headlines: Array) -> void:
-	if headlines.is_empty():
-		return
-	play(&"weibo")
+## （原 `_on_broadcast_published`：周报发刊播 `weibo`，10-21 按需求删掉了）
