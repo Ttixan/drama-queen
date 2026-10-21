@@ -93,9 +93,9 @@ func _build_paper() -> void:
 	_label(_paper_text, data.masthead, 46, UiPalette.INK,
 			Rect2(240, 70, 700, 64), HORIZONTAL_ALIGNMENT_LEFT, false,
 			UiPalette.TITLE_FONT)
-	# 版次放在报头右侧的空白纸面上 —— 模板右上角有灰条，小字压上去读不清
-	_label(_paper_text, data.edition, 22, UiPalette.PAGE_INK_SOFT,
-			Rect2(560, 76, 620, 44))
+	# 【10-21 起不再画版次】右上角那行「增刊 · 第 0 期」去掉了 ——
+	# 这张是虚构游戏的整版广告，期号对它没有信息量，反而像没改干净的模板。
+	# 数据里的 `edition` 字段保留（`IntroData.validate()` 仍在校验它），只是不上屏。
 
 	# 两条深色栏目条（模板里本来就是深灰，只往上压白字）
 	_label(_paper_text, "整版广告", 24, UiPalette.PAPER,

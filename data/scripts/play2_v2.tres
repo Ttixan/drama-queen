@@ -10,8 +10,7 @@ play_title = "穿越宫斗"
 role_name = "贵妃"
 tier = 1
 scene_count = 3
-body = "角色代号：`play2_v2`
-角色名：贵妃
+body = "角色名：贵妃
 场景数：3
 
 张扬又跋扈的贵妃，发现贵人最近十分得宠，想要搅碎贵人的升职梦。

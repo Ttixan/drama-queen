@@ -266,9 +266,9 @@ func _body_of(lines: Array) -> String:
 			var cells := _table_cells(t)
 			# 表头（`| 字段 | 内容 |`）不是内容，丢掉；分隔行由 _table_cells 返回空
 			if cells.size() >= 2 and not (cells[0] == "字段" and cells[1] == "内容"):
-				# 【场景代号是内部 id】分镜、调试、需求表都靠它对位，但玩家读的剧本里
-				# 出现「场景代号：play2_v1_s1」只会莫名其妙 —— 不进正文
-				if cells[0] != "场景代号":
+				# 【代号是内部 id】分镜、调试、需求表都靠它对位，但玩家读的剧本里
+				# 出现「角色代号：play2_v1」「场景代号：play2_v1_s1」只会莫名其妙 —— 不进正文
+				if cells[0] != "场景代号" and cells[0] != "角色代号":
 					out.append("%s：%s" % [cells[0], cells[1]])
 			continue
 		if s.begins_with(">"):
