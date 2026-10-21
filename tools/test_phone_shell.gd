@@ -589,11 +589,25 @@ func _test_restart_button() -> void:
 	_check("待确认时按钮变红", _app._restart_button.get_theme_color("font_color"), UiPalette.DANGER)
 
 	_app._on_restart_pressed()
-	_check("第二次按才真的重开（回到第 1 天）", _game.day(), 1)
-	_check("第二次按把钱也清了", _game.money(), BalanceLibrary.data().init_money)
+	# 【10-21 起多一问】确认重开之后先问「要不要再看一遍新手引导」
+	var choice: Control = _app.get_node_or_null("TutorialChoice")
+	_check("第二次按先弹出引导选择框", choice != null, true)
+	_check("选之前还没真的重开", _game.day(), 9)
+
+	_app._restart_apply(false)     # 选「再看一遍」
+	_check("确认后才真的重开（回到第 1 天）", _game.day(), 1)
+	_check("重开把钱也清了", _game.money(), BalanceLibrary.data().init_money)
 	_check("重开后按钮回到常态", _app._restart_button.text, "重开一局")
+	_check("选「再看一遍」→ 引导从头开始", _game.state.tutorial_step, 0)
 	_check("重开会把新局写进存档（否则下次打开会被读回上一局）",
 			FileAccess.file_exists("user://save.json"), true)
+
+	# 另一个分支：选「跳过引导」
+	_app._restart_armed_at = 0
+	_app._on_restart_pressed()
+	_app._on_restart_pressed()
+	_app._restart_apply(true)
+	_check("选「跳过引导」→ 进度直接标记为已完成", _game.state.tutorial_step, -1)
 
 	# 待确认窗口过期之后，再按一次只应该**重新进入待确认**
 	_game.state.day = 15

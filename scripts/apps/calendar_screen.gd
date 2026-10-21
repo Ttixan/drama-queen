@@ -806,12 +806,108 @@ func _on_restart_pressed() -> void:
 		_refresh_restart()
 		return
 	_restart_armed_at = 0
+	# 确认之后还有一问：要不要再走一遍新手引导
+	_ask_skip_tutorial()
+
+
+## 重开前的第二问。
+## 【为什么要问】老玩家重开只是想换个开局，不想把十分钟教学再看一遍；
+## 新玩家或想复习的人正好相反。替哪一边决定都不合适，给两个按钮最省事。
+func _ask_skip_tutorial() -> void:
+	var layer := Control.new()
+	layer.name = "TutorialChoice"
+	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(layer)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.52)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(center)
+
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(600, 0)
+	card.add_theme_stylebox_override("panel",
+			UiPalette.panel(UiPalette.PAPER, 18, 3, UiPalette.INK))
+	center.add_child(card)
+
+	var margin := MarginContainer.new()
+	for side: String in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		margin.add_theme_constant_override(side, 28)
+	card.add_child(margin)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 16)
+	margin.add_child(box)
+
+	var title := Label.new()
+	title.text = "重开一局"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_override("font", TITLE_FONT)
+	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_color_override("font_color", INK)
+	box.add_child(title)
+
+	var body := Label.new()
+	body.text = "要再看一遍新手引导吗？\n（从点开手机、投第一份简历开始教）"
+	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	body.add_theme_font_override("font", FONT_CN)
+	body.add_theme_font_size_override("font_size", 18)
+	body.add_theme_color_override("font_color", INK_SOFT)
+	box.add_child(body)
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 20)
+	box.add_child(row)
+
+	row.add_child(_choice_button("跳过引导", func() -> void: _restart_apply(true)))
+	row.add_child(_choice_button("再看一遍", func() -> void: _restart_apply(false)))
+
+
+func _choice_button(text: String, cb: Callable) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.custom_minimum_size = Vector2(180, 54)
+	b.add_theme_font_override("font", FONT_CN)
+	b.add_theme_font_size_override("font_size", 20)
+	b.add_theme_color_override("font_color", INK)
+	b.add_theme_color_override("font_hover_color", INK)
+	b.add_theme_color_override("font_pressed_color", INK)
+	b.add_theme_stylebox_override("normal",
+			UiPalette.button(Color(1, 1, 1, 0.9), CARD_LINE, 2, 14))
+	b.add_theme_stylebox_override("hover",
+			UiPalette.button(Color(1, 1, 1), INK, 3, 14))
+	b.add_theme_stylebox_override("pressed",
+			UiPalette.button(Color(0.92, 0.9, 0.86), OK_INK, 3, 14))
+	b.pressed.connect(cb)
+	return b
+
+
+## 真正重开。`skip_tutorial` = 玩家选了「跳过引导」。
+func _restart_apply(skip_tutorial: bool) -> void:
 	# 【new_game() 本身不写存档】它只重置状态（测试也要能干净地调它）。
 	# 「重开」这个动作**必须**把旧存档盖掉，否则玩家下次打开游戏会被读回上一局 ——
 	# 那会让人以为"重开没生效"。
 	Game.new_game()
+	if skip_tutorial:
+		# `new_game()` 里 `state_reset` 已经让主场景把引导挂上了 ——
+		# 这里要连"那层已经挂出来的"一起收掉，光改状态是收不掉的。
+		var main := get_tree().current_scene
+		if main != null and main.has_method("skip_tutorial"):
+			main.call("skip_tutorial")
+		else:
+			Game.skip_tutorial()
 	EventBus.save_requested.emit()
 	_refresh_all()
+	cancelled.emit()
 
 
 func _is_restart_armed(now: int) -> bool:
